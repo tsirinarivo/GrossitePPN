@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { DashboardHome } from "@/components/domain/dashboard-home";
+import { DashboardAnalytics } from "@/components/domain/dashboard-analytics";
 
-export const metadata: Metadata = {
-  title: "Tableau de bord",
-};
+export const metadata: Metadata = { title: "Tableau de bord" };
 
 export default function RapportsPage() {
-  return <DashboardHome />;
+  return <DashboardAnalytics />;
 }
