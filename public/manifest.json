@@ -1,0 +1,24 @@
+{
+  "name": "GrossistePPN Madagascar",
+  "short_name": "GrossistePPN",
+  "description": "Système de gestion grossiste PPN pour Madagascar",
+  "start_url": "/pos/agent",
+  "display": "standalone",
+  "background_color": "#0e0f1a",
+  "theme_color": "#0e0f1a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "fr"
+}

@@ -1,0 +1,181 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  ShoppingCart,
+  Package,
+  Users,
+  Truck,
+  BarChart3,
+  Settings,
+  Store,
+  ChevronRight,
+  Wifi,
+  WifiOff,
+  Receipt,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { useAppStore } from "@/store/app.store";
+
+const navItems = [
+  {
+    href: "/pos/agent",
+    label: "Point de vente",
+    icon: ShoppingCart,
+    badge: null,
+    couleur: "text-[--color-ocre-600]",
+  },
+  {
+    href: "/pos/caisse",
+    label: "Caisse",
+    icon: Receipt,
+    badge: "3",
+    couleur: "text-[--color-vanille-600]",
+  },
+  {
+    href: "/stock",
+    label: "Stock",
+    icon: Package,
+    badge: null,
+    couleur: "text-[--color-indigo-600]",
+  },
+  {
+    href: "/clients",
+    label: "Clients",
+    icon: Users,
+    badge: null,
+    couleur: null,
+  },
+  {
+    href: "/livraisons",
+    label: "Livraisons",
+    icon: Truck,
+    badge: "2",
+    couleur: null,
+  },
+  {
+    href: "/rapports",
+    label: "Rapports",
+    icon: BarChart3,
+    badge: null,
+    couleur: null,
+  },
+  {
+    href: "/shop",
+    label: "Boutique",
+    icon: Store,
+    badge: null,
+    couleur: null,
+    external: true,
+  },
+  {
+    href: "/admin",
+    label: "Admin",
+    icon: Settings,
+    badge: null,
+    couleur: null,
+  },
+];
+
+export function DashboardNav() {
+  const pathname = usePathname();
+  const connexion = useAppStore((s) => s.connexion);
+
+  return (
+    <nav className="w-16 lg:w-56 h-screen flex flex-col border-r border-[--border] bg-[--card] shrink-0 transition-all duration-200">
+      {/* Logo */}
+      <div className="h-14 flex items-center px-4 border-b border-[--border]">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-[--primary] flex items-center justify-center shrink-0">
+            <Package className="w-4 h-4 text-white" />
+          </div>
+          <div className="hidden lg:block min-w-0">
+            <div className="text-sm font-bold tracking-tight truncate">GrossistePPN</div>
+            <div className="text-[10px] text-[--foreground-subtle] truncate">Madagascar</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Nav items */}
+      <div className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+        {navItems.map((item) => {
+          const isActive =
+            pathname === item.href ||
+            pathname.startsWith(item.href + "/");
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 px-2 py-2 rounded-lg",
+                "text-sm font-medium transition-all duration-150",
+                "group relative",
+                isActive
+                  ? "bg-[--primary]/10 text-[--primary]"
+                  : "text-[--foreground-muted] hover:bg-[--accent] hover:text-[--foreground]"
+              )}
+            >
+              <item.icon
+                className={cn(
+                  "w-5 h-5 shrink-0 transition-colors",
+                  isActive && item.couleur ? item.couleur : "",
+                  isActive && !item.couleur ? "text-[--primary]" : ""
+                )}
+              />
+              <span className="hidden lg:block truncate">{item.label}</span>
+              {item.badge && (
+                <Badge
+                  variant="destructive"
+                  className="hidden lg:flex ml-auto text-[10px] h-5 min-w-5 px-1.5"
+                >
+                  {item.badge}
+                </Badge>
+              )}
+              {isActive && (
+                <ChevronRight className="hidden lg:block w-4 h-4 ml-auto text-[--primary] opacity-60" />
+              )}
+              {/* Tooltip pour mode réduit */}
+              <div className="lg:hidden absolute left-full ml-2 px-2 py-1 bg-[--foreground] text-[--background] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                {item.label}
+                {item.badge && (
+                  <span className="ml-1 px-1 bg-[--destructive] text-white rounded-full text-[10px]">
+                    {item.badge}
+                  </span>
+                )}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Statut connexion */}
+      <div className="p-3 border-t border-[--border]">
+        <div
+          className={cn(
+            "flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs",
+            connexion === "online"
+              ? "text-[--success]"
+              : connexion === "slow"
+                ? "text-[--warning-foreground]"
+                : "text-[--destructive]"
+          )}
+        >
+          {connexion === "offline" ? (
+            <WifiOff className="w-4 h-4 shrink-0" />
+          ) : (
+            <Wifi className="w-4 h-4 shrink-0" />
+          )}
+          <span className="hidden lg:block font-medium">
+            {connexion === "online"
+              ? "En ligne"
+              : connexion === "slow"
+                ? "Réseau lent"
+                : "Hors ligne"}
+          </span>
+        </div>
+      </div>
+    </nav>
+  );
+}
