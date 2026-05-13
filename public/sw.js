@@ -1,7 +1,7 @@
 // Service Worker GrossistePPN — offline shell + cache
 // Stratégies : network-first pour HTML, cache-first pour assets, runtime cache pour /_next/static
 
-const VERSION = "ppn-v1";
+const VERSION = "ppn-v3";
 const SHELL_CACHE = `${VERSION}-shell`;
 const STATIC_CACHE = `${VERSION}-static`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
