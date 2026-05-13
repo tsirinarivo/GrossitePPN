@@ -14,6 +14,7 @@ import { POSProduitGrid } from "./pos-produit-grid";
 import { POSPanier } from "./pos-panier";
 import { POSClientBar } from "./pos-client-bar";
 import { POSCategorieBar } from "./pos-categorie-bar";
+import { CATEGORIES_DEMO, PRODUITS_DEMO } from "./pos-data-demo";
 
 type CategorieAPI = {
   id: string;
@@ -45,10 +46,35 @@ export function POSAgent() {
     fetch("/api/produits")
       .then((r) => r.json())
       .then((data: { produits: ProduitAPI[]; categories: CategorieAPI[] }) => {
-        setProduits(data.produits ?? []);
-        setCategories(data.categories ?? []);
+        const apiProduits = data.produits ?? [];
+        const apiCategories = data.categories ?? [];
+        // Fall back to demo data if DB is empty (e.g. not yet seeded)
+        setProduits(apiProduits.length > 0 ? apiProduits : (PRODUITS_DEMO as ProduitAPI[]));
+        setCategories(
+          apiCategories.length > 0
+            ? apiCategories
+            : CATEGORIES_DEMO.map((c) => ({
+                id: c.id,
+                nom: c.label,
+                nomMG: c.labelMG ?? null,
+                slug: c.id,
+                icone: c.icon,
+              }))
+        );
       })
-      .catch(() => {})
+      .catch(() => {
+        // Network failure: use demo data so the POS remains usable offline
+        setProduits(PRODUITS_DEMO as ProduitAPI[]);
+        setCategories(
+          CATEGORIES_DEMO.map((c) => ({
+            id: c.id,
+            nom: c.label,
+            nomMG: c.labelMG ?? null,
+            slug: c.id,
+            icone: c.icon,
+          }))
+        );
+      })
       .finally(() => setLoading(false));
   }, []);
 
