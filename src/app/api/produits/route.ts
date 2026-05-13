@@ -92,10 +92,10 @@ export async function GET() {
 
 const uniteVenteSchema = z.object({
   nom: z.string().min(1),
-  facteurConversion: z.number().positive(),
-  prixGros: z.number().int().nonnegative().optional().nullable(),
-  prixSemiGros: z.number().int().nonnegative().optional().nullable(),
-  prixDetail: z.number().int().nonnegative().optional().nullable(),
+  facteurConversion: z.coerce.number().positive(),
+  prixGros: z.coerce.number().int().nonnegative().optional().nullable(),
+  prixSemiGros: z.coerce.number().int().nonnegative().optional().nullable(),
+  prixDetail: z.coerce.number().int().nonnegative().optional().nullable(),
   codeBarres: z.string().optional().nullable(),
   estDefaut: z.boolean().default(false),
 });
@@ -108,12 +108,12 @@ const nouveauProduitSchema = z.object({
   marque: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   uniteBase: z.string().min(1, "Unité de base requise"),
-  seuilAlerte: z.number().int().nonnegative().default(0),
+  seuilAlerte: z.coerce.number().int().nonnegative().default(0),
   aDLC: z.boolean().default(false),
-  tauxTVA: z.number().int().min(0).max(100).default(0),
+  tauxTVA: z.coerce.number().int().min(0).max(100).default(0),
   unitesVente: z.array(uniteVenteSchema).min(1),
   visibleEcommerce: z.boolean().default(false),
-  prixEcommerce: z.number().int().nonnegative().optional().nullable(),
+  prixEcommerce: z.coerce.number().int().nonnegative().optional().nullable(),
 });
 
 export async function POST(req: NextRequest) {
