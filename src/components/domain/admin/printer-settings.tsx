@@ -310,6 +310,9 @@ export function PrinterSettings() {
                   <option value="https://open.xpyun.net/api/openapi/xprinter">
                     International — open.xpyun.net (recommandé Madagascar)
                   </option>
+                  <option value="https://open-eu.xpyun.net/api/openapi/xprinter">
+                    Europe / Allemagne — open-eu.xpyun.net
+                  </option>
                   <option value="https://api.xpyun.net/api/openapi/xprinter">
                     Asie — api.xpyun.net
                   </option>
