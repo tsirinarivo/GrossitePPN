@@ -70,12 +70,16 @@ function ProduitCard({ produit }: { produit: ProduitPOS }) {
 
   return (
     <div
+      onClick={handleAjouter}
       className={cn(
         "flex flex-col rounded-xl border border-[--pos-border] bg-[--pos-surface]",
         "overflow-hidden transition-all duration-150",
         "hover:border-[--pos-primary]/50 hover:shadow-lg hover:shadow-[--pos-primary]/5",
         "active:scale-[0.98]",
-        "group"
+        "group",
+        prixActuel && produit.stockDisponible > 0
+          ? "cursor-pointer"
+          : "opacity-60 cursor-not-allowed"
       )}
     >
       {/* Image/Icône produit */}
@@ -120,7 +124,9 @@ function ProduitCard({ produit }: { produit: ProduitPOS }) {
           <div className="relative">
             <select
               value={uniteSelectee.id}
+              onClick={(e) => e.stopPropagation()}
               onChange={(e) => {
+                e.stopPropagation();
                 const unite = produit.unitesVente.find((u) => u.id === e.target.value);
                 if (unite) setUniteSelectee(unite);
               }}
@@ -156,7 +162,7 @@ function ProduitCard({ produit }: { produit: ProduitPOS }) {
           </div>
 
           <Button
-            onClick={handleAjouter}
+            onClick={(e) => { e.stopPropagation(); handleAjouter(); }}
             disabled={!prixActuel || produit.stockDisponible <= 0}
             variant="pos"
             size="icon"
