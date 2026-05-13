@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { User, CreditCard, Star, ChevronDown, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePOSStore } from "@/store/pos.store";
@@ -57,7 +58,7 @@ const PALIER_VARIANTS = {
 
 export function POSClientBar() {
   const { client, setClient } = usePOSStore();
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className="flex items-center gap-2 px-4 py-2 border-b border-[--pos-border] bg-[--pos-surface] shrink-0">
@@ -151,6 +152,3 @@ export function POSClientBar() {
     </div>
   );
 }
-
-// Import React pour useState
-import * as React from "react";
