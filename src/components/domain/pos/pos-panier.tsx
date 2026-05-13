@@ -38,6 +38,8 @@ export function POSPanier({ onClose, totalTTC, nbArticles }: Props) {
     viderPanier,
     client,
     modeHorsLigne,
+    agentId,
+    depotId,
   } = usePOSStore();
   const { totalHT, totalTVA, totalRemise } = usePOSTotaux();
   const [notesVisible, setNotesVisible] = useState(false);
@@ -46,18 +48,43 @@ export function POSPanier({ onClose, totalTTC, nbArticles }: Props) {
   const handleEnvoyer = async () => {
     if (lignes.length === 0) return;
     setEnvoiEnCours(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setEnvoiEnCours(false);
-    toast.success(
-      modeHorsLigne
-        ? "Commande sauvegardée — sera envoyée dès le retour du réseau"
-        : "Commande envoyée à la caisse",
-      {
-        description: `${nbArticles} article(s) — ${formatMGA(totalTTC)}`,
-        icon: <CheckCircle2 className="w-4 h-4 text-green-500" />,
+    try {
+      const res = await fetch("/api/caisse/commandes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lignes,
+          client,
+          notes,
+          agentId,
+          depotId,
+          totalHT,
+          totalTVA,
+          totalTTC,
+          totalRemise,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? `Erreur ${res.status}`);
       }
-    );
-    viderPanier();
+      toast.success(
+        modeHorsLigne
+          ? "Commande sauvegardée — sera envoyée dès le retour du réseau"
+          : "Commande envoyée à la caisse",
+        {
+          description: `${nbArticles} article(s) — ${formatMGA(totalTTC)}`,
+          icon: <CheckCircle2 className="w-4 h-4 text-green-500" />,
+        }
+      );
+      viderPanier();
+    } catch (e) {
+      toast.error("Échec de l'envoi", {
+        description: e instanceof Error ? e.message : "Erreur inconnue",
+      });
+    } finally {
+      setEnvoiEnCours(false);
+    }
   };
 
   if (lignes.length === 0) {
