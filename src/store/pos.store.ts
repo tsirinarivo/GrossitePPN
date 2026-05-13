@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { useShallow } from "zustand/react/shallow";
 
 export type PalierPrix = "gros" | "semi_gros" | "detail";
 
@@ -247,12 +248,17 @@ export const usePOSStore = create<POSState>()(
 );
 
 // Sélecteurs dérivés
+// useShallow prevents the infinite-render loop (React error #185): without it,
+// the selector returns a new object reference every call, causing useSyncExternalStore
+// to schedule another render, which calls the selector again, ad infinitum.
 export const usePOSTotaux = () =>
-  usePOSStore((s) => {
-    const totalHT = s.lignes.reduce((sum, l) => sum + l.totalHT, 0);
-    const totalTVA = s.lignes.reduce((sum, l) => sum + l.totalTVA, 0);
-    const totalTTC = s.lignes.reduce((sum, l) => sum + l.totalTTC, 0);
-    const totalRemise = s.lignes.reduce((sum, l) => sum + l.montantRemise, 0);
-    const nbArticles = s.lignes.reduce((sum, l) => sum + l.quantite, 0);
-    return { totalHT, totalTVA, totalTTC, totalRemise, nbArticles };
-  });
+  usePOSStore(
+    useShallow((s) => {
+      const totalHT = s.lignes.reduce((sum, l) => sum + l.totalHT, 0);
+      const totalTVA = s.lignes.reduce((sum, l) => sum + l.totalTVA, 0);
+      const totalTTC = s.lignes.reduce((sum, l) => sum + l.totalTTC, 0);
+      const totalRemise = s.lignes.reduce((sum, l) => sum + l.montantRemise, 0);
+      const nbArticles = s.lignes.reduce((sum, l) => sum + l.quantite, 0);
+      return { totalHT, totalTVA, totalTTC, totalRemise, nbArticles };
+    })
+  );
