@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useCallback, useRef } from "react";
 import {
   Printer,
   Wifi,
@@ -10,6 +10,7 @@ import {
   Send,
   Loader2,
   Info,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -74,15 +75,37 @@ export function PrinterSettings() {
   const [status, setStatus] = useState<PrinterStatus | null>(null);
   const [logs, setLogs] = useState<PrintLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [lastLogsUpdate, setLastLogsUpdate] = useState<Date | null>(null);
   const [savePending, startSave] = useTransition();
   const [testPending, startTest] = useTransition();
   const [refreshPending, startRefresh] = useTransition();
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchLogs = useCallback(async (quiet = false) => {
+    if (!quiet) setLogsLoading(true);
+    try {
+      const res = await fetch("/api/admin/printer/logs");
+      if (res.ok) {
+        setLogs(await res.json());
+        setLastLogsUpdate(new Date());
+      }
+    } catch {
+      // ignore
+    } finally {
+      if (!quiet) setLogsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchConfig();
     fetchStatus();
     fetchLogs();
-  }, []);
+    pollingRef.current = setInterval(() => fetchLogs(true), 30_000);
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [fetchLogs]);
 
   async function fetchConfig() {
     try {
@@ -99,15 +122,6 @@ export function PrinterSettings() {
     try {
       const res = await fetch("/api/print/status");
       if (res.ok) setStatus(await res.json());
-    } catch {
-      // ignore
-    }
-  }
-
-  async function fetchLogs() {
-    try {
-      const res = await fetch("/api/admin/printer/logs");
-      if (res.ok) setLogs(await res.json());
     } catch {
       // ignore
     }
@@ -412,13 +426,24 @@ export function PrinterSettings() {
           {/* Logs */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-[--foreground] uppercase tracking-wide">
-                Derniers envois
-              </h4>
-              <Button variant="outline" size="sm" onClick={refreshLogs} loading={refreshPending}>
-                <RefreshCw className="w-3 h-3" />
-                Rafraîchir statuts
-              </Button>
+              <div>
+                <h4 className="text-sm font-semibold text-[--foreground] uppercase tracking-wide">
+                  Derniers envois
+                </h4>
+                {lastLogsUpdate && (
+                  <p className="flex items-center gap-1 text-[10px] text-[--foreground-subtle] mt-0.5">
+                    <Clock className="w-3 h-3" />
+                    Mis à jour {lastLogsUpdate.toLocaleTimeString("fr-MG")} · auto-refresh 30s
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {logsLoading && <Loader2 className="w-3 h-3 animate-spin text-[--foreground-subtle]" />}
+                <Button variant="outline" size="sm" onClick={refreshLogs} loading={refreshPending}>
+                  <RefreshCw className="w-3 h-3" />
+                  Rafraîchir statuts
+                </Button>
+              </div>
             </div>
             {logs.length === 0 ? (
               <p className="text-sm text-[--foreground-subtle]">Aucun envoi pour l&apos;instant.</p>
