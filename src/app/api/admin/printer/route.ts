@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -63,10 +64,9 @@ export async function PUT(req: NextRequest) {
     xprintAutoOnFacture: d.autoOnFacture,
   };
 
-  await db.update(schema.entreprise).set({
-    parametres: updated,
-    updatedAt: new Date(),
-  });
+  await db.update(schema.entreprise)
+    .set({ parametres: updated, updatedAt: new Date() })
+    .where(eq(schema.entreprise.id, "singleton"));
 
   return NextResponse.json({ ok: true });
 }
