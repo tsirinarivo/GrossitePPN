@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useCommandeStream } from "@/hooks/use-commande-stream";
 import type { CommandeEvent } from "@/lib/sse/broadcast";
 import {
@@ -17,6 +17,7 @@ import {
   CreditCard,
   Printer,
   FileText,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
@@ -38,68 +39,67 @@ type CommandeFile = {
   statut: "en_attente" | "en_cours";
 };
 
-const COMMANDES_DEMO: CommandeFile[] = [
-  {
-    id: "cmd1",
-    numero: "CMD-2026-0847",
-    client: "Épicerie Rasoamanarivo",
-    montant: 385000,
-    nbArticles: 6,
-    source: "pos_agent",
-    agentNom: "Hery",
-    soumiseAt: "14:32",
-    priorite: 1,
-    statut: "en_attente",
-  },
-  {
-    id: "cmd2",
-    numero: "CMD-2026-0848",
-    client: "Supérette Analakely",
-    montant: 1250000,
-    nbArticles: 12,
-    source: "ecommerce",
-    soumiseAt: "14:18",
-    priorite: 2,
-    statut: "en_attente",
-  },
-  {
-    id: "cmd3",
-    numero: "CMD-2026-0849",
-    client: "Restaurant Colbert",
-    montant: 320000,
-    nbArticles: 4,
-    source: "ecommerce",
-    soumiseAt: "13:41",
-    priorite: 3,
-    statut: "en_attente",
-  },
-  {
-    id: "cmd4",
-    numero: "CMD-2026-0850",
-    client: "Épicerie Ambatonakanga",
-    montant: 75000,
-    nbArticles: 3,
-    source: "pos_agent",
-    agentNom: "Nivo",
-    soumiseAt: "13:20",
-    priorite: 4,
-    statut: "en_attente",
-  },
-];
+type Ligne = {
+  id: string;
+  nom: string;
+  unite: string;
+  qte: number;
+  prix: number;
+  total: number;
+  tauxTVA: number;
+  totalTTC: number;
+};
 
-const LIGNES_DEMO = [
-  { nom: "Riz Makalioka", unite: "Sac 50 kg", qte: 2, prix: 145000, total: 290000 },
-  { nom: "Huile Tiko 1L", unite: "Carton 12 btl", qte: 1, prix: 118000, total: 118000 },
-  { nom: "Sucre Blanc", unite: "kg", qte: 25, prix: 4800, total: 120000 },
-];
+type CommandeDetail = {
+  id: string;
+  numero: string;
+  totalHT: number;
+  totalTVA: number;
+  totalTTC: number;
+  assujettieTV: boolean;
+};
 
 export function CaisseView() {
-  const [fileCommandes, setFileCommandes] = useState<CommandeFile[]>(COMMANDES_DEMO);
-  const [commandeSelectee, setCommandeSelectee] = useState<CommandeFile | null>(
-    COMMANDES_DEMO[0] ?? null
-  );
+  const [fileCommandes, setFileCommandes] = useState<CommandeFile[]>([]);
+  const [loadingFile, setLoadingFile] = useState(true);
+  const [commandeSelectee, setCommandeSelectee] = useState<CommandeFile | null>(null);
+  const [commandeDetail, setCommandeDetail] = useState<CommandeDetail | null>(null);
+  const [lignes, setLignes] = useState<Ligne[]>([]);
+  const [loadingLignes, setLoadingLignes] = useState(false);
   const [modePaiement, setModePaiement] = useState<string>("especes");
   const [etape, setEtape] = useState<"detail" | "paiement" | "confirmation">("detail");
+
+  // Load queue on mount
+  useEffect(() => {
+    fetch("/api/caisse/commandes")
+      .then((r) => r.json())
+      .then((data: CommandeFile[]) => {
+        setFileCommandes(data ?? []);
+        if (data.length > 0) {
+          setCommandeSelectee(data[0] ?? null);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingFile(false));
+  }, []);
+
+  // Load lines when a commande is selected
+  useEffect(() => {
+    if (!commandeSelectee) {
+      setLignes([]);
+      setCommandeDetail(null);
+      return;
+    }
+    setLoadingLignes(true);
+    fetch(`/api/caisse/commandes/${commandeSelectee.id}`)
+      .then((r) => r.json())
+      .then((data: { commande: CommandeDetail | null; lignes: Ligne[] }) => {
+        setCommandeDetail(data.commande);
+        setLignes(data.lignes ?? []);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingLignes(false));
+  }, [commandeSelectee?.id]);
 
   // Écoute les nouvelles commandes en temps réel via SSE
   const handleNouvelleCommande = useCallback((event: CommandeEvent) => {
@@ -119,8 +119,18 @@ export function CaisseView() {
 
   useCommandeStream(handleNouvelleCommande);
 
-  const totalHT = LIGNES_DEMO.reduce((s, l) => s + l.total, 0);
-  const totalTTC = totalHT;
+  const totalHT = commandeDetail?.totalHT ?? lignes.reduce((s, l) => s + l.total, 0);
+  const totalTVA = commandeDetail?.totalTVA ?? 0;
+  const totalTTC = commandeDetail?.totalTTC ?? lignes.reduce((s, l) => s + l.totalTTC, 0);
+  const assujettieTV = commandeDetail?.assujettieTV ?? false;
+
+  const handleCommandeSuivante = () => {
+    setFileCommandes((prev) => prev.filter((c) => c.id !== commandeSelectee?.id));
+    setCommandeSelectee(null);
+    setCommandeDetail(null);
+    setLignes([]);
+    setEtape("detail");
+  };
 
   return (
     <div className="flex h-screen bg-[--background] overflow-hidden">
@@ -135,76 +145,82 @@ export function CaisseView() {
         </div>
 
         <div className="flex-1 overflow-y-auto divide-y divide-[--border]">
-          {fileCommandes.map((cmd) => (
-            <button
-              key={cmd.id}
-              onClick={() => { setCommandeSelectee(cmd); setEtape("detail"); }}
-              className={cn(
-                "w-full flex items-start gap-3 px-4 py-3 text-left",
-                "hover:bg-[--accent] transition-colors",
-                commandeSelectee?.id === cmd.id && "bg-[--primary]/5 border-l-2 border-l-[--primary]"
-              )}
-            >
-              {/* Icône source */}
-              <div className={cn(
-                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5",
-                cmd.source === "ecommerce"
-                  ? "bg-[--color-indigo-100] dark:bg-[--color-indigo-950]"
-                  : "bg-[--color-ocre-100] dark:bg-[--color-ocre-950]"
-              )}>
-                {cmd.source === "ecommerce" ? (
-                  <Globe className="w-4 h-4 text-[--color-indigo-600]" />
-                ) : (
-                  <Monitor className="w-4 h-4 text-[--color-ocre-600]" />
+          {loadingFile ? (
+            <div className="flex items-center justify-center py-12 text-[--foreground-muted]">
+              <Loader2 className="w-5 h-5 animate-spin" />
+            </div>
+          ) : fileCommandes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-2 text-[--foreground-muted]">
+              <CheckCircle2 className="w-8 h-8 opacity-30" />
+              <p className="text-sm">File vide — aucune commande en attente</p>
+            </div>
+          ) : (
+            fileCommandes.map((cmd) => (
+              <button
+                key={cmd.id}
+                onClick={() => { setCommandeSelectee(cmd); setEtape("detail"); }}
+                className={cn(
+                  "w-full flex items-start gap-3 px-4 py-3 text-left",
+                  "hover:bg-[--accent] transition-colors",
+                  commandeSelectee?.id === cmd.id && "bg-[--primary]/5 border-l-2 border-l-[--primary]"
                 )}
-              </div>
+              >
+                <div className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5",
+                  cmd.source === "ecommerce"
+                    ? "bg-[--color-indigo-100] dark:bg-[--color-indigo-950]"
+                    : "bg-[--color-ocre-100] dark:bg-[--color-ocre-950]"
+                )}>
+                  {cmd.source === "ecommerce" ? (
+                    <Globe className="w-4 h-4 text-[--color-indigo-600]" />
+                  ) : (
+                    <Monitor className="w-4 h-4 text-[--color-ocre-600]" />
+                  )}
+                </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs font-mono text-[--foreground-subtle]">
-                    {cmd.numero}
-                  </span>
-                  <Badge
-                    variant={cmd.source === "ecommerce" ? "web" : "pos"}
-                    className="text-[9px] py-0"
-                  >
-                    {cmd.source === "ecommerce" ? "WEB" : "POS"}
-                  </Badge>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-mono text-[--foreground-subtle]">
+                      {cmd.numero}
+                    </span>
+                    <Badge
+                      variant={cmd.source === "ecommerce" ? "web" : "pos"}
+                      className="text-[9px] py-0"
+                    >
+                      {cmd.source === "ecommerce" ? "WEB" : "POS"}
+                    </Badge>
+                  </div>
+                  <p className="text-sm font-medium text-[--foreground] truncate mt-0.5">
+                    {cmd.client}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-[--foreground-muted]">
+                      {cmd.nbArticles} art.
+                    </span>
+                    <span className="text-xs font-semibold text-[--foreground] text-mga">
+                      {formatMGA(cmd.montant)}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-sm font-medium text-[--foreground] truncate mt-0.5">
-                  {cmd.client}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-[--foreground-muted]">
-                    {cmd.nbArticles} art.
-                  </span>
-                  <span className="text-xs font-semibold text-[--foreground] text-mga">
-                    {formatMGA(cmd.montant)}
-                  </span>
-                </div>
-              </div>
 
-              <div className="shrink-0 text-right">
-                <div className="flex items-center gap-1 text-[11px] text-[--foreground-subtle]">
-                  <Clock className="w-3 h-3" />
-                  {cmd.soumiseAt}
+                <div className="shrink-0 text-right">
+                  <div className="flex items-center gap-1 text-[11px] text-[--foreground-subtle]">
+                    <Clock className="w-3 h-3" />
+                    {cmd.soumiseAt}
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-[--foreground-subtle] mt-1 ml-auto" />
                 </div>
-                <ChevronRight className="w-4 h-4 text-[--foreground-subtle] mt-1 ml-auto" />
-              </div>
-            </button>
-          ))}
+              </button>
+            ))
+          )}
         </div>
 
         {/* Stats session */}
         <div className="p-4 border-t border-[--border] bg-[--background-subtle]">
           <div className="text-xs text-[--foreground-muted] space-y-1">
             <div className="flex justify-between">
-              <span>Encaissé aujourd'hui</span>
-              <span className="font-semibold text-[--foreground] text-mga">{formatMGA(3_850_000)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Factures émises</span>
-              <span className="font-semibold text-[--foreground]">24</span>
+              <span>En attente</span>
+              <span className="font-semibold text-[--foreground]">{fileCommandes.length}</span>
             </div>
           </div>
         </div>
@@ -256,29 +272,43 @@ export function CaisseView() {
                 <CardContent className="space-y-4">
                   {/* Lignes commande */}
                   <div className="rounded-xl border border-[--border] overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead className="bg-[--background-subtle]">
-                        <tr>
-                          <th className="text-left px-4 py-2.5 text-[--foreground-muted] font-medium">Produit</th>
-                          <th className="text-right px-4 py-2.5 text-[--foreground-muted] font-medium">Qté</th>
-                          <th className="text-right px-4 py-2.5 text-[--foreground-muted] font-medium">P.U.</th>
-                          <th className="text-right px-4 py-2.5 text-[--foreground-muted] font-medium">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[--border]">
-                        {LIGNES_DEMO.map((l, i) => (
-                          <tr key={i} className="hover:bg-[--accent] transition-colors">
-                            <td className="px-4 py-2.5">
-                              <div className="font-medium">{l.nom}</div>
-                              <div className="text-[11px] text-[--foreground-muted]">{l.unite}</div>
-                            </td>
-                            <td className="text-right px-4 py-2.5">{l.qte}</td>
-                            <td className="text-right px-4 py-2.5 text-mga">{formatMGA(l.prix)}</td>
-                            <td className="text-right px-4 py-2.5 font-semibold text-mga">{formatMGA(l.total)}</td>
+                    {loadingLignes ? (
+                      <div className="flex items-center justify-center py-8 text-[--foreground-muted]">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      </div>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead className="bg-[--background-subtle]">
+                          <tr>
+                            <th className="text-left px-4 py-2.5 text-[--foreground-muted] font-medium">Produit</th>
+                            <th className="text-right px-4 py-2.5 text-[--foreground-muted] font-medium">Qté</th>
+                            <th className="text-right px-4 py-2.5 text-[--foreground-muted] font-medium">P.U.</th>
+                            <th className="text-right px-4 py-2.5 text-[--foreground-muted] font-medium">Total</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-[--border]">
+                          {lignes.length === 0 ? (
+                            <tr>
+                              <td colSpan={4} className="text-center py-6 text-[--foreground-muted] text-sm">
+                                Aucune ligne de commande
+                              </td>
+                            </tr>
+                          ) : (
+                            lignes.map((l) => (
+                              <tr key={l.id} className="hover:bg-[--accent] transition-colors">
+                                <td className="px-4 py-2.5">
+                                  <div className="font-medium">{l.nom}</div>
+                                  <div className="text-[11px] text-[--foreground-muted]">{l.unite}</div>
+                                </td>
+                                <td className="text-right px-4 py-2.5">{l.qte}</td>
+                                <td className="text-right px-4 py-2.5 text-mga">{formatMGA(l.prix)}</td>
+                                <td className="text-right px-4 py-2.5 font-semibold text-mga">{formatMGA(l.total)}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
 
                   {/* Totaux */}
@@ -287,10 +317,17 @@ export function CaisseView() {
                       <span>Total HT</span>
                       <span className="text-mga">{formatMGA(totalHT)}</span>
                     </div>
-                    <div className="flex justify-between text-[--foreground-muted]">
-                      <span>TVA non applicable</span>
-                      <span>—</span>
-                    </div>
+                    {assujettieTV ? (
+                      <div className="flex justify-between text-[--foreground-muted]">
+                        <span>TVA</span>
+                        <span className="text-mga">{formatMGA(totalTVA)}</span>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between text-[--foreground-muted]">
+                        <span>TVA non applicable</span>
+                        <span>—</span>
+                      </div>
+                    )}
                     <Separator />
                     <div className="flex justify-between text-base font-bold">
                       <span>TOTAL TTC</span>
@@ -301,6 +338,7 @@ export function CaisseView() {
                   <Button
                     className="w-full"
                     size="lg"
+                    disabled={loadingLignes}
                     onClick={() => setEtape("paiement")}
                   >
                     <Receipt className="w-4 h-4" />
@@ -319,7 +357,6 @@ export function CaisseView() {
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Modes de paiement */}
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { id: "especes", label: "Espèces", icon: Banknote },
@@ -347,18 +384,10 @@ export function CaisseView() {
                   </div>
 
                   <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setEtape("detail")}
-                    >
+                    <Button variant="outline" className="flex-1" onClick={() => setEtape("detail")}>
                       Retour
                     </Button>
-                    <Button
-                      className="flex-1"
-                      size="lg"
-                      onClick={() => setEtape("confirmation")}
-                    >
+                    <Button className="flex-1" size="lg" onClick={() => setEtape("confirmation")}>
                       <CheckCircle2 className="w-4 h-4" />
                       Confirmer l'encaissement
                     </Button>
@@ -376,7 +405,7 @@ export function CaisseView() {
                   <div>
                     <h3 className="text-lg font-bold">Paiement confirmé</h3>
                     <p className="text-[--foreground-muted] text-sm mt-1">
-                      Facture FAC-2026-0847 émise — {formatMGA(totalTTC)}
+                      {commandeSelectee.numero} — {formatMGA(totalTTC)}
                     </p>
                   </div>
                   <div className="flex gap-3 justify-center">
@@ -390,16 +419,16 @@ export function CaisseView() {
                           await printTicket(printer, {
                             nomEntreprise: "GrossistePPN SARL",
                             adresseEntreprise: "Analakely, Antananarivo 101",
-                            numero: commandeSelectee?.numero ?? "---",
+                            numero: commandeSelectee.numero,
                             date: new Date().toLocaleString("fr-FR"),
                             caissier: "Caissier",
-                            client: commandeSelectee?.client,
-                            lignes: LIGNES_DEMO,
+                            client: commandeSelectee.client,
+                            lignes: lignes.map((l) => ({ nom: l.nom, unite: l.unite, qte: l.qte, prix: l.prix, total: l.total })),
                             totalHT,
-                            totalTVA: 0,
+                            totalTVA,
                             totalTTC,
-                            modePaiement: modePaiement,
-                            assujettieTV: false,
+                            modePaiement,
+                            assujettieTV,
                           });
                           await releasePrinter(printer);
                         } catch (e) {
@@ -418,38 +447,35 @@ export function CaisseView() {
                         const bytes = await genererFacturePDF({
                           nomEntreprise: "GrossistePPN SARL",
                           adresseEntreprise: "Analakely, Antananarivo 101",
-                          numero: commandeSelectee?.numero ?? "---",
+                          numero: commandeSelectee.numero,
                           date: new Date().toLocaleDateString("fr-FR"),
-                          client: commandeSelectee?.client ?? "Comptoir",
-                          lignes: LIGNES_DEMO.map((l) => ({
+                          client: commandeSelectee.client,
+                          lignes: lignes.map((l) => ({
                             description: l.nom,
                             unite: l.unite,
                             quantite: l.qte,
                             prixUnitaire: l.prix,
                             totalHT: l.total,
-                            tauxTVA: 0,
-                            totalTVA: 0,
-                            totalTTC: l.total,
+                            tauxTVA: l.tauxTVA,
+                            totalTVA: Math.round(l.total * l.tauxTVA / 100),
+                            totalTTC: l.totalTTC,
                           })),
                           totalHT,
-                          totalTVA: 0,
+                          totalTVA,
                           totalTTC,
                           totalRegle: totalTTC,
                           soldeRestant: 0,
-                          assujettieTV: false,
+                          assujettieTV,
                           modePaiement,
                         });
-                        downloadPDF(bytes, `facture-${commandeSelectee?.numero ?? "ppn"}.pdf`);
+                        downloadPDF(bytes, `facture-${commandeSelectee.numero}.pdf`);
                       }}
                     >
                       <FileText className="w-4 h-4" />
                       PDF A4
                     </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    onClick={() => { setCommandeSelectee(null); setEtape("detail"); }}
-                  >
+                  <Button variant="ghost" onClick={handleCommandeSuivante}>
                     Commande suivante
                   </Button>
                 </CardContent>

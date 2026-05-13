@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Search, ScanLine, User, ShoppingCart, Wifi, WifiOff, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePOSStore, usePOSTotaux } from "@/store/pos.store";
+import type { ProduitPOS } from "@/store/pos.store";
 import { useAppStore } from "@/store/app.store";
 import { formatMGA } from "@/lib/money";
 import { Input } from "@/components/ui/input";
@@ -14,11 +15,22 @@ import { POSPanier } from "./pos-panier";
 import { POSClientBar } from "./pos-client-bar";
 import { POSCategorieBar } from "./pos-categorie-bar";
 
-// Données de démo — remplacé par vrai fetch en prod
-import { PRODUITS_DEMO, CATEGORIES_DEMO } from "./pos-data-demo";
+type CategorieAPI = {
+  id: string;
+  nom: string;
+  nomMG: string | null;
+  slug: string;
+  icone: string | null;
+};
+
+type ProduitAPI = ProduitPOS & { categorieId: string | null };
 
 export function POSAgent() {
   const [panierOuvert, setPanierOuvert] = useState(false);
+  const [produits, setProduits] = useState<ProduitAPI[]>([]);
+  const [categories, setCategories] = useState<CategorieAPI[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const {
     recherche,
     setRecherche,
@@ -29,7 +41,18 @@ export function POSAgent() {
   const connexion = useAppStore((s) => s.connexion);
   const { nbArticles, totalTTC } = usePOSTotaux();
 
-  const produitsFiltres = PRODUITS_DEMO.filter((p) => {
+  useEffect(() => {
+    fetch("/api/produits")
+      .then((r) => r.json())
+      .then((data: { produits: ProduitAPI[]; categories: CategorieAPI[] }) => {
+        setProduits(data.produits ?? []);
+        setCategories(data.categories ?? []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const produitsFiltres = produits.filter((p) => {
     const q = recherche.toLowerCase();
     const matchRecherche =
       !q ||
@@ -39,6 +62,13 @@ export function POSAgent() {
     const matchCat = !categorieActive || p.categorieId === categorieActive;
     return matchRecherche && matchCat;
   });
+
+  const categoriesForBar = categories.map((c) => ({
+    id: c.id,
+    label: c.nom,
+    labelMG: c.nomMG ?? undefined,
+    icon: c.icone ?? "📦",
+  }));
 
   return (
     <div className="flex h-screen bg-[--pos-bg] text-[--pos-text] overflow-hidden">
@@ -106,14 +136,20 @@ export function POSAgent() {
 
         {/* Catégories */}
         <POSCategorieBar
-          categories={CATEGORIES_DEMO}
+          categories={categoriesForBar}
           active={categorieActive}
           onSelect={setCategorieActive}
         />
 
         {/* Grille produits */}
         <div className="flex-1 overflow-y-auto p-4">
-          {produitsFiltres.length === 0 ? (
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="h-36 rounded-xl bg-[--pos-surface-hover] animate-pulse" />
+              ))}
+            </div>
+          ) : produitsFiltres.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-[--pos-text-muted]">
               <Package className="w-12 h-12 opacity-30" />
               <div className="text-center">

@@ -10,7 +10,6 @@ import { signIn } from "@/lib/auth/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const schema = z.object({
@@ -19,12 +18,6 @@ const schema = z.object({
 });
 
 type Fields = z.infer<typeof schema>;
-
-const COMPTES_DEMO = [
-  { role: "Admin", email: "admin@ppn.mg", mdp: "admin123" },
-  { role: "Agent", email: "agent@ppn.mg", mdp: "agent123" },
-  { role: "Caissier", email: "caisse@ppn.mg", mdp: "caisse123" },
-];
 
 export function LoginForm() {
   const router = useRouter();
@@ -35,7 +28,6 @@ export function LoginForm() {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<Fields>({ resolver: zodResolver(schema) });
 
@@ -121,32 +113,6 @@ export function LoginForm() {
           </Button>
         </form>
 
-        {/* Comptes de démo */}
-        <div className="space-y-2">
-          <p className="text-xs text-[--foreground-subtle] text-center font-medium uppercase tracking-wide">
-            Comptes de démo
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            {COMPTES_DEMO.map((c) => (
-              <button
-                key={c.role}
-                type="button"
-                onClick={() => {
-                  setValue("email", c.email);
-                  setValue("password", c.mdp);
-                }}
-                className={cn(
-                  "text-xs text-center py-2 px-2 rounded-lg border border-[--border]",
-                  "bg-[--background-subtle] hover:bg-[--accent] hover:border-[--primary]/40",
-                  "text-[--foreground-muted] hover:text-[--foreground]",
-                  "transition-all duration-150"
-                )}
-              >
-                <span className="font-medium block">{c.role}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

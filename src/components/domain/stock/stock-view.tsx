@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -14,91 +14,96 @@ import {
   BarChart2,
   Filter,
   Download,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
 
-// Données de démo
-const STOCK_DEMO = [
-  {
-    id: "p1", code: "RIZ-MAKA-001", nom: "Riz Makalioka", nomMG: "Vary Makalioka",
-    categorie: "Riz", emoji: "🌾", uniteBase: "kg",
-    stockBase: 2500, seuilAlerte: 500,
-    unitesPrincipales: [
-      { nom: "Sac 50 kg", facteur: 50 },
-      { nom: "kg", facteur: 1 },
-    ],
-    prixAchat: 2500, prixVente: 3200, valeurStock: 6250000,
-    tendance: "stable" as const,
-  },
-  {
-    id: "p2", code: "HUI-TIKO-001", nom: "Huile Tiko 1L", nomMG: "Menaka Tiko",
-    categorie: "Huile", emoji: "🫙", uniteBase: "bouteille",
-    stockBase: 48, seuilAlerte: 120,
-    unitesPrincipales: [
-      { nom: "Carton 12 btl", facteur: 12 },
-      { nom: "Bouteille", facteur: 1 },
-    ],
-    prixAchat: 9500, prixVente: 12000, valeurStock: 456000,
-    tendance: "bas" as const,
-    alerteRupture: true,
-  },
-  {
-    id: "p3", code: "SUC-BLA-001", nom: "Sucre Blanc", nomMG: "Siramamy Fotsy",
-    categorie: "Sucre", emoji: "🍬", uniteBase: "kg",
-    stockBase: 3000, seuilAlerte: 200,
-    unitesPrincipales: [
-      { nom: "Sac 50 kg", facteur: 50 },
-    ],
-    prixAchat: 4000, prixVente: 4800, valeurStock: 12000000,
-    tendance: "hausse" as const,
-  },
-  {
-    id: "p4", code: "SAV-MAD-001", nom: "Savon Madar", nomMG: "Savony Madar",
-    categorie: "Savon", emoji: "🧼", uniteBase: "pièce",
-    stockBase: 2400, seuilAlerte: 300,
-    unitesPrincipales: [
-      { nom: "Carton 100 pcs", facteur: 100 },
-      { nom: "Pièce", facteur: 1 },
-    ],
-    prixAchat: 600, prixVente: 800, valeurStock: 1440000,
-    tendance: "stable" as const,
-  },
-  {
-    id: "p5", code: "LAI-GLO-001", nom: "Lait Gloria concentré", nomMG: "Ronono Gloria",
-    categorie: "Lait", emoji: "🥛", uniteBase: "boîte",
-    stockBase: 96, seuilAlerte: 96,
-    unitesPrincipales: [
-      { nom: "Carton 48 btes", facteur: 48 },
-    ],
-    prixAchat: 3500, prixVente: 4500, valeurStock: 336000,
-    tendance: "bas" as const,
-    alerteRupture: true,
-  },
-];
+type ProduitStock = {
+  id: string;
+  code: string;
+  nom: string;
+  nomMG: string | null;
+  categorie: string;
+  uniteBase: string;
+  stockBase: number;
+  seuilAlerte: number;
+  alerteRupture: boolean;
+  prixAchat: number;
+  prixVente: number;
+  valeurStock: number;
+  mouvementsJour: number;
+  entreesJour: number;
+  sortiesJour: number;
+};
 
-const STATS_STOCK = [
-  { label: "Valeur totale", valeur: "20.5 M Ar", sous: "5 produits en stock", icon: BarChart2, couleur: "text-[--primary]" },
-  { label: "Alertes rupture", valeur: "2", sous: "Huile Tiko, Lait Gloria", icon: AlertTriangle, couleur: "text-[--destructive]" },
-  { label: "Mouvements du jour", valeur: "18", sous: "+12 entrées, −6 sorties", icon: ArrowUpRight, couleur: "text-[--success]" },
-  { label: "Valeur casse", valeur: "45 000 Ar", sous: "Ce mois-ci", icon: TrendingDown, couleur: "text-[--warning-foreground]" },
-];
+type Stats = {
+  valeurTotale: number;
+  nbAlertes: number;
+  totalMvt: number;
+  totalEntrees: number;
+  totalSorties: number;
+};
 
 export function StockView() {
   const [recherche, setRecherche] = useState("");
   const [alerteOnly, setAlerteOnly] = useState(false);
+  const [produitsDB, setProduitsDB] = useState<ProduitStock[]>([]);
+  const [stats, setStats] = useState<Stats>({ valeurTotale: 0, nbAlertes: 0, totalMvt: 0, totalEntrees: 0, totalSorties: 0 });
+  const [loading, setLoading] = useState(true);
 
-  const produits = STOCK_DEMO.filter((p) => {
+  useEffect(() => {
+    fetch("/api/stock")
+      .then((r) => r.json())
+      .then((data: { produits: ProduitStock[]; stats: Stats }) => {
+        setProduitsDB(data.produits ?? []);
+        setStats(data.stats ?? { valeurTotale: 0, nbAlertes: 0, totalMvt: 0, totalEntrees: 0, totalSorties: 0 });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const produits = produitsDB.filter((p) => {
     const q = recherche.toLowerCase();
     const matchQ = !q || p.nom.toLowerCase().includes(q) || p.code.toLowerCase().includes(q);
-    const matchAlerte = !alerteOnly || !!p.alerteRupture;
+    const matchAlerte = !alerteOnly || p.alerteRupture;
     return matchQ && matchAlerte;
   });
+
+  const statsCards = [
+    {
+      label: "Valeur totale",
+      valeur: formatMGA(stats.valeurTotale, { compact: true }),
+      sous: `${produitsDB.length} produits en stock`,
+      icon: BarChart2,
+      couleur: "text-[--primary]",
+    },
+    {
+      label: "Alertes rupture",
+      valeur: String(stats.nbAlertes),
+      sous: stats.nbAlertes === 0 ? "Aucune alerte" : `${stats.nbAlertes} produit(s) critique(s)`,
+      icon: AlertTriangle,
+      couleur: "text-[--destructive]",
+    },
+    {
+      label: "Mouvements du jour",
+      valeur: String(stats.totalMvt),
+      sous: `+${stats.totalEntrees} entrées, −${stats.totalSorties} sorties`,
+      icon: ArrowUpRight,
+      couleur: "text-[--success]",
+    },
+    {
+      label: "Produits actifs",
+      valeur: String(produitsDB.length),
+      sous: "Dans le catalogue",
+      icon: Package,
+      couleur: "text-[--foreground-muted]",
+    },
+  ];
 
   return (
     <div className="p-6 space-y-6">
@@ -124,7 +129,7 @@ export function StockView() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {STATS_STOCK.map((s, i) => (
+        {statsCards.map((s, i) => (
           <motion.div
             key={s.label}
             initial={{ opacity: 0, y: 12 }}
@@ -136,7 +141,7 @@ export function StockView() {
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-xs text-[--foreground-muted]">{s.label}</p>
-                    <p className="text-xl font-bold text-[--foreground] mt-1 text-mga">{s.valeur}</p>
+                    <p className="text-xl font-bold text-[--foreground] mt-1">{s.valeur}</p>
                     <p className="text-xs text-[--foreground-subtle] mt-0.5">{s.sous}</p>
                   </div>
                   <div className={cn("w-9 h-9 rounded-xl bg-[--accent] flex items-center justify-center", s.couleur)}>
@@ -172,121 +177,123 @@ export function StockView() {
           <AlertTriangle className="w-4 h-4" />
           Alertes seulement
         </button>
-        <Button variant="outline" size="sm">
-          <Filter className="w-4 h-4" />
-          Filtres
-        </Button>
       </div>
 
       {/* Tableau stock */}
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-[--background-subtle] border-b border-[--border]">
-                <tr>
-                  <th className="text-left px-4 py-3 font-medium text-[--foreground-muted]">Produit</th>
-                  <th className="text-right px-4 py-3 font-medium text-[--foreground-muted]">Stock (unité base)</th>
-                  <th className="text-right px-4 py-3 font-medium text-[--foreground-muted] hidden sm:table-cell">Équivalences</th>
-                  <th className="text-right px-4 py-3 font-medium text-[--foreground-muted] hidden md:table-cell">Valeur stock</th>
-                  <th className="text-center px-4 py-3 font-medium text-[--foreground-muted]">Statut</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[--border]">
-                {produits.map((p, i) => {
-                  const pourcentageSeuil = Math.min(100, (p.stockBase / p.seuilAlerte) * 100);
-                  const critique = p.stockBase <= p.seuilAlerte;
+            {loading ? (
+              <div className="flex items-center justify-center py-16 text-[--foreground-muted]">
+                <Loader2 className="w-6 h-6 animate-spin" />
+              </div>
+            ) : produits.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-[--foreground-muted]">
+                <Package className="w-10 h-10 opacity-30" />
+                <p className="text-sm">
+                  {alerteOnly ? "Aucune alerte de rupture" : "Aucun produit dans le catalogue"}
+                </p>
+                {!alerteOnly && (
+                  <Button size="sm" asChild>
+                    <Link href="/stock/produits/nouveau">
+                      <Plus className="w-4 h-4" />
+                      Ajouter le premier produit
+                    </Link>
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead className="bg-[--background-subtle] border-b border-[--border]">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-medium text-[--foreground-muted]">Produit</th>
+                    <th className="text-right px-4 py-3 font-medium text-[--foreground-muted]">Stock</th>
+                    <th className="text-right px-4 py-3 font-medium text-[--foreground-muted] hidden md:table-cell">Valeur stock</th>
+                    <th className="text-right px-4 py-3 font-medium text-[--foreground-muted] hidden sm:table-cell">Seuil alerte</th>
+                    <th className="text-center px-4 py-3 font-medium text-[--foreground-muted]">Statut</th>
+                    <th className="px-4 py-3" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[--border]">
+                  {produits.map((p, i) => {
+                    const pourcentageSeuil = p.seuilAlerte > 0
+                      ? Math.min(100, (p.stockBase / p.seuilAlerte) * 100)
+                      : 100;
+                    const critique = p.alerteRupture;
 
-                  return (
-                    <motion.tr
-                      key={p.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: i * 0.05 }}
-                      className={cn(
-                        "hover:bg-[--accent] transition-colors",
-                        critique && "bg-[--destructive]/3"
-                      )}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{p.emoji}</span>
-                          <div>
-                            <p className="font-semibold text-[--foreground]">{p.nom}</p>
-                            <p className="text-[11px] text-[--foreground-muted] italic">{p.nomMG}</p>
-                            <p className="text-[10px] font-mono text-[--foreground-subtle]">{p.code}</p>
+                    return (
+                      <motion.tr
+                        key={p.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: i * 0.04 }}
+                        className={cn(
+                          "hover:bg-[--accent] transition-colors",
+                          critique && "bg-[--destructive]/3"
+                        )}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-[--accent] flex items-center justify-center shrink-0">
+                              <Package className="w-4 h-4 text-[--foreground-muted]" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-[--foreground]">{p.nom}</p>
+                              {p.nomMG && <p className="text-[11px] text-[--foreground-muted] italic">{p.nomMG}</p>}
+                              <p className="text-[10px] font-mono text-[--foreground-subtle]">{p.code}</p>
+                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td className="text-right px-4 py-3">
-                        <div>
-                          <p className={cn("font-bold text-mga", critique ? "text-[--destructive]" : "text-[--foreground]")}>
+                        <td className="text-right px-4 py-3">
+                          <p className={cn("font-bold", critique ? "text-[--destructive]" : "text-[--foreground]")}>
                             {p.stockBase.toLocaleString("fr-FR")} {p.uniteBase}
                           </p>
-                          {/* Barre de stock */}
                           <div className="w-24 h-1.5 bg-[--border] rounded-full mt-1 ml-auto">
                             <div
                               className={cn(
                                 "h-full rounded-full transition-all",
-                                critique ? "bg-[--destructive]" : pourcentageSeuil < 200 ? "bg-[--warning]" : "bg-[--success]"
+                                critique ? "bg-[--destructive]" : pourcentageSeuil < 150 ? "bg-[--warning]" : "bg-[--success]"
                               )}
                               style={{ width: `${Math.min(100, pourcentageSeuil / 3)}%` }}
                             />
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td className="text-right px-4 py-3 hidden sm:table-cell">
-                        <div className="space-y-0.5">
-                          {p.unitesPrincipales.map((u) => (
-                            <p key={u.nom} className="text-xs text-[--foreground-muted]">
-                              ≈ {Math.floor(p.stockBase / u.facteur)} {u.nom}
-                              {p.stockBase % u.facteur > 0 && u.facteur > 1 && (
-                                <span className="opacity-60">
-                                  {" "}+ {p.stockBase % u.facteur} {p.uniteBase}
-                                </span>
-                              )}
-                            </p>
-                          ))}
-                        </div>
-                      </td>
+                        <td className="text-right px-4 py-3 hidden md:table-cell">
+                          <p className="font-medium text-sm">{formatMGA(p.valeurStock, { compact: true })}</p>
+                        </td>
 
-                      <td className="text-right px-4 py-3 hidden md:table-cell">
-                        <p className="font-medium text-mga text-sm">{formatMGA(p.valeurStock, { compact: true })}</p>
-                      </td>
+                        <td className="text-right px-4 py-3 hidden sm:table-cell text-[--foreground-muted] text-xs">
+                          {p.seuilAlerte > 0 ? `${p.seuilAlerte} ${p.uniteBase}` : "—"}
+                        </td>
 
-                      <td className="text-center px-4 py-3">
-                        {critique ? (
-                          <Badge variant="destructive" className="text-[10px]">
-                            <AlertTriangle className="w-2.5 h-2.5 mr-1" />
-                            Rupture
-                          </Badge>
-                        ) : p.tendance === "bas" ? (
-                          <Badge variant="warning" className="text-[10px]">
-                            <ArrowDownRight className="w-2.5 h-2.5 mr-1" />
-                            Bas
-                          </Badge>
-                        ) : (
-                          <Badge variant="success" className="text-[10px]">
-                            OK
-                          </Badge>
-                        )}
-                      </td>
+                        <td className="text-center px-4 py-3">
+                          {critique ? (
+                            <Badge variant="destructive" className="text-[10px]">
+                              <AlertTriangle className="w-2.5 h-2.5 mr-1" />
+                              Rupture
+                            </Badge>
+                          ) : (
+                            <Badge variant="success" className="text-[10px]">
+                              OK
+                            </Badge>
+                          )}
+                        </td>
 
-                      <td className="px-4 py-3">
-                        <Button variant="ghost" size="icon-sm" asChild>
-                          <Link href={`/stock/produits/${p.id}`}>
-                            <ArrowUpRight className="w-3.5 h-3.5" />
-                          </Link>
-                        </Button>
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        <td className="px-4 py-3">
+                          <Button variant="ghost" size="icon-sm" asChild>
+                            <Link href={`/stock/produits/${p.id}`}>
+                              <ArrowUpRight className="w-3.5 h-3.5" />
+                            </Link>
+                          </Button>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
         </CardContent>
       </Card>

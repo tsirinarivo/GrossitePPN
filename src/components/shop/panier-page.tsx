@@ -20,14 +20,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
-const PANIER_DEMO = [
-  { id: "l1", produitId: "1", nom: "Riz Makalioka", unite: "Sac 50 kg", qte: 3, prixUnit: 145000, emoji: "🌾", reserve: true },
-  { id: "l2", produitId: "4", nom: "Huile Tiko 1L", unite: "Carton 12 btl", qte: 2, prixUnit: 132000, emoji: "🫙", reserve: true },
-  { id: "l3", produitId: "8", nom: "Savon Madar", unite: "Carton 100 pcs", qte: 1, prixUnit: 70000, emoji: "🧼", reserve: false },
-];
-
 export function PanierPage() {
-  const [lignes, setLignes] = useState(PANIER_DEMO);
+  const [lignes, setLignes] = useState<{ id: string; produitId: string; nom: string; unite: string; qte: number; prixUnit: number; emoji: string; reserve: boolean }[]>([]);
   const [codePromo, setCodePromo] = useState("");
   const [promoAppliquee, setPromoAppliquee] = useState(false);
 
