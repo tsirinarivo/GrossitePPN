@@ -27,7 +27,7 @@ export async function middleware(request: NextRequest) {
 
   if (!sessionCookie) {
     const loginUrl = new URL(
-      isDashboard ? "/login" : "/shop/login",
+      isDashboard ? "/login" : "/login",
       request.url
     );
     loginUrl.searchParams.set("redirect", pathname);
