@@ -4,12 +4,26 @@ import * as schema from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
 type Role = (typeof schema.roleEnum.enumValues)[number];
 
+async function requireAdmin() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) return false;
+  const user = await db.select({ role: schema.users.role })
+    .from(schema.users)
+    .where(eq(schema.users.id, session.user.id))
+    .limit(1);
+  return user[0]?.role === "admin";
+}
+
 export async function GET() {
+  if (!await requireAdmin()) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
   const users = await db.select({
     id: schema.users.id,
     name: schema.users.name,
@@ -29,6 +43,9 @@ const createSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  if (!await requireAdmin()) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
   const body = await req.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
@@ -37,7 +54,6 @@ export async function POST(req: NextRequest) {
   const { name, email, password, role } = parsed.data;
 
   try {
-    // Utiliser l'API Better-Auth directement (pas de fetch interne)
     const result = await auth.api.signUpEmail({
       body: { name, email, password },
     });
