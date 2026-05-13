@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/store/app.store";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 
 const navItems = [
   {
@@ -148,6 +149,11 @@ export function DashboardNav() {
             </Link>
           );
         })}
+      </div>
+
+      {/* Sélecteur de langue */}
+      <div className="px-3 pb-2 hidden lg:block">
+        <LocaleSwitcher className="w-full justify-around" />
       </div>
 
       {/* Statut connexion */}

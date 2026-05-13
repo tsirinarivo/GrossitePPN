@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart, User, Package, Menu, X, Search, Globe } from "lucide-react";
+import { ShoppingCart, User, Package, Menu, X, Search } from "lucide-react";
+import { LocaleSwitcher } from "@/components/locale-switcher";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,6 @@ const NAV_LINKS = [
 
 export function ShopHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [langue, setLangue] = useState<"fr" | "mg">("fr");
 
   return (
     <header className="sticky top-0 z-40 bg-[--card]/95 backdrop-blur-md border-b border-[--border]">
@@ -60,14 +60,7 @@ export function ShopHeader() {
               </Link>
             </Button>
 
-            {/* Langue toggle */}
-            <button
-              onClick={() => setLangue(langue === "fr" ? "mg" : "fr")}
-              className="flex items-center gap-1 text-xs font-medium text-[--foreground-muted] hover:text-[--foreground] px-2 py-1.5 rounded-lg hover:bg-[--accent] transition-all"
-            >
-              <Globe className="w-3.5 h-3.5" />
-              {langue === "fr" ? "FR" : "MG"}
-            </button>
+            <LocaleSwitcher />
 
             {/* Panier */}
             <Button variant="ghost" size="icon" className="relative" asChild>
