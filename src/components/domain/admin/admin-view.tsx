@@ -12,14 +12,16 @@ import {
   Receipt,
   Smartphone,
   Check,
+  Printer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PrinterSettings } from "./printer-settings";
 
-type Section = "entreprise" | "depots" | "utilisateurs" | "paiements";
+type Section = "entreprise" | "depots" | "utilisateurs" | "paiements" | "imprimante";
 
 const DEPOTS_DEMO = [
   { id: "d1", nom: "Dépôt principal Antananarivo", ville: "Antananarivo", responsable: "Hery R.", actif: true },
@@ -84,6 +86,7 @@ export function AdminView() {
     { id: "depots", label: "Dépôts", icon: Warehouse },
     { id: "utilisateurs", label: "Utilisateurs & rôles", icon: Users },
     { id: "paiements", label: "Moyens de paiement", icon: Wallet },
+    { id: "imprimante", label: "Imprimante thermique", icon: Printer },
   ];
 
   return (
@@ -300,13 +303,25 @@ export function AdminView() {
             </motion.div>
           )}
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline">Annuler</Button>
-            <Button>
-              <Check className="w-4 h-4" />
-              Enregistrer
-            </Button>
-          </div>
+          {section === "imprimante" && (
+            <motion.div key="imprimante" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+              <Card>
+                <CardContent className="pt-6">
+                  <PrinterSettings />
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {section !== "imprimante" && (
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline">Annuler</Button>
+              <Button>
+                <Check className="w-4 h-4" />
+                Enregistrer
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>
