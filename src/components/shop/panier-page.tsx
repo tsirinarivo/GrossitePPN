@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -10,7 +10,6 @@ import {
   Trash2,
   ArrowRight,
   Tag,
-  Lock,
   Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,25 +18,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { useShopCart } from "@/store/shop-cart.store";
 
 export function PanierPage() {
-  const [lignes, setLignes] = useState<{ id: string; produitId: string; nom: string; unite: string; qte: number; prixUnit: number; emoji: string; reserve: boolean }[]>([]);
+  const { lignes, modifierQte: modifierQteStore, supprimer: supprimerStore } = useShopCart();
   const [codePromo, setCodePromo] = useState("");
   const [promoAppliquee, setPromoAppliquee] = useState(false);
+
+  useEffect(() => {
+    useShopCart.persist.rehydrate();
+  }, []);
 
   const total = lignes.reduce((s, l) => s + l.qte * l.prixUnit, 0);
   const remisePromo = promoAppliquee ? Math.round(total * 0.05) : 0;
   const totalFinal = total - remisePromo;
 
-  const modifierQte = (id: string, delta: number) => {
-    setLignes((prev) =>
-      prev
-        .map((l) => (l.id === id ? { ...l, qte: Math.max(0, l.qte + delta) } : l))
-        .filter((l) => l.qte > 0)
-    );
-  };
+  const modifierQte = (produitId: string, delta: number) => modifierQteStore(produitId, delta);
 
-  const supprimer = (id: string) => setLignes((prev) => prev.filter((l) => l.id !== id));
+  const supprimer = (produitId: string) => supprimerStore(produitId);
 
   if (lignes.length === 0) {
     return (
@@ -90,25 +88,19 @@ export function PanierPage() {
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-[--foreground] truncate">{l.nom}</p>
                   <p className="text-sm text-[--foreground-muted]">{l.unite}</p>
-                  {l.reserve && (
-                    <div className="flex items-center gap-1 text-[10px] text-[--success] mt-1">
-                      <Lock className="w-2.5 h-2.5" />
-                      Stock réservé (15 min)
-                    </div>
-                  )}
                 </div>
 
                 {/* Quantité */}
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => modifierQte(l.id, -1)}
+                    onClick={() => modifierQte(l.produitId, -1)}
                     className="w-8 h-8 rounded-lg border border-[--border] flex items-center justify-center hover:bg-[--accent] transition-colors"
                   >
                     <Minus className="w-3.5 h-3.5" />
                   </button>
                   <span className="text-sm font-bold w-6 text-center">{l.qte}</span>
                   <button
-                    onClick={() => modifierQte(l.id, 1)}
+                    onClick={() => modifierQte(l.produitId, 1)}
                     className="w-8 h-8 rounded-lg border border-[--border] flex items-center justify-center hover:bg-[--accent] transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5" />
@@ -125,7 +117,7 @@ export function PanierPage() {
 
                 {/* Supprimer */}
                 <button
-                  onClick={() => supprimer(l.id)}
+                  onClick={() => supprimer(l.produitId)}
                   className="text-[--foreground-subtle] hover:text-[--destructive] transition-colors p-1"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -207,8 +199,7 @@ export function PanierPage() {
 
             {/* Sécurité */}
             <div className="flex items-center gap-2 text-xs text-[--foreground-subtle]">
-              <Lock className="w-3.5 h-3.5 shrink-0" />
-              Paiement sécurisé — Mvola, Orange Money, Espèces
+              🔒 Paiement sécurisé — Mvola, Orange Money, Espèces
             </div>
           </div>
 

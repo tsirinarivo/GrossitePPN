@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { useShopCart } from "@/store/shop-cart.store";
 
 // Données de démo complètes
 const CATALOGUE = [
@@ -61,8 +62,13 @@ export function ShopCatalogue() {
   const [recherche, setRecherche] = useState("");
   const [catActive, setCatActive] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("grid");
-  const [panier, setPanier] = useState<Record<string, number>>({});
   const [filtresOuverts, setFiltresOuverts] = useState(false);
+
+  const { lignes, ajouterArticle } = useShopCart();
+
+  useEffect(() => {
+    useShopCart.persist.rehydrate();
+  }, []);
 
   const produitsFiltres = useMemo(
     () =>
@@ -78,10 +84,22 @@ export function ShopCatalogue() {
     [recherche, catActive]
   );
 
-  const nbPanier = Object.values(panier).reduce((s, q) => s + q, 0);
+  const panier: Record<string, number> = Object.fromEntries(
+    lignes.map((l) => [l.produitId, l.qte])
+  );
+  const nbPanier = lignes.reduce((s, l) => s + l.qte, 0);
 
   const addToCart = (id: string, nom: string) => {
-    setPanier((prev) => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }));
+    const produit = CATALOGUE.find((p) => p.id === id);
+    if (!produit) return;
+    ajouterArticle({
+      produitId: id,
+      nom,
+      unite: produit.unite,
+      emoji: produit.emoji,
+      prixUnit: produit.prix,
+      qte: 1,
+    });
     toast.success(`${nom} ajouté au panier`, { duration: 1500 });
   };
 
@@ -192,12 +210,18 @@ export function ShopCatalogue() {
             <QuickOrderTable
               produits={produitsFiltres}
               panier={panier}
-              onChange={(id, q) =>
-                setPanier((prev) => ({
-                  ...prev,
-                  [id]: q,
-                }))
-              }
+              onChange={(id, q) => {
+                const produit = CATALOGUE.find((p) => p.id === id);
+                if (!produit) return;
+                if (q <= 0) {
+                  useShopCart.getState().supprimer(id);
+                } else {
+                  useShopCart.getState().setQte(id, q);
+                  if (!lignes.find((l) => l.produitId === id)) {
+                    ajouterArticle({ produitId: id, nom: produit.nom, unite: produit.unite, emoji: produit.emoji, prixUnit: produit.prix, qte: q });
+                  }
+                }
+              }}
             />
           </motion.div>
         ) : view === "list" ? (

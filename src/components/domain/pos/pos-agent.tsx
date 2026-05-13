@@ -151,12 +151,13 @@ export function POSAgent() {
           <Button
             variant="pos"
             size="pos-md"
-            className="relative md:hidden"
+            className="relative md:hidden gap-2"
             onClick={() => setPanierOuvert(true)}
           >
             <ShoppingCart className="w-5 h-5" />
+            <span>Panier</span>
             {nbArticles > 0 && (
-              <span className="absolute -top-1 -right-1 bg-white text-[--primary] rounded-full text-[10px] font-bold w-5 h-5 flex items-center justify-center">
+              <span className="ml-1 bg-white text-[--pos-primary] rounded-full text-[10px] font-bold w-5 h-5 flex items-center justify-center shrink-0">
                 {nbArticles}
               </span>
             )}
