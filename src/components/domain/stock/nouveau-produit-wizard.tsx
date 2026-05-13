@@ -208,21 +208,21 @@ export function NouveauProduitWizard() {
                 <CardContent className="p-6 space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="sm:col-span-2 space-y-1.5">
-                      <label className="text-sm font-medium">Nom du produit *</label>
+                      <label className="text-sm font-medium text-[--foreground]">Nom du produit *</label>
                       <Input {...register("nom")} placeholder="Ex: Riz Makalioka" error={!!errors.nom} />
                       {errors.nom && <p className="text-xs text-[--destructive]">{errors.nom.message}</p>}
                     </div>
                     <div className="sm:col-span-2 space-y-1.5">
-                      <label className="text-sm font-medium">Nom en Malagasy</label>
+                      <label className="text-sm font-medium text-[--foreground]">Nom en Malagasy</label>
                       <Input {...register("nomMG")} placeholder="Ex: Vary Makalioka" />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Code produit *</label>
+                      <label className="text-sm font-medium text-[--foreground]">Code produit *</label>
                       <Input {...register("code")} placeholder="Ex: RIZ-MAKA-001" error={!!errors.code} className="font-mono" />
                       {errors.code && <p className="text-xs text-[--destructive]">{errors.code.message}</p>}
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Catégorie *</label>
+                      <label className="text-sm font-medium text-[--foreground]">Catégorie *</label>
                       <select
                         {...register("categorieId")}
                         className={cn(
@@ -239,11 +239,11 @@ export function NouveauProduitWizard() {
                       {errors.categorieId && <p className="text-xs text-[--destructive]">{errors.categorieId.message}</p>}
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Marque</label>
+                      <label className="text-sm font-medium text-[--foreground]">Marque</label>
                       <Input {...register("marque")} placeholder="Ex: Tiko, Madar..." />
                     </div>
                     <div className="sm:col-span-2 space-y-1.5">
-                      <label className="text-sm font-medium">Description</label>
+                      <label className="text-sm font-medium text-[--foreground]">Description</label>
                       <textarea
                         {...register("description")}
                         rows={3}
@@ -272,7 +272,7 @@ export function NouveauProduitWizard() {
               <Card>
                 <CardContent className="p-6 space-y-4">
                   <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Unité de base *</label>
+                    <label className="text-sm font-medium text-[--foreground]">Unité de base *</label>
                     <Input {...register("uniteBase")} placeholder="kg, L, pièce, bouteille..." error={!!errors.uniteBase} />
                     <div className="flex flex-wrap gap-1.5 mt-1">
                       {UNITES_BASE_SUGGESTIONS.map((u) => (
@@ -297,11 +297,11 @@ export function NouveauProduitWizard() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Seuil d'alerte (en {uniteBase || "unité"})</label>
+                      <label className="text-sm font-medium text-[--foreground]">Seuil d'alerte (en {uniteBase || "unité"})</label>
                       <Input {...register("seuilAlerte")} type="number" min={0} placeholder="Ex: 500" />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium">Taux TVA (%)</label>
+                      <label className="text-sm font-medium text-[--foreground]">Taux TVA (%)</label>
                       <Input {...register("tauxTVA")} type="number" min={0} max={100} placeholder="0" />
                       <p className="text-xs text-[--foreground-muted]">0 si non assujetti</p>
                     </div>
@@ -309,7 +309,7 @@ export function NouveauProduitWizard() {
 
                   <div className="flex items-center gap-3">
                     <input type="checkbox" {...register("aDLC")} id="aDLC" className="rounded" />
-                    <label htmlFor="aDLC" className="text-sm">
+                    <label htmlFor="aDLC" className="text-sm text-[--foreground]">
                       Ce produit a une date limite de consommation (DLC/DLUO)
                     </label>
                   </div>
@@ -367,7 +367,7 @@ export function NouveauProduitWizard() {
 
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-[--foreground-muted] uppercase tracking-wide">Nom</label>
+                            <label className="text-xs font-medium text-[--foreground] uppercase tracking-wide">Nom</label>
                             <Input
                               {...register(`unitesVente.${i}.nom`)}
                               placeholder={i === 0 ? `${uniteBase || "kg"}` : "Sac 50 kg, Carton 12..."}
@@ -375,7 +375,7 @@ export function NouveauProduitWizard() {
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-[--foreground-muted] uppercase tracking-wide">
+                            <label className="text-xs font-medium text-[--foreground] uppercase tracking-wide">
                               Facteur ({uniteBase || "unité"})
                             </label>
                             <Input
@@ -419,7 +419,7 @@ export function NouveauProduitWizard() {
 
                         {/* Code-barres */}
                         <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-[--foreground-muted] uppercase tracking-wide">
+                          <label className="text-xs font-medium text-[--foreground] uppercase tracking-wide">
                             Code-barres (optionnel)
                           </label>
                           <Input
@@ -484,7 +484,7 @@ export function NouveauProduitWizard() {
                   {watchedValues.visibleEcommerce && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-3 pt-3 border-t border-[--border]">
                       <div className="space-y-1.5">
-                        <label className="text-sm font-medium">Prix spécifique e-commerce (optionnel)</label>
+                        <label className="text-sm font-medium text-[--foreground]">Prix spécifique e-commerce (optionnel)</label>
                         <Input {...register("prixEcommerce")} type="number" placeholder="Laisser vide pour utiliser le prix standard" className="text-mga" />
                         <p className="text-xs text-[--foreground-muted]">
                           Si vide, le prix du palier du client s'applique automatiquement.

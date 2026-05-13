@@ -55,16 +55,31 @@ export function StockView() {
   const [produitsDB, setProduitsDB] = useState<ProduitStock[]>([]);
   const [stats, setStats] = useState<Stats>({ valeurTotale: 0, nbAlertes: 0, totalMvt: 0, totalEntrees: 0, totalSorties: 0 });
   const [loading, setLoading] = useState(true);
+  const [erreur, setErreur] = useState(false);
 
   useEffect(() => {
-    fetch("/api/stock")
-      .then((r) => r.json())
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12000);
+
+    fetch("/api/stock", { signal: ctrl.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((data: { produits: ProduitStock[]; stats: Stats }) => {
         setProduitsDB(data.produits ?? []);
         setStats(data.stats ?? { valeurTotale: 0, nbAlertes: 0, totalMvt: 0, totalEntrees: 0, totalSorties: 0 });
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch((e) => {
+        if (e?.name !== "AbortError") console.error("[stock-view]", e);
+        setErreur(true);
+      })
+      .finally(() => {
+        clearTimeout(timer);
+        setLoading(false);
+      });
+
+    return () => { ctrl.abort(); clearTimeout(timer); };
   }, []);
 
   const produits = produitsDB.filter((p) => {
@@ -185,7 +200,15 @@ export function StockView() {
           <div className="overflow-x-auto">
             {loading ? (
               <div className="flex items-center justify-center py-16 text-[--foreground-muted]">
-                <Loader2 className="w-6 h-6 animate-spin" />
+                <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                <span className="text-sm">Chargement du stock…</span>
+              </div>
+            ) : erreur ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-3 text-[--destructive]">
+                <AlertTriangle className="w-10 h-10 opacity-60" />
+                <p className="text-sm font-medium">Impossible de charger le stock</p>
+                <p className="text-xs text-[--foreground-muted]">Vérifiez la connexion au serveur puis rechargez la page.</p>
+                <Button size="sm" variant="outline" onClick={() => window.location.reload()}>Réessayer</Button>
               </div>
             ) : produits.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 gap-3 text-[--foreground-muted]">
