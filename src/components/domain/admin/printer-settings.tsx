@@ -245,6 +245,21 @@ export function PrinterSettings() {
                 />
               </div>
               <div className="space-y-1.5">
+                <label className="text-sm text-[--foreground-muted]">Serveur xpyun</label>
+                <select
+                  value={config.baseUrl}
+                  onChange={(e) => setConfig((c) => ({ ...c, baseUrl: e.target.value }))}
+                  className="w-full h-10 px-3 text-sm rounded-lg border border-[--border] bg-[--background] text-[--foreground] focus:outline-none focus:ring-2 focus:ring-[--primary]/40"
+                >
+                  <option value="https://open.xpyun.net/api/openapi/xprinter">
+                    International (open.xpyun.net)
+                  </option>
+                  <option value="https://open2.xpyun.net/api/openapi/xprinter">
+                    Chine (open2.xpyun.net)
+                  </option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
                 <label className="text-sm text-[--foreground-muted]">Copies</label>
                 <Input
                   type="number"
