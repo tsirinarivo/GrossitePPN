@@ -220,7 +220,13 @@ export const usePOSStore = create<POSState>()(
     {
       name: "ppn-pos-store",
       storage: createJSONStorage(() =>
-        typeof window !== "undefined" ? localStorage : (null as unknown as Storage)
+        typeof window !== "undefined"
+          ? localStorage
+          : ({
+              getItem: () => null,
+              setItem: () => {},
+              removeItem: () => {},
+            } as unknown as Storage)
       ),
       partialize: (state) => ({
         agentId: state.agentId,
