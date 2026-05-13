@@ -69,9 +69,17 @@ success "Build terminé"
 
 # ── 4b. Copie des assets statiques (obligatoire pour output: standalone) ─────
 info "Copie des fichiers statiques dans standalone..."
+rm -rf "$APP_DIR/.next/standalone/.next/static" "$APP_DIR/.next/standalone/public"
 cp -r "$APP_DIR/.next/static"  "$APP_DIR/.next/standalone/.next/static"
 cp -r "$APP_DIR/public"        "$APP_DIR/.next/standalone/public"
 success "Assets statiques copiés (CSS / JS / images)"
+
+# ── 4c. Workaround bug Next.js standalone + route groups ─────────────────────
+# Les fichiers *_client-reference-manifest.js et pages/* ne sont pas copiés
+# automatiquement pour les routes dans des groupes (dashboard)/(shop)
+info "Copie des manifests manquants (workaround route groups)..."
+cp -rn "$APP_DIR/.next/server/." "$APP_DIR/.next/standalone/.next/server/" 2>/dev/null || true
+success "Manifests serveur synchronisés"
 
 # ── 5. Migrations base de données ─────────────────────────────────────────────
 info "Application des migrations DB..."
