@@ -219,6 +219,10 @@ export const usePOSStore = create<POSState>()(
     }),
     {
       name: "ppn-pos-store",
+      // skipHydration prevents Zustand from reading localStorage during module
+      // initialisation, which fires a setState mid-React-19 hydration (error #185).
+      // We call usePOSStore.persist.rehydrate() in a useEffect after mount instead.
+      skipHydration: true,
       storage: createJSONStorage(() =>
         typeof window !== "undefined"
           ? localStorage

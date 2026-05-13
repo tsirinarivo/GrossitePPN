@@ -42,6 +42,12 @@ export function POSAgent() {
   const connexion = useAppStore((s) => s.connexion);
   const { nbArticles, totalTTC } = usePOSTotaux();
 
+  // Rehydrate the persisted POS store from localStorage after React hydration.
+  // Must happen in useEffect (post-mount) to avoid React 19 error #185.
+  useEffect(() => {
+    usePOSStore.persist.rehydrate();
+  }, []);
+
   useEffect(() => {
     fetch("/api/produits")
       .then((r) => r.json())
