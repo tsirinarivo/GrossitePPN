@@ -308,16 +308,13 @@ export function PrinterSettings() {
                   className="w-full h-10 px-3 text-sm rounded-lg border border-[--border] bg-[--background] text-[--foreground] focus:outline-none focus:ring-2 focus:ring-[--primary]/40"
                 >
                   <option value="https://open.xpyun.net/api/openapi/xprinter">
-                    International — open.xpyun.net (recommandé Madagascar)
+                    Chine — open.xpyun.net (plateforme : platform.xpyun.net)
                   </option>
-                  <option value="https://open-eu.xpyun.net/api/openapi/xprinter">
-                    Europe / Allemagne — open-eu.xpyun.net
+                  <option value="https://gm.open.xpyun.net/api/openapi/xprinter">
+                    Allemagne — gm.open.xpyun.net (plateforme : gm.open.xpyun.net)
                   </option>
-                  <option value="https://api.xpyun.net/api/openapi/xprinter">
-                    Asie — api.xpyun.net
-                  </option>
-                  <option value="https://open2.xpyun.net/api/openapi/xprinter">
-                    Chine — open2.xpyun.net
+                  <option value="https://sg.open.xpyun.net/api/openapi/xprinter">
+                    Singapour — sg.open.xpyun.net (plateforme : sg.open.xpyun.net)
                   </option>
                 </select>
               </div>
