@@ -34,10 +34,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const response = NextResponse.next();
-  // Force browser to clear SW caches on every page load (temp, remove after SW migration)
-  response.headers.set("Clear-Site-Data", '"cache"');
-  return response;
+  return NextResponse.next();
 }
 
 export const config = {
