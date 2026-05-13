@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { eq, and, lt, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -33,13 +33,14 @@ export async function GET() {
     // Today's movements count
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const todayISO = today.toISOString();
     const mouvements = await db
       .select({
         produitId: schema.mouvementsStock.produitId,
         type: schema.mouvementsStock.type,
       })
       .from(schema.mouvementsStock)
-      .where(sql`${schema.mouvementsStock.createdAt} >= ${today}`);
+      .where(sql`${schema.mouvementsStock.createdAt} >= ${todayISO}`);
 
     const mvtMap = new Map<string, { entrees: number; sorties: number }>();
     for (const m of mouvements) {
