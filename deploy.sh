@@ -28,9 +28,15 @@ source .env.production
 [[ "${POSTGRES_PASSWORD}" == "CHANGE_MOI_MOT_DE_PASSE_FORT_ICI" ]] && err "Change le POSTGRES_PASSWORD !"
 [[ "${BETTER_AUTH_SECRET}"  == "CHANGE_MOI_SECRET_32_CHARS_MIN"  ]] && err "Change le BETTER_AUTH_SECRET !"
 
-# Vérifier que le port 3001 est libre
+# Arrêter l'app si elle tourne (mise à jour) — PostgreSQL reste up
+if docker compose ps app 2>/dev/null | grep -q "running"; then
+  log "Arrêt de l'app en cours..."
+  docker compose stop app
+fi
+
+# Vérifier que le port 3001 est libre (hors de nos propres containers)
 if ss -tlnp 2>/dev/null | grep -q ':3001'; then
-  err "Port 3001 déjà utilisé. Changer APP_PORT dans docker-compose.yml."
+  err "Port 3001 déjà utilisé par un autre processus. Changer APP_PORT dans docker-compose.yml."
 fi
 ok "Prérequis OK"
 
