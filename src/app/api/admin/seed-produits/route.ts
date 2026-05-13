@@ -273,19 +273,35 @@ const PRODUITS: ProduitSeed[] = [
 
 // ── Seed handler ──────────────────────────────────────────────────────────────
 export async function POST() {
+  const now = new Date();
+  const errors: string[] = [];
+  let nbCategories = 0;
+  let nbProduits = 0;
+  let nbUnites = 0;
+  let nbStocks = 0;
+
+  // 1. Dépôts (nécessaires avant les stocks, FK)
   try {
-    const now = new Date();
+    await db.insert(schema.depots).values([
+      { id: "depot-tana", nom: "Dépôt principal Antananarivo", adresse: "Zone Industrielle Forello, Tanjombato", actif: true, estPrincipal: true },
+      { id: "depot-tama", nom: "Dépôt Tamatave", adresse: "Bazar Be, Tamatave", actif: true, estPrincipal: false },
+    ]).onConflictDoNothing();
+  } catch (e) {
+    errors.push(`depots: ${e}`);
+  }
 
-    // 1. Catégories
+  // 2. Catégories
+  try {
     await db.insert(schema.categories).values(CATS).onConflictDoNothing();
+    nbCategories = CATS.length;
+  } catch (e) {
+    errors.push(`categories: ${e}`);
+  }
 
-    // 2. Produits + unités de vente + stocks
-    let nbProduits = 0;
-    let nbUnites = 0;
-    let nbStocks = 0;
-
-    for (const p of PRODUITS) {
-      // Produit
+  // 3. Produits + unités + stocks — chaque produit est indépendant
+  for (const p of PRODUITS) {
+    // Produit
+    try {
       await db.insert(schema.produits).values({
         id: p.id,
         code: p.code,
@@ -305,9 +321,14 @@ export async function POST() {
         updatedAt: now,
       }).onConflictDoNothing();
       nbProduits++;
+    } catch (e) {
+      errors.push(`produit ${p.code}: ${e}`);
+      continue; // skip units/stock if product failed
+    }
 
-      // Unités de vente
-      for (const [i, uv] of p.unitesVente.entries()) {
+    // Unités de vente
+    for (const [i, uv] of p.unitesVente.entries()) {
+      try {
         await db.insert(schema.unitesVente).values({
           id: uv.id,
           produitId: p.id,
@@ -321,38 +342,48 @@ export async function POST() {
           ordre: uv.ordre ?? i,
         }).onConflictDoNothing();
         nbUnites++;
+      } catch (e) {
+        errors.push(`unite ${uv.id}: ${e}`);
       }
+    }
 
-      // Stock dépôt principal (Antananarivo)
-      const stockId = `st-${p.id}-tana`;
+    // Stock dépôt Tana (onConflictDoNothing — le stock sera mis à jour manuellement)
+    try {
       await db.insert(schema.stocks).values({
-        id: stockId,
+        id: `st-${p.id}-tana`,
         produitId: p.id,
         depotId: "depot-tana",
         quantiteBase: p.stockTana,
         updatedAt: now,
-      }).onConflictDoUpdate({
-        target: [schema.stocks.produitId, schema.stocks.depotId],
-        set: { quantiteBase: p.stockTana, updatedAt: now },
-      });
+      }).onConflictDoNothing();
       nbStocks++;
+    } catch (e) {
+      errors.push(`stock ${p.id}: ${e}`);
     }
-
-    return NextResponse.json({
-      ok: true,
-      categories: CATS.length,
-      produits: nbProduits,
-      unitesVente: nbUnites,
-      stocks: nbStocks,
-    });
-  } catch (e) {
-    console.error("[seed-produits]", e);
-    return NextResponse.json({ error: String(e) }, { status: 500 });
   }
+
+  return NextResponse.json({
+    ok: errors.length === 0,
+    categories: nbCategories,
+    produits: nbProduits,
+    unitesVente: nbUnites,
+    stocks: nbStocks,
+    errors: errors.length > 0 ? errors : undefined,
+  });
 }
 
 export async function GET() {
-  const produits = await db.select({ id: schema.produits.id, nom: schema.produits.nom })
-    .from(schema.produits).limit(50);
-  return NextResponse.json({ count: produits.length, produits });
+  const [produits, categories, stocks] = await Promise.all([
+    db.select({ id: schema.produits.id, nom: schema.produits.nom, code: schema.produits.code })
+      .from(schema.produits).limit(50),
+    db.select().from(schema.categories),
+    db.select({ produitId: schema.stocks.produitId, qty: schema.stocks.quantiteBase })
+      .from(schema.stocks),
+  ]);
+  return NextResponse.json({
+    produits: produits.length,
+    categories: categories.length,
+    stocks: stocks.length,
+    liste: produits,
+  });
 }
