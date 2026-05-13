@@ -6,16 +6,14 @@ export function PwaRegister() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
-    if (process.env.NODE_ENV !== "production") return;
 
-    const register = async () => {
-      try {
-        await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-      } catch (e) {
-        console.warn("[PWA] enregistrement SW échoué", e);
-      }
-    };
-    register();
+    // Désinstaller tout SW existant et vider les caches
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      for (const reg of regs) reg.unregister();
+    });
+    caches.keys().then((keys) => {
+      for (const k of keys) caches.delete(k);
+    });
   }, []);
 
   return null;
