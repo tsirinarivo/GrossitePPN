@@ -1,18 +1,24 @@
-/** Normalise le texte pour imprimante thermique CP437 */
+/** Normalise le texte pour imprimante thermique CP437/CP858
+ *  - Supprime les diacritiques (accents)
+ *  - Remplace NBSP (U+00A0) et NNBSP (U+202F) entre chiffres par "."
+ *  - Remplace les caractères spéciaux non imprimables
+ */
 export function normaliseForThermal(s: string): string {
   return s
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/œ/g, "oe").replace(/Œ/g, "OE")
-    .replace(/æ/g, "ae").replace(/Æ/g, "AE")
-    .replace(/[‘’]/g, "'")
-    .replace(/[“”]/g, '"')
-    .replace(/[–—]/g, "-")
-    .replace(/…/g, "...")
-    .replace(/€/g, "EUR")
-    .replace(/→/g, "->")
-    .replace(/·/g, "-")
+    .replace(/[̀-ͯ]/g, "")        // strip diacritiques (NFD decomposed)
+    .replace(/œ/g, "oe").replace(/Œ/g, "OE")   // œ Œ
+    .replace(/æ/g, "ae").replace(/Æ/g, "AE")   // æ Æ
+    .replace(/[‘’]/g, "'")         // guillemets simples typographiques
+    .replace(/[“”]/g, '"')         // guillemets doubles typographiques
+    .replace(/[–—]/g, "-")         // tirets
+    .replace(/…/g, "...")               // ellipse
+    .replace(/€/g, "EUR")              // €
+    .replace(/→/g, "->")              // →
+    .replace(/·/g, "-")               // ·
+    // NBSP (U+00A0) et NNBSP (U+202F) entre chiffres → "." (séparateur de milliers MGA)
     .replace(/(\d)[  ](\d)/g, "$1.$2")
+    // Remaining NBSP/NNBSP → espace normal
     .replace(/[  ]/g, " ");
 }
 
@@ -26,11 +32,20 @@ function divider(c = "-"): string {
   return c.repeat(WIDTH);
 }
 
-function row(left: string, right: string, totalWidth = WIDTH): string {
+/** Ligne gauche-droite sur WIDTH caractères, sans les tags <L> */
+function rowContent(left: string, right: string, totalWidth = WIDTH): string {
   const l = escapeXprint(left);
   const r = escapeXprint(right);
   const space = Math.max(1, totalWidth - l.length - r.length);
-  return `<L>${l}${" ".repeat(space)}${r}</L>`;
+  return `${l}${" ".repeat(space)}${r}`;
+}
+
+function row(left: string, right: string): string {
+  return `<L>${rowContent(left, right)}</L>`;
+}
+
+function rowBold(left: string, right: string): string {
+  return `<L><BOLD>${rowContent(left, right)}</BOLD></L>`;
 }
 
 export interface LigneTicket {
@@ -59,26 +74,26 @@ export interface TicketFactureOpts {
   footer?: string | null;
 }
 
+/** Formatage montant MGA sans Intl (évite NNBSP U+202F) */
 function formatMGAThermal(amount: number): string {
-  // Pas d'Intl (NNBSP) — formatage manuel
   const rounded = Math.round(amount);
   const s = rounded.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return `${s} Ar`;
 }
 
 function formatDateThermal(d: Date): string {
-  const dd = d.getDate().toString().padStart(2, "0");
-  const mm = (d.getMonth() + 1).toString().padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
-  const hh = d.getHours().toString().padStart(2, "0");
-  const mn = d.getMinutes().toString().padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mn = String(d.getMinutes()).padStart(2, "0");
   return `${dd}/${mm}/${yyyy} ${hh}:${mn}`;
 }
 
 export function formatFactureTicket(opts: TicketFactureOpts): string {
   const lines: string[] = [];
 
-  // En-tête custom
+  // En-tête custom (multilignes)
   if (opts.header?.trim()) {
     for (const ln of opts.header.split("\n")) {
       lines.push(`<C>${escapeXprint(ln)}</C>`);
@@ -86,7 +101,7 @@ export function formatFactureTicket(opts: TicketFactureOpts): string {
     lines.push("");
   }
 
-  // Nom entreprise
+  // Nom entreprise centré en gras
   lines.push(`<C><B>${escapeXprint(opts.entrepriseNom.toUpperCase())}</B></C>`);
   if (opts.entrepriseAdresse) {
     lines.push(`<C>${escapeXprint(opts.entrepriseAdresse)}</C>`);
@@ -116,31 +131,31 @@ export function formatFactureTicket(opts: TicketFactureOpts): string {
     const unite = escapeXprint(lg.unite).slice(0, 5).padEnd(5);
     const total = formatMGAThermal(lg.total).padStart(10);
     lines.push(`<L>${nom} ${qte}  ${unite} ${total}</L>`);
-    // Prix unitaire en dessous si > 1 article
     if (lg.qte > 1) {
-      const pu = `  ${formatMGAThermal(lg.prixUnitaire)}/u`;
-      lines.push(`<L>${escapeXprint(pu)}</L>`);
+      lines.push(`<L>  @ ${formatMGAThermal(lg.prixUnitaire)}/u</L>`);
     }
   }
 
   lines.push(divider());
 
-  // Totaux
+  // Totaux — <BOLD> pour gras normal, pas <B> (qui double la largeur)
   lines.push(row("Sous-total", formatMGAThermal(opts.sousTotal)));
   if (opts.tva && opts.tva > 0 && opts.tauxTVA) {
     lines.push(row(`TVA ${opts.tauxTVA}%`, formatMGAThermal(opts.tva)));
   }
   lines.push(divider("="));
-  lines.push(`<L><B>${row("TOTAL", formatMGAThermal(opts.total)).replace("<L>", "").replace("</L>", "")}</B></L>`);
+  lines.push(rowBold("TOTAL", formatMGAThermal(opts.total)));
 
   if (opts.modePaiement) {
     lines.push(row("Paiement", escapeXprint(opts.modePaiement)));
   }
 
-  // QR code
+  // QR code — centré, max 256 chars (spec section 4)
+  // Pas de <CUT> après — xpyun découpe automatiquement (spec section 5.1)
   if (opts.qrPayload) {
     lines.push(divider());
-    lines.push(`<C><QRCODE>${opts.qrPayload.slice(0, 256)}</QRCODE></C>`);
+    const qr = opts.qrPayload.slice(0, 256).replace(/</g, "").replace(/>/g, "");
+    lines.push(`<C><QRCODE>${qr}</QRCODE></C>`);
   }
 
   lines.push("");
@@ -155,6 +170,5 @@ export function formatFactureTicket(opts: TicketFactureOpts): string {
     }
   }
 
-  // PAS de <CUT> — xpyun découpe automatiquement
   return lines.join("<BR>");
 }

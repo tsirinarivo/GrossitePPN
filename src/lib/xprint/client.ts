@@ -94,6 +94,20 @@ export async function xprintQueryOrder(
   return res.ok && res.data === true;
 }
 
+/** Codes d'erreur xpyun documentés — section 11 */
+const XPYUN_ERRORS: Record<number, string> = {
+  1002: "Signature invalide (vérifier User et UserKEY)",
+  1003: "Timestamp invalide (décalage horloge serveur)",
+  1006: "Numéro de série (SN) inconnu ou non rattaché au compte",
+  1007: "Contenu trop long (> 4096 bytes)",
+  1008: "Imprimante hors ligne",
+  1010: "Limite de débit dépassée — réessayer dans quelques secondes",
+};
+
+export function xprintErrorMessage(code: number, defaultMsg: string): string {
+  return XPYUN_ERRORS[code] ?? defaultMsg;
+}
+
 export function buildDefaultConfig(partial: Partial<XprintConfig>): XprintConfig {
   return {
     user: partial.user ?? "",

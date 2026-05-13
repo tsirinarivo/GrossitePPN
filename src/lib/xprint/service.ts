@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { xprintSend, xprintQueryOrder, buildDefaultConfig, type XprintConfig } from "./client";
+import { xprintSend, xprintQueryOrder, buildDefaultConfig, xprintErrorMessage, type XprintConfig } from "./client";
 
 export async function loadXprintConfig(): Promise<XprintConfig | null> {
   const rows = await db.select().from(schema.entreprise).limit(1);
@@ -57,7 +57,7 @@ export async function sendPrintAndLog(
     copies,
     status: res.ok ? "pending" : "failed",
     orderId: res.orderId ?? null,
-    error: res.ok ? null : `${res.code} ${res.msg}`,
+    error: res.ok ? null : `[${res.code}] ${xprintErrorMessage(res.code, res.msg)}`,
     failedAt: res.ok ? null : new Date(),
   });
 
@@ -81,7 +81,7 @@ export async function sendPrintAndLog(
   return {
     ok: res.ok,
     orderId: res.orderId,
-    errorMessage: res.ok ? undefined : res.msg,
+    errorMessage: res.ok ? undefined : xprintErrorMessage(res.code, res.msg),
   };
 }
 
