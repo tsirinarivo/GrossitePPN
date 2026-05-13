@@ -54,6 +54,7 @@
     "next-intl": "^4.11.2",
     "nuqs": "^2.8.9",
     "pdf-lib": "^1.17.1",
+    "postgres": "^3.4.9",
     "pusher-js": "^8.5.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",

@@ -2,15 +2,15 @@
  * Script de seed — données initiales pour Grossiste PPN Madagascar
  * Usage : DATABASE_URL=... pnpm tsx src/lib/db/seed.ts
  */
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import * as schema from "./schema";
 
 const url = process.env["DATABASE_URL"];
 if (!url) throw new Error("DATABASE_URL manquant");
 
-const sql = neon(url);
-const db = drizzle(sql, { schema });
+const client = postgres(url);
+const db = drizzle(client, { schema });
 
 async function seed() {
   console.log("🌱 Seed Grossiste PPN Madagascar...");
