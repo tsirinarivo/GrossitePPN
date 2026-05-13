@@ -76,15 +76,14 @@ success "Migrations appliquées"
 info "Démarrage/rechargement PM2..."
 
 if pm2 describe "$APP_NAME" &>/dev/null; then
-  pm2 reload "$APP_NAME" --update-env
-  success "Application rechargée (zero-downtime)"
+  pm2 restart "$APP_NAME" --update-env
+  success "Application redémarrée"
 else
-  pm2 start pnpm \
+  PORT="${PORT:-3001}" pm2 start node \
     --name "$APP_NAME" \
     --cwd "$APP_DIR" \
     --max-memory-restart 512M \
-    --env production \
-    -- start
+    -- .next/standalone/server.js
   pm2 save
   success "Application démarrée"
 fi
