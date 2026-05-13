@@ -109,15 +109,31 @@ export function NouveauProduitWizard() {
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
     try {
+      // Auto-remplir le nom de la première unité si vide
+      const payload = {
+        ...data,
+        unitesVente: data.unitesVente.map((u, i) => ({
+          ...u,
+          nom: u.nom || (i === 0 ? data.uniteBase : `Unité ${i + 1}`),
+        })),
+      };
+
       const res = await fetch("/api/produits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
       if (!res.ok) {
-        const msg = typeof json.error === "string" ? json.error : "Erreur lors de la création";
-        toast.error(msg);
+        // Afficher le détail de l'erreur Zod si disponible
+        if (json.error?.fieldErrors) {
+          const msgs = Object.entries(json.error.fieldErrors)
+            .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
+            .join(" | ");
+          toast.error("Validation échouée", { description: msgs });
+        } else {
+          toast.error(typeof json.error === "string" ? json.error : "Erreur lors de la création");
+        }
         return;
       }
       toast.success(`Produit "${data.nom}" créé avec succès`, {
