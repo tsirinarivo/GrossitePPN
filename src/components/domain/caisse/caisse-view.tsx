@@ -18,7 +18,9 @@ import {
   Printer,
   FileText,
   Loader2,
+  Wifi,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -408,11 +410,46 @@ export function CaisseView() {
                       {commandeSelectee.numero} — {formatMGA(totalTTC)}
                     </p>
                   </div>
-                  <div className="flex gap-3 justify-center">
+                  <div className="flex gap-3 justify-center flex-wrap">
                     <Button
                       variant="outline"
                       size="lg"
                       onClick={async () => {
+                        // 1. Try cloud printer (Xprint) first
+                        try {
+                          const res = await fetch("/api/print/ticket", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              numero: commandeSelectee.numero,
+                              client: commandeSelectee.client,
+                              commandeId: commandeSelectee.id,
+                              lignes: lignes.map((l) => ({ nom: l.nom, unite: l.unite, qte: l.qte, prix: l.prix, total: l.total })),
+                              totalHT,
+                              totalTVA,
+                              totalTTC,
+                              modePaiement,
+                              assujettieTV,
+                            }),
+                          });
+                          const data = await res.json();
+                          if (data.ok) {
+                            toast.success("Ticket envoyé à l'imprimante cloud", {
+                              description: "L'imprimante imprimera le ticket dans quelques secondes",
+                              icon: <Wifi className="w-4 h-4 text-green-500" />,
+                            });
+                            return;
+                          }
+                          // If not configured, fall through to WebUSB
+                          if (!data.errorMessage?.includes("non configurée")) {
+                            toast.error("Échec impression cloud", { description: data.errorMessage });
+                            return;
+                          }
+                        } catch {
+                          // Network error — fall through to WebUSB
+                        }
+
+                        // 2. Fallback: WebUSB ESC/POS
                         try {
                           const { connectPrinter, printTicket, releasePrinter } = await import("@/lib/print/escpos");
                           const printer = await connectPrinter();
@@ -432,7 +469,7 @@ export function CaisseView() {
                           });
                           await releasePrinter(printer);
                         } catch (e) {
-                          alert(`Imprimante : ${e instanceof Error ? e.message : String(e)}`);
+                          toast.error("Imprimante USB", { description: e instanceof Error ? e.message : String(e) });
                         }
                       }}
                     >
