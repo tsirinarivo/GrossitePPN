@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -36,8 +35,12 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const d = parsed.data;
-  await db.update(schema.entreprise)
-    .set({ ...d, updatedAt: new Date() })
-    .where(eq(schema.entreprise.id, "singleton"));
+  await db
+    .insert(schema.entreprise)
+    .values({ id: "singleton", ...d, updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: schema.entreprise.id,
+      set: { ...d, updatedAt: new Date() },
+    });
   return NextResponse.json({ ok: true });
 }
