@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { Printer, Wifi, WifiOff, AlertTriangle, RefreshCw, Send, Loader2 } from "lucide-react";
+import {
+  Printer,
+  Wifi,
+  WifiOff,
+  AlertTriangle,
+  RefreshCw,
+  Send,
+  Loader2,
+  Info,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +26,8 @@ interface PrinterConfig {
   header: string;
   footer: string;
   autoOnFacture: boolean;
+  autoOnBonLivraison: boolean;
+  autoOnReceptionStock: boolean;
 }
 
 interface PrinterStatus {
@@ -38,6 +49,13 @@ interface PrintLog {
 
 const DEFAULT_BASE_URL = "https://open.xpyun.net/api/openapi/xprinter";
 
+const KIND_LABELS: Record<string, string> = {
+  facture: "Facture",
+  bon_livraison: "Bon livraison",
+  inventaire: "Inventaire",
+  test: "Test",
+};
+
 export function PrinterSettings() {
   const [config, setConfig] = useState<PrinterConfig>({
     enabled: false,
@@ -50,6 +68,8 @@ export function PrinterSettings() {
     header: "",
     footer: "",
     autoOnFacture: true,
+    autoOnBonLivraison: false,
+    autoOnReceptionStock: false,
   });
   const [status, setStatus] = useState<PrinterStatus | null>(null);
   const [logs, setLogs] = useState<PrintLog[]>([]);
@@ -67,10 +87,7 @@ export function PrinterSettings() {
   async function fetchConfig() {
     try {
       const res = await fetch("/api/admin/printer");
-      if (res.ok) {
-        const data = await res.json();
-        setConfig(data);
-      }
+      if (res.ok) setConfig(await res.json());
     } catch {
       // ignore
     } finally {
@@ -136,11 +153,39 @@ export function PrinterSettings() {
       const res = await fetch("/api/print/logs/refresh", { method: "POST" });
       const data = await res.json();
       if (data.ok) {
-        toast.success(`${data.updated} log(s) mis à jour`);
+        toast.success(`${data.updated ?? 0} log(s) mis à jour`);
         fetchLogs();
       }
     });
   }
+
+  const Toggle = ({
+    checked,
+    onChange,
+    label,
+    description,
+  }: {
+    checked: boolean;
+    onChange: (v: boolean) => void;
+    label: string;
+    description?: string;
+  }) => (
+    <label className="flex items-start gap-3 cursor-pointer group">
+      <div className="relative mt-0.5 shrink-0">
+        <input
+          type="checkbox"
+          className="sr-only peer"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+        />
+        <div className="w-10 h-6 bg-[--border] rounded-full peer peer-checked:bg-[--primary] transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-4" />
+      </div>
+      <div>
+        <p className="text-sm font-medium text-[--foreground]">{label}</p>
+        {description && <p className="text-xs text-[--foreground-muted] mt-0.5">{description}</p>}
+      </div>
+    </label>
+  );
 
   const StatusBadge = () => {
     if (!status?.configured) {
@@ -149,7 +194,7 @@ export function PrinterSettings() {
     if (status.anomalie) {
       return (
         <span className="flex items-center gap-1 text-xs text-amber-500">
-          <AlertTriangle className="w-3 h-3" /> Anomalie
+          <AlertTriangle className="w-3 h-3" /> Anomalie hardware
         </span>
       );
     }
@@ -162,7 +207,7 @@ export function PrinterSettings() {
     }
     return (
       <span className="flex items-center gap-1 text-xs text-red-500">
-        <WifiOff className="w-3 h-3" /> Hors ligne
+        <WifiOff className="w-3 h-3" /> Hors ligne (file en attente active)
       </span>
     );
   };
@@ -195,20 +240,23 @@ export function PrinterSettings() {
         </Button>
       </div>
 
+      {/* Note technique */}
+      <div className="flex gap-2 p-3 rounded-xl border border-[--border] bg-[--background-subtle] text-sm text-[--foreground-muted]">
+        <Info className="w-4 h-4 shrink-0 mt-0.5 text-[--primary]" />
+        <p>
+          Impression cloud via <strong>xpyun.net</strong> — aucun driver, aucun câble USB.
+          L&apos;imprimante reçoit les tickets par WiFi ou 4G.
+          Si hors ligne, les jobs sont mis en file d&apos;attente et imprimés au retour.
+        </p>
+      </div>
+
       {/* Activer/désactiver */}
-      <div className="flex items-center gap-3 p-4 rounded-xl border border-[--border] bg-[--background-subtle]">
-        <label className="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            className="sr-only peer"
-            checked={config.enabled}
-            onChange={(e) => setConfig((c) => ({ ...c, enabled: e.target.checked }))}
-          />
-          <div className="w-11 h-6 bg-[--border] rounded-full peer peer-checked:bg-[--primary] transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
-        </label>
-        <span className="text-sm font-medium text-[--foreground]">
-          Activer l&apos;impression cloud xpyun.net
-        </span>
+      <div className="p-4 rounded-xl border border-[--border] bg-[--background-subtle]">
+        <Toggle
+          checked={config.enabled}
+          onChange={(v) => setConfig((c) => ({ ...c, enabled: v }))}
+          label="Activer l'impression cloud xpyun.net"
+        />
       </div>
 
       {config.enabled && (
@@ -218,6 +266,12 @@ export function PrinterSettings() {
             <h4 className="text-sm font-semibold text-[--foreground] uppercase tracking-wide">
               Identifiants développeur
             </h4>
+            <div className="rounded-lg border border-[--border] bg-[--background-subtle] px-4 py-3 text-xs text-[--foreground-muted] space-y-1">
+              <p>1. Créer un compte : <strong>admin.xpyun.net</strong></p>
+              <p>2. Open Platform → noter <strong>User</strong> + <strong>UserKEY</strong></p>
+              <p>3. Configurer le WiFi via l&apos;app Xprinter (iOS/Android)</p>
+              <p>4. Récupérer le <strong>SN</strong> gravé sous l&apos;imprimante</p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-sm text-[--foreground-muted]">User (identifiant xpyun)</label>
@@ -225,6 +279,7 @@ export function PrinterSettings() {
                   value={config.user}
                   onChange={(e) => setConfig((c) => ({ ...c, user: e.target.value }))}
                   placeholder="votre_user_xpyun"
+                  autoComplete="off"
                 />
               </div>
               <div className="space-y-1.5">
@@ -234,6 +289,7 @@ export function PrinterSettings() {
                   value={config.key}
                   onChange={(e) => setConfig((c) => ({ ...c, key: e.target.value }))}
                   placeholder="••••••••••••••••"
+                  autoComplete="new-password"
                 />
               </div>
               <div className="space-y-1.5">
@@ -252,15 +308,18 @@ export function PrinterSettings() {
                   className="w-full h-10 px-3 text-sm rounded-lg border border-[--border] bg-[--background] text-[--foreground] focus:outline-none focus:ring-2 focus:ring-[--primary]/40"
                 >
                   <option value="https://open.xpyun.net/api/openapi/xprinter">
-                    International (open.xpyun.net)
+                    International — open.xpyun.net (recommandé Madagascar)
+                  </option>
+                  <option value="https://api.xpyun.net/api/openapi/xprinter">
+                    Asie — api.xpyun.net
                   </option>
                   <option value="https://open2.xpyun.net/api/openapi/xprinter">
-                    Chine (open2.xpyun.net)
+                    Chine — open2.xpyun.net
                   </option>
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm text-[--foreground-muted]">Copies</label>
+                <label className="text-sm text-[--foreground-muted]">Nombre de copies (1-5)</label>
                 <Input
                   type="number"
                   min={1}
@@ -269,55 +328,82 @@ export function PrinterSettings() {
                   onChange={(e) => setConfig((c) => ({ ...c, copies: parseInt(e.target.value) || 1 }))}
                 />
               </div>
+              <div className="space-y-1.5">
+                <label className="text-sm text-[--foreground-muted]">Volume sonnerie (0 = muet, 1-15)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={15}
+                  value={config.voice}
+                  onChange={(e) => setConfig((c) => ({ ...c, voice: parseInt(e.target.value) || 0 }))}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Options auto */}
-          <div className="space-y-3">
+          {/* Impression automatique */}
+          <div className="space-y-4">
             <h4 className="text-sm font-semibold text-[--foreground] uppercase tracking-wide">
               Impression automatique
             </h4>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
+            <div className="space-y-4">
+              <Toggle
                 checked={config.autoOnFacture}
-                onChange={(e) => setConfig((c) => ({ ...c, autoOnFacture: e.target.checked }))}
-                className="rounded border-[--border] text-[--primary]"
+                onChange={(v) => setConfig((c) => ({ ...c, autoOnFacture: v }))}
+                label="Après validation d'une facture"
+                description="Imprime le ticket de caisse dès qu'une facture est validée"
               />
-              <span className="text-sm text-[--foreground]">
-                Imprimer automatiquement à la validation d&apos;une facture
-              </span>
-            </label>
+              <Toggle
+                checked={config.autoOnBonLivraison}
+                onChange={(v) => setConfig((c) => ({ ...c, autoOnBonLivraison: v }))}
+                label="Après création d'un bon de livraison"
+                description="Imprime le bon à faire signer par le client à la livraison"
+              />
+              <Toggle
+                checked={config.autoOnReceptionStock}
+                onChange={(v) => setConfig((c) => ({ ...c, autoOnReceptionStock: v }))}
+                label="Lors d'une réception / fiche inventaire"
+                description="Imprime la fiche de comptage pour signature du responsable"
+              />
+            </div>
           </div>
 
           {/* En-tête / pied */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-sm text-[--foreground-muted]">En-tête personnalisé</label>
-              <textarea
-                className="w-full h-20 px-3 py-2 text-sm rounded-lg border border-[--border] bg-[--background] text-[--foreground] resize-none focus:outline-none focus:ring-2 focus:ring-[--primary]/40"
-                value={config.header}
-                onChange={(e) => setConfig((c) => ({ ...c, header: e.target.value }))}
-                placeholder="Ex: Grossiste PPN Madagascar&#10;Antananarivo 101"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-sm text-[--foreground-muted]">Pied de ticket personnalisé</label>
-              <textarea
-                className="w-full h-20 px-3 py-2 text-sm rounded-lg border border-[--border] bg-[--background] text-[--foreground] resize-none focus:outline-none focus:ring-2 focus:ring-[--primary]/40"
-                value={config.footer}
-                onChange={(e) => setConfig((c) => ({ ...c, footer: e.target.value }))}
-                placeholder="Ex: Merci de votre confiance&#10;+261 34 00 000 00"
-              />
+          <div className="space-y-3">
+            <h4 className="text-sm font-semibold text-[--foreground] uppercase tracking-wide">
+              Texte du ticket
+            </h4>
+            <p className="text-xs text-[--foreground-muted]">
+              Le NIF, STAT et RCS s&apos;affichent automatiquement depuis la fiche entreprise ci-dessus.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-sm text-[--foreground-muted]">En-tête personnalisé</label>
+                <textarea
+                  className="w-full h-20 px-3 py-2 text-sm rounded-lg border border-[--border] bg-[--background] text-[--foreground] resize-none focus:outline-none focus:ring-2 focus:ring-[--primary]/40"
+                  value={config.header}
+                  onChange={(e) => setConfig((c) => ({ ...c, header: e.target.value }))}
+                  placeholder={"Grossiste PPN Madagascar\nAntananarivo 101"}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm text-[--foreground-muted]">Pied de ticket personnalisé</label>
+                <textarea
+                  className="w-full h-20 px-3 py-2 text-sm rounded-lg border border-[--border] bg-[--background] text-[--foreground] resize-none focus:outline-none focus:ring-2 focus:ring-[--primary]/40"
+                  value={config.footer}
+                  onChange={(e) => setConfig((c) => ({ ...c, footer: e.target.value }))}
+                  placeholder={"Marchandise vendue non reprise.\nMerci de votre confiance."}
+                />
+              </div>
             </div>
           </div>
 
           {/* Actions */}
           <div className="flex flex-wrap gap-3">
             <Button onClick={saveConfig} loading={savePending}>
-              Sauvegarder
+              Sauvegarder la configuration
             </Button>
-            <Button variant="outline" onClick={sendTest} loading={testPending}>
+            <Button variant="outline" onClick={sendTest} loading={testPending} disabled={!config.sn}>
               <Send className="w-4 h-4" />
               Ticket de test
             </Button>
@@ -344,25 +430,31 @@ export function PrinterSettings() {
                       <th className="text-left px-4 py-2 text-[--foreground-muted] font-medium">Type</th>
                       <th className="text-left px-4 py-2 text-[--foreground-muted] font-medium">Statut</th>
                       <th className="text-left px-4 py-2 text-[--foreground-muted] font-medium">Copies</th>
+                      <th className="text-left px-4 py-2 text-[--foreground-muted] font-medium hidden sm:table-cell">Erreur</th>
                       <th className="text-left px-4 py-2 text-[--foreground-muted] font-medium">Date</th>
                     </tr>
                   </thead>
                   <tbody>
                     {logs.map((log) => (
                       <tr key={log.id} className="border-t border-[--border]">
-                        <td className="px-4 py-2 text-[--foreground]">{log.kind}</td>
+                        <td className="px-4 py-2 text-[--foreground]">
+                          {KIND_LABELS[log.kind] ?? log.kind}
+                        </td>
                         <td className="px-4 py-2">
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                             log.status === "printed"
-                              ? "bg-green-100 text-green-700"
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                               : log.status === "failed"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-amber-100 text-amber-700"
+                              ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                              : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
                           }`}>
                             {log.status === "printed" ? "Imprimé" : log.status === "failed" ? "Échec" : "En attente"}
                           </span>
                         </td>
                         <td className="px-4 py-2 text-[--foreground-muted]">{log.copies}</td>
+                        <td className="px-4 py-2 text-[--foreground-muted] text-xs hidden sm:table-cell max-w-[200px] truncate">
+                          {log.error ?? "—"}
+                        </td>
                         <td className="px-4 py-2 text-[--foreground-muted]">
                           {new Date(log.createdAt).toLocaleString("fr-MG")}
                         </td>

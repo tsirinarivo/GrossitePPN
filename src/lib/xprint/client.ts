@@ -12,6 +12,8 @@ export interface XprintConfig {
   header: string | null;
   footer: string | null;
   autoOnFacture: boolean;
+  autoOnBonLivraison: boolean;
+  autoOnReceptionStock: boolean;
 }
 
 interface XprintResponse<T> {
@@ -119,5 +121,7 @@ export function buildDefaultConfig(partial: Partial<XprintConfig>): XprintConfig
     header: partial.header ?? null,
     footer: partial.footer ?? null,
     autoOnFacture: partial.autoOnFacture ?? true,
+    autoOnBonLivraison: partial.autoOnBonLivraison ?? false,
+    autoOnReceptionStock: partial.autoOnReceptionStock ?? false,
   };
 }

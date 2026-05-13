@@ -1,7 +1,19 @@
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { xprintSend, xprintQueryOrder, buildDefaultConfig, xprintErrorMessage, type XprintConfig } from "./client";
+import {
+  xprintSend,
+  xprintQueryOrder,
+  buildDefaultConfig,
+  xprintErrorMessage,
+  type XprintConfig,
+} from "./client";
+import {
+  formatBonLivraison,
+  formatFicheInventaire,
+  type BonLivraisonOpts,
+  type FicheInventaireOpts,
+} from "./format";
 
 export async function loadXprintConfig(): Promise<XprintConfig | null> {
   const rows = await db.select().from(schema.entreprise).limit(1);
@@ -26,6 +38,8 @@ export async function loadXprintConfig(): Promise<XprintConfig | null> {
     header: p["xprintHeader"] ? String(p["xprintHeader"]) : null,
     footer: p["xprintFooter"] ? String(p["xprintFooter"]) : null,
     autoOnFacture: p["xprintAutoOnFacture"] !== false,
+    autoOnBonLivraison: p["xprintAutoOnBonLivraison"] === true,
+    autoOnReceptionStock: p["xprintAutoOnReceptionStock"] === true,
   });
 }
 
@@ -61,7 +75,7 @@ export async function sendPrintAndLog(
     failedAt: res.ok ? null : new Date(),
   });
 
-  // Poll à 15s pour mettre à jour le statut
+  // Poll à 15s pour confirmer "printed" (spec §6.3)
   if (res.ok && res.orderId) {
     const orderId = res.orderId;
     setTimeout(() => {
@@ -85,6 +99,35 @@ export async function sendPrintAndLog(
   };
 }
 
+/** Rafraîchit les statuts "pending" (bouton manuel UI, spec §6.3) */
+export async function refreshPendingLogs(): Promise<{ checked: number; updated: number }> {
+  const cfg = await loadXprintConfig();
+  if (!cfg) return { checked: 0, updated: 0 };
+
+  const pending = await db
+    .select({ id: schema.printLogs.id, orderId: schema.printLogs.orderId })
+    .from(schema.printLogs)
+    .where(eq(schema.printLogs.status, "pending"))
+    .limit(100);
+
+  const withOrderId = pending.filter((l) => l.orderId);
+  let updated = 0;
+
+  for (const log of withOrderId) {
+    const done = await xprintQueryOrder(cfg, log.orderId!).catch(() => false);
+    if (done) {
+      await db
+        .update(schema.printLogs)
+        .set({ status: "printed" })
+        .where(and(eq(schema.printLogs.id, log.id), eq(schema.printLogs.status, "pending")))
+        .catch(() => {});
+      updated++;
+    }
+  }
+
+  return { checked: withOrderId.length, updated };
+}
+
 /** Auto-impression après validation d'une facture */
 export async function autoPrintFacture(factureId: string, content: string): Promise<void> {
   try {
@@ -93,5 +136,35 @@ export async function autoPrintFacture(factureId: string, content: string): Prom
     await sendPrintAndLog(content, { kind: "facture", relatedId: factureId, copies: cfg.copies });
   } catch (e) {
     console.warn("[xprint] autoPrintFacture failed:", e);
+  }
+}
+
+/** Auto-impression après création d'un bon de livraison */
+export async function autoPrintBonLivraison(opts: {
+  bonId: string;
+  bonOpts: BonLivraisonOpts;
+}): Promise<void> {
+  try {
+    const cfg = await loadXprintConfig();
+    if (!cfg?.autoOnBonLivraison) return;
+    const content = formatBonLivraison(opts.bonOpts);
+    await sendPrintAndLog(content, { kind: "bon_livraison", relatedId: opts.bonId, copies: cfg.copies });
+  } catch (e) {
+    console.warn("[xprint] autoPrintBonLivraison failed:", e);
+  }
+}
+
+/** Auto-impression d'une fiche inventaire / réception stock */
+export async function autoPrintFicheInventaire(opts: {
+  ficheId: string;
+  ficheOpts: FicheInventaireOpts;
+}): Promise<void> {
+  try {
+    const cfg = await loadXprintConfig();
+    if (!cfg?.autoOnReceptionStock) return;
+    const content = formatFicheInventaire(opts.ficheOpts);
+    await sendPrintAndLog(content, { kind: "inventaire", relatedId: opts.ficheId, copies: 1 });
+  } catch (e) {
+    console.warn("[xprint] autoPrintFicheInventaire failed:", e);
   }
 }

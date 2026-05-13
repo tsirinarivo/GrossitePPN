@@ -22,6 +22,8 @@ export async function GET() {
     header: p["xprintHeader"] ?? "",
     footer: p["xprintFooter"] ?? "",
     autoOnFacture: p["xprintAutoOnFacture"] !== false,
+    autoOnBonLivraison: p["xprintAutoOnBonLivraison"] === true,
+    autoOnReceptionStock: p["xprintAutoOnReceptionStock"] === true,
   });
 }
 
@@ -36,6 +38,8 @@ const configSchema = z.object({
   header: z.string().max(500).default(""),
   footer: z.string().max(500).default(""),
   autoOnFacture: z.boolean().default(true),
+  autoOnBonLivraison: z.boolean().default(false),
+  autoOnReceptionStock: z.boolean().default(false),
 });
 
 export async function PUT(req: NextRequest) {
@@ -62,6 +66,8 @@ export async function PUT(req: NextRequest) {
     xprintHeader: d.header,
     xprintFooter: d.footer,
     xprintAutoOnFacture: d.autoOnFacture,
+    xprintAutoOnBonLivraison: d.autoOnBonLivraison,
+    xprintAutoOnReceptionStock: d.autoOnReceptionStock,
   };
 
   await db.update(schema.entreprise)

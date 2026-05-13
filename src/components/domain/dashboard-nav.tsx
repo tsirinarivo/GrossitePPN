@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ShoppingCart,
   ShoppingBag,
@@ -15,11 +15,15 @@ import {
   Wifi,
   WifiOff,
   Receipt,
+  LogOut,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { useAppStore } from "@/store/app.store";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { useSession, signOut } from "@/lib/auth/client";
+import { toast } from "sonner";
 
 const navItems = [
   {
@@ -33,7 +37,7 @@ const navItems = [
     href: "/pos/caisse",
     label: "Caisse",
     icon: Receipt,
-    badge: "3",
+    badge: null,
     couleur: "text-[--color-vanille-600]",
   },
   {
@@ -54,7 +58,7 @@ const navItems = [
     href: "/livraisons",
     label: "Livraisons",
     icon: Truck,
-    badge: "2",
+    badge: null,
     couleur: null,
   },
   {
@@ -90,7 +94,26 @@ const navItems = [
 
 export function DashboardNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const connexion = useAppStore((s) => s.connexion);
+  const { data: session } = useSession();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.push("/login");
+      router.refresh();
+    } catch {
+      toast.error("Erreur lors de la déconnexion");
+    }
+  };
+
+  const userName = session?.user?.name ?? session?.user?.email ?? "Utilisateur";
+  const userInitials = userName
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("");
 
   return (
     <nav className="w-16 lg:w-56 h-screen flex flex-col border-r border-[--border] bg-[--card] shrink-0 transition-all duration-200">
@@ -165,7 +188,7 @@ export function DashboardNav() {
       </div>
 
       {/* Statut connexion */}
-      <div className="p-3 border-t border-[--border]">
+      <div className="px-3 py-2 border-t border-[--border]">
         <div
           className={cn(
             "flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs",
@@ -188,6 +211,43 @@ export function DashboardNav() {
                 ? "Réseau lent"
                 : "Hors ligne"}
           </span>
+        </div>
+      </div>
+
+      {/* Profil utilisateur + déconnexion */}
+      <div className="p-3 border-t border-[--border]">
+        <div className="flex items-center gap-2 min-w-0">
+          {/* Avatar */}
+          <div className="w-8 h-8 rounded-full bg-[--primary]/15 text-[--primary] flex items-center justify-center font-semibold text-xs shrink-0">
+            {userInitials || <User className="w-4 h-4" />}
+          </div>
+
+          {/* Nom + rôle */}
+          <div className="hidden lg:flex flex-col flex-1 min-w-0">
+            <span className="text-xs font-medium text-[--foreground] truncate">{userName}</span>
+            {session?.user?.email && session.user.name && (
+              <span className="text-[10px] text-[--foreground-subtle] truncate">
+                {session.user.email}
+              </span>
+            )}
+          </div>
+
+          {/* Bouton déconnexion */}
+          <button
+            onClick={handleSignOut}
+            title="Se déconnecter"
+            className={cn(
+              "p-1.5 rounded-lg text-[--foreground-muted] transition-colors",
+              "hover:bg-[--destructive]/10 hover:text-[--destructive]",
+              "group relative"
+            )}
+          >
+            <LogOut className="w-4 h-4" />
+            {/* Tooltip mode réduit */}
+            <div className="lg:hidden absolute left-full ml-2 px-2 py-1 bg-[--foreground] text-[--background] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+              Se déconnecter
+            </div>
+          </button>
         </div>
       </div>
     </nav>
