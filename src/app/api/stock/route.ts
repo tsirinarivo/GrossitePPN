@@ -30,17 +30,14 @@ export async function GET() {
     const categories = await db.select().from(schema.categories);
     const catMap = new Map(categories.map((c) => [c.id, c.nom]));
 
-    // Today's movements count
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
+    // Today's movements — CURRENT_DATE évite tout binding Date côté Drizzle
     const mouvements = await db
       .select({
         produitId: schema.mouvementsStock.produitId,
         type: schema.mouvementsStock.type,
       })
       .from(schema.mouvementsStock)
-      .where(sql`${schema.mouvementsStock.createdAt} >= ${todayISO}`);
+      .where(sql`${schema.mouvementsStock.createdAt} >= CURRENT_DATE`);
 
     const mvtMap = new Map<string, { entrees: number; sorties: number }>();
     for (const m of mouvements) {
