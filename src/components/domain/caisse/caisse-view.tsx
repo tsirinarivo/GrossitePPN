@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useCommandeStream } from "@/hooks/use-commande-stream";
+import type { CommandeEvent } from "@/lib/sse/broadcast";
 import {
   Receipt,
   Clock,
@@ -92,11 +94,30 @@ const LIGNES_DEMO = [
 ];
 
 export function CaisseView() {
+  const [fileCommandes, setFileCommandes] = useState<CommandeFile[]>(COMMANDES_DEMO);
   const [commandeSelectee, setCommandeSelectee] = useState<CommandeFile | null>(
     COMMANDES_DEMO[0] ?? null
   );
   const [modePaiement, setModePaiement] = useState<string>("especes");
   const [etape, setEtape] = useState<"detail" | "paiement" | "confirmation">("detail");
+
+  // Écoute les nouvelles commandes en temps réel via SSE
+  const handleNouvelleCommande = useCallback((event: CommandeEvent) => {
+    const nouvelleCommande: CommandeFile = {
+      id: event.commandeId,
+      numero: event.numero,
+      client: event.clientId ?? "Client comptoir",
+      montant: event.totalTTC,
+      nbArticles: 1,
+      source: event.source as CommandeFile["source"],
+      soumiseAt: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+      priorite: 0,
+      statut: "en_attente",
+    };
+    setFileCommandes((prev) => [nouvelleCommande, ...prev]);
+  }, []);
+
+  useCommandeStream(handleNouvelleCommande);
 
   const totalHT = LIGNES_DEMO.reduce((s, l) => s + l.total, 0);
   const totalTTC = totalHT;
@@ -109,12 +130,12 @@ export function CaisseView() {
           <Receipt className="w-5 h-5 text-[--primary]" />
           <span className="font-semibold flex-1">File d'attente</span>
           <Badge variant="destructive" className="text-xs">
-            {COMMANDES_DEMO.length}
+            {fileCommandes.length}
           </Badge>
         </div>
 
         <div className="flex-1 overflow-y-auto divide-y divide-[--border]">
-          {COMMANDES_DEMO.map((cmd) => (
+          {fileCommandes.map((cmd) => (
             <button
               key={cmd.id}
               onClick={() => { setCommandeSelectee(cmd); setEtape("detail"); }}
@@ -359,11 +380,68 @@ export function CaisseView() {
                     </p>
                   </div>
                   <div className="flex gap-3 justify-center">
-                    <Button variant="outline" size="lg">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={async () => {
+                        try {
+                          const { connectPrinter, printTicket, releasePrinter } = await import("@/lib/print/escpos");
+                          const printer = await connectPrinter();
+                          await printTicket(printer, {
+                            nomEntreprise: "GrossistePPN SARL",
+                            adresseEntreprise: "Analakely, Antananarivo 101",
+                            numero: commandeSelectee?.numero ?? "---",
+                            date: new Date().toLocaleString("fr-FR"),
+                            caissier: "Caissier",
+                            client: commandeSelectee?.client,
+                            lignes: LIGNES_DEMO,
+                            totalHT,
+                            totalTVA: 0,
+                            totalTTC,
+                            modePaiement: modePaiement,
+                            assujettieTV: false,
+                          });
+                          await releasePrinter(printer);
+                        } catch (e) {
+                          alert(`Imprimante : ${e instanceof Error ? e.message : String(e)}`);
+                        }
+                      }}
+                    >
                       <Printer className="w-4 h-4" />
                       Imprimer ticket
                     </Button>
-                    <Button variant="outline" size="lg">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      onClick={async () => {
+                        const { genererFacturePDF, downloadPDF } = await import("@/lib/print/pdf-facture");
+                        const bytes = await genererFacturePDF({
+                          nomEntreprise: "GrossistePPN SARL",
+                          adresseEntreprise: "Analakely, Antananarivo 101",
+                          numero: commandeSelectee?.numero ?? "---",
+                          date: new Date().toLocaleDateString("fr-FR"),
+                          client: commandeSelectee?.client ?? "Comptoir",
+                          lignes: LIGNES_DEMO.map((l) => ({
+                            description: l.nom,
+                            unite: l.unite,
+                            quantite: l.qte,
+                            prixUnitaire: l.prix,
+                            totalHT: l.total,
+                            tauxTVA: 0,
+                            totalTVA: 0,
+                            totalTTC: l.total,
+                          })),
+                          totalHT,
+                          totalTVA: 0,
+                          totalTTC,
+                          totalRegle: totalTTC,
+                          soldeRestant: 0,
+                          assujettieTV: false,
+                          modePaiement,
+                        });
+                        downloadPDF(bytes, `facture-${commandeSelectee?.numero ?? "ppn"}.pdf`);
+                      }}
+                    >
                       <FileText className="w-4 h-4" />
                       PDF A4
                     </Button>

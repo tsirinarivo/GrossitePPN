@@ -8,6 +8,7 @@ const DASHBOARD_ROUTES = [
   "/livraisons",
   "/rapports",
   "/admin",
+  "/achats",
 ];
 
 const SHOP_ROUTES = ["/compte"];
@@ -44,6 +45,7 @@ export const config = {
     "/livraisons/:path*",
     "/rapports/:path*",
     "/admin/:path*",
+    "/achats/:path*",
     "/compte/:path*",
   ],
 };

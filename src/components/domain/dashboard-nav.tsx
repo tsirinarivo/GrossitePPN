@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ShoppingCart,
+  ShoppingBag,
   Package,
   Users,
   Truck,
@@ -54,6 +55,13 @@ const navItems = [
     label: "Livraisons",
     icon: Truck,
     badge: "2",
+    couleur: null,
+  },
+  {
+    href: "/achats",
+    label: "Achats",
+    icon: ShoppingBag,
+    badge: null,
     couleur: null,
   },
   {
