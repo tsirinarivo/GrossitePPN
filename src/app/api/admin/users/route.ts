@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { auth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +21,6 @@ export async function GET() {
   return NextResponse.json(users);
 }
 
-const VALID_ROLES = schema.roleEnum.enumValues;
-
 const createSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
@@ -33,27 +32,31 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: "Données invalides" }, { status: 400 });
   }
   const { name, email, password, role } = parsed.data;
 
-  const signUpRes = await fetch(new URL("/api/auth/sign-up/email", req.url), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Origin": req.headers.get("origin") ?? "http://localhost:3000" },
-    body: JSON.stringify({ name, email, password }),
-  });
+  try {
+    // Utiliser l'API Better-Auth directement (pas de fetch interne)
+    const result = await auth.api.signUpEmail({
+      body: { name, email, password },
+    });
 
-  if (!signUpRes.ok) {
-    const err = await signUpRes.json().catch(() => ({}));
-    return NextResponse.json({ error: err.message ?? "Erreur création compte" }, { status: 400 });
+    const userId = result?.user?.id;
+    if (!userId) {
+      return NextResponse.json({ error: "Erreur création du compte" }, { status: 500 });
+    }
+
+    if (role !== "agent") {
+      await db.update(schema.users)
+        .set({ role: role as Role })
+        .where(eq(schema.users.id, userId));
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[admin/users] POST error:", msg);
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
-
-  const data = await signUpRes.json();
-  const userId = data.user?.id;
-
-  if (userId && role !== "agent") {
-    await db.update(schema.users).set({ role: role as Role }).where(eq(schema.users.id, userId));
-  }
-
-  return NextResponse.json({ ok: true });
 }
