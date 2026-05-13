@@ -205,7 +205,7 @@ export function AdminView() {
                           <div key={key}>
                             <label className="text-xs text-[--foreground-muted] mb-1 block">{label}</label>
                             <Input
-                              value={(ent as Record<string, string>)[key] ?? ""}
+                              value={(ent as unknown as Record<string, string>)[key] ?? ""}
                               onChange={e => setEnt(c => ({ ...c, [key]: e.target.value }))}
                             />
                           </div>
