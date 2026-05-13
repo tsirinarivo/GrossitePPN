@@ -1,44 +1,39 @@
 # Déploiement GrossistePPN — VPS Contabo Ubuntu 22.04
 
-## Architecture
+## Architecture sur le VPS
 
 ```
-Internet → Nginx :80 → Next.js :3000 → PostgreSQL :5432
-           (reverse proxy)  (app)           (DB)
+Internet :80/:443
+     │
+  Nginx natif (systemd)          ← gère tous les projets du VPS
+     │
+     ├── transhub    → 127.0.0.1:3000
+     ├── dagoit      → 127.0.0.1:8085
+     ├── smsgate     → 127.0.0.1:8084
+     ├── dagocloud   → 127.0.0.1:8083
+     ├── starlink    → 127.0.0.1:8082
+     └── grossiteppn → 127.0.0.1:3001   ← notre app
+
+Docker Compose GrossistePPN :
+  ppn_app      (Next.js  :3001)
+  ppn_postgres (PostgreSQL, réseau interne uniquement)
 ```
 
-Tout tourne dans Docker Compose sur le même VPS.  
-Latence DB interne : < 1ms.
+**Pas de container Nginx** — on réutilise le Nginx natif déjà en place.
 
 ---
 
-## 1. Préparer le VPS (une seule fois)
-
-Connecte-toi en SSH à ton VPS Contabo :
+## 1. Préparer le projet sur le VPS (une seule fois)
 
 ```bash
 ssh root@TON_IP_VPS
-```
 
-### Installer Docker
-
-```bash
-curl -fsSL https://get.docker.com | sh
-systemctl enable docker
-systemctl start docker
-
-# Vérifier
-docker --version
-docker compose version
-```
-
-### Cloner le projet
-
-```bash
+# Cloner dans /opt comme tes autres projets
 cd /opt
 git clone https://github.com/tsirinarivo/GrossitePPN.git grossiteppn
 cd grossiteppn
 git checkout claude/wholesale-management-pwa-khts0
+chmod +x deploy.sh
 ```
 
 ---
@@ -50,151 +45,139 @@ cp .env.production.example .env.production
 nano .env.production
 ```
 
-Remplir les valeurs :
-
-| Variable | Description | Exemple |
-|---|---|---|
-| `POSTGRES_PASSWORD` | Mot de passe DB (fort) | `Xk9#mP2$vL8nQ...` |
-| `BETTER_AUTH_SECRET` | Clé secrète auth (32+ chars) | générer avec `openssl rand -base64 32` |
-| `BETTER_AUTH_URL` | URL publique de l'app | `http://123.456.789.012` |
-
-**Générer un secret sécurisé :**
-```bash
-openssl rand -base64 32
-```
+| Variable | Description |
+|---|---|
+| `POSTGRES_PASSWORD` | Mot de passe fort (min. 24 chars) |
+| `BETTER_AUTH_SECRET` | `openssl rand -base64 32` |
+| `BETTER_AUTH_URL` | `http://TON_IP_VPS` (ou domaine plus tard) |
 
 ---
 
 ## 3. Premier déploiement
 
 ```bash
-chmod +x deploy.sh
-
-# Déployer + insérer les données initiales
 ./deploy.sh --seed
 ```
 
-Le script va :
-1. Vérifier les prérequis
-2. Builder l'image Next.js (~3-5 min)
-3. Démarrer PostgreSQL, l'app, Nginx
-4. Appliquer les migrations Drizzle
-5. Insérer les données initiales (produits, dépôts, clients démo)
+Le script :
+1. Vérifie les prérequis et variables
+2. Vérifie que le port 3001 est libre
+3. Build l'image Next.js (~3-5 min)
+4. Démarre PostgreSQL + l'app
+5. Applique les migrations Drizzle
+6. Insère les données initiales (produits, dépôts, clients)
+7. Configure automatiquement le vhost Nginx natif
+8. Vérifie que l'app répond
 
 ---
 
-## 4. Mises à jour suivantes
+## 4. Configuration Nginx (si pas fait automatiquement)
+
+```bash
+# Éditer le vhost généré
+nano /etc/nginx/sites-available/grossiteppn
+
+# Remplacer TON_IP_VPS par ton IP réelle, par exemple :
+# server_name ppn.123.456.789.012;
+# ou simplement :
+# server_name _;   ← répond à toutes les requêtes sans domaine
+
+# Vérifier et recharger
+nginx -t && systemctl reload nginx
+```
+
+---
+
+## 5. Mises à jour suivantes
 
 ```bash
 cd /opt/grossiteppn
-./deploy.sh
-# (sans --seed pour ne pas réinsérer les données)
+./deploy.sh   # sans --seed
 ```
 
 ---
 
-## 5. Migrations manuelles (si le script échoue)
+## 6. Migrations manuelles
+
+Si le script de migration échoue dans le deploy.sh :
 
 ```bash
-# Depuis le VPS, dans le dossier du projet
 source .env.production
-export DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}?sslmode=disable"
+DB="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}?sslmode=disable"
 
-# Pousser le schéma
+# Option A — depuis un container temporaire
 docker run --rm \
   --network grossiteppn_ppn_network \
-  -e DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable" \
+  -e DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@ppn_postgres:5432/${POSTGRES_DB}?sslmode=disable" \
   -v "$(pwd):/app" -w /app \
   node:22-alpine sh -c "npm i -g pnpm && pnpm install && pnpm drizzle-kit push"
 
-# Seed
-docker run --rm \
-  --network grossiteppn_ppn_network \
-  -e DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable" \
-  -v "$(pwd):/app" -w /app \
-  node:22-alpine sh -c "npm i -g pnpm && pnpm install && pnpm db:seed"
+# Option B — exposer temporairement PostgreSQL (puis refermer)
+# Dans docker-compose.yml, ajouter sous postgres:
+#   ports:
+#     - "127.0.0.1:5433:5432"
+# Puis depuis le VPS :
+DATABASE_URL="postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@127.0.0.1:5433/${POSTGRES_DB}?sslmode=disable" \
+  pnpm drizzle-kit push
 ```
 
 ---
 
-## 6. Commandes utiles
+## 7. Commandes utiles
 
 ```bash
-# Voir les logs en temps réel
+# Logs
 docker compose logs -f app
-docker compose logs -f nginx
 docker compose logs -f postgres
 
-# Statut des conteneurs
+# Statut
 docker compose ps
 
-# Redémarrer un service
+# Redémarrer l'app
 docker compose restart app
 
-# Accéder à PostgreSQL directement
+# Accès PostgreSQL
 docker compose exec postgres psql -U ppn_user -d ppn_production
 
-# Sauvegarder la base de données
-docker compose exec postgres pg_dump -U ppn_user ppn_production > backup_$(date +%Y%m%d).sql
+# Sauvegarde DB
+docker compose exec postgres pg_dump -U ppn_user ppn_production \
+  > /opt/backups/ppn_$(date +%Y%m%d_%H%M).sql
 
-# Restaurer une sauvegarde
-docker compose exec -T postgres psql -U ppn_user ppn_production < backup_20260513.sql
-
-# Arrêter tout
+# Arrêt
 docker compose down
 
-# Arrêter et supprimer les données (⚠️ irréversible)
-docker compose down -v
+# Voir ce qui tourne sur le VPS
+docker ps --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"
 ```
 
 ---
 
-## 7. Surveillance
+## 8. Ressources VPS actuelles
 
+| Ressource | Total | Utilisé | Libre |
+|---|---|---|---|
+| Disque | 193G | 61G | **133G** ✅ |
+| RAM | 23Gi | 3.7Gi | **19Gi** ✅ |
+
+GrossistePPN nécessite environ : ~500MB RAM, ~2GB disque.
+
+---
+
+## 9. Note sur ERPNext
+
+Tes instances ERPNext (`erpnext` et `frappe_docker2`) sont en boucle de restart.  
+Ce n'est pas lié à GrossistePPN mais si tu veux investiguer :
 ```bash
-# CPU / RAM / Disk
-htop
-df -h
-
-# Espace utilisé par Docker
-docker system df
-
-# Nettoyer les images inutilisées
-docker system prune -f
+docker compose -f /opt/erpnext/pwd.yml logs frontend --tail=50
+docker compose -f /opt/erpnext2/pwd.yml logs frontend --tail=50
 ```
 
 ---
 
-## 8. Ajouter un domaine + HTTPS (optionnel, plus tard)
-
-Quand tu auras un nom de domaine `.mg` :
+## 10. Ajouter HTTPS plus tard (quand tu auras un domaine)
 
 ```bash
-# Installer Certbot
 apt install certbot python3-certbot-nginx -y
-
-# Modifier docker/nginx/nginx.conf : ajouter server_name ton-domaine.mg
-# Puis obtenir le certificat SSL
+# Modifier server_name dans /etc/nginx/sites-available/grossiteppn
 certbot --nginx -d ton-domaine.mg
 ```
-
----
-
-## Ports ouverts sur le firewall VPS
-
-```bash
-# Ouvrir le port 80 (HTTP)
-ufw allow 80/tcp
-ufw allow 22/tcp  # SSH (déjà ouvert normalement)
-ufw enable
-```
-
----
-
-## Comptes de connexion (démo après seed)
-
-| Rôle | Email | Mot de passe |
-|---|---|---|
-| Admin | admin@grossiteppn.mg | (à définir via l'interface) |
-
-> **Note :** Les comptes utilisateurs se créent via le module Admin → Inviter un utilisateur.
