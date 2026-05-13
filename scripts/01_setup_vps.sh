@@ -8,7 +8,7 @@
 set -euo pipefail
 
 APP_USER="ppn"
-APP_DIR="/var/www/grossiteppn"
+APP_DIR="/opt/grossiteppn"
 NODE_VERSION="22"
 PG_DB="ppn_production"
 PG_USER="ppn_user"

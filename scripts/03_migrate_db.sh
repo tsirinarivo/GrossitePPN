@@ -6,7 +6,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-APP_DIR="/var/www/grossiteppn"
+APP_DIR="/opt/grossiteppn"
 ENV_FILE="$APP_DIR/.env.production"
 
 GREEN='\033[0;32m'; BLUE='\033[0;34m'; RED='\033[0;31m'; NC='\033[0m'

@@ -7,7 +7,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-APP_DIR="/var/www/grossiteppn"
+APP_DIR="/opt/grossiteppn"
 APP_NAME="grossiteppn"
 GIT_REPO="https://github.com/tsirinarivo/GrossitePPN.git"
 GIT_BRANCH="claude/wholesale-management-pwa-khts0"
