@@ -88,6 +88,10 @@ if [[ "$SEED" == "true" ]]; then
 fi
 
 # ── 7. Vhost Nginx ────────────────────────────────────────────────────────────
+# Page d'erreur 502 personnalisée (toujours mise à jour)
+mkdir -p /etc/nginx/error-pages/grossiteppn
+cp docker/nginx/502.html /etc/nginx/error-pages/grossiteppn/502.html
+
 NGINX_CONF="/etc/nginx/sites-available/grossiteppn"
 if [[ ! -f "$NGINX_CONF" ]]; then
   log "Configuration du vhost Nginx..."

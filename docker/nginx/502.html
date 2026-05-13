@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Service indisponible — GrossistePPN</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0f1117;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 2rem;
+    }
+
+    .card {
+      max-width: 480px;
+      width: 100%;
+      background: #1a1f2e;
+      border: 1px solid #2d3448;
+      border-radius: 1.25rem;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      box-shadow: 0 25px 60px rgba(0,0,0,.4);
+    }
+
+    .icon {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #f59e0b22, #ef444422);
+      border: 1px solid #f59e0b44;
+      border-radius: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+    }
+
+    .icon svg { width: 36px; height: 36px; color: #f59e0b; }
+
+    .code {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: #f59e0b;
+      margin-bottom: .5rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: .75rem;
+    }
+
+    p {
+      font-size: .9rem;
+      color: #94a3b8;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: .75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .6rem 1.25rem;
+      border-radius: .625rem;
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity .15s;
+      border: none;
+    }
+    .btn:hover { opacity: .85; }
+
+    .btn-primary {
+      background: #f59e0b;
+      color: #0f1117;
+    }
+
+    .btn-ghost {
+      background: #2d3448;
+      color: #e2e8f0;
+    }
+
+    .footer {
+      margin-top: 2rem;
+      font-size: .75rem;
+      color: #475569;
+    }
+
+    .pulse {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #f59e0b;
+      margin-right: .4rem;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .4; transform: scale(.75); }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </div>
+
+    <div class="code">502 Bad Gateway</div>
+    <h1>Service temporairement indisponible</h1>
+    <p>
+      L&rsquo;application GrossistePPN est en cours de redémarrage ou de mise à jour.
+      <br><br>
+      <span class="pulse"></span>Récupération en cours&hellip;
+    </p>
+
+    <div class="actions">
+      <a href="/" class="btn btn-primary" onclick="location.reload(); return false;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+          <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+        </svg>
+        Réessayer
+      </a>
+      <button class="btn btn-ghost" onclick="setTimeout(() => location.reload(), 10000); this.textContent = 'Retry dans 10s…'; this.disabled=true;">
+        Réessai auto
+      </button>
+    </div>
+  </div>
+
+  <div class="footer">GrossistePPN &mdash; Madagascar &mdash; grossiste.dago-it.com</div>
+
+  <script>
+    // Retry automatique toutes les 15s jusqu'à ce que l'app réponde
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await fetch('/api/health', { cache: 'no-store' });
+        if (res.ok) { clearInterval(interval); location.reload(); }
+      } catch { /* encore down */ }
+      if (attempts >= 20) clearInterval(interval); // arrêt après 5 min
+    }, 15000);
+  </script>
+</body>
+</html>
