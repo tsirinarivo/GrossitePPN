@@ -79,11 +79,7 @@ if pm2 describe "$APP_NAME" &>/dev/null; then
   pm2 restart "$APP_NAME" --update-env
   success "Application redémarrée"
 else
-  PORT="${PORT:-3001}" pm2 start node \
-    --name "$APP_NAME" \
-    --cwd "$APP_DIR" \
-    --max-memory-restart 512M \
-    -- .next/standalone/server.js
+  pm2 start "$APP_DIR/ecosystem.config.js"
   pm2 save
   success "Application démarrée"
 fi
