@@ -38,7 +38,7 @@ export function LoginForm() {
     });
 
     if (result.error) {
-      toast.error("Identifiants incorrects", {
+      toast.error(`Erreur: ${result.error.message ?? result.error.code ?? "inconnu"}`, {
         description: "Vérifiez votre email et votre mot de passe.",
       });
       return;
