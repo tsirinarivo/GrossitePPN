@@ -67,6 +67,12 @@ info "Build Next.js..."
 NODE_ENV=production pnpm build
 success "Build terminé"
 
+# ── 4b. Copie des assets statiques (obligatoire pour output: standalone) ─────
+info "Copie des fichiers statiques dans standalone..."
+cp -r "$APP_DIR/.next/static"  "$APP_DIR/.next/standalone/.next/static"
+cp -r "$APP_DIR/public"        "$APP_DIR/.next/standalone/public"
+success "Assets statiques copiés (CSS / JS / images)"
+
 # ── 5. Migrations base de données ─────────────────────────────────────────────
 info "Application des migrations DB..."
 DATABASE_URL="$DATABASE_URL" npx drizzle-kit push
