@@ -6,8 +6,10 @@ import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
+type Role = (typeof schema.roleEnum.enumValues)[number];
+
 const updateSchema = z.object({
-  role: z.string().optional(),
+  role: z.enum(schema.roleEnum.enumValues).optional(),
   actif: z.boolean().optional(),
   name: z.string().min(1).optional(),
 });
@@ -19,10 +21,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  const updates: Record<string, unknown> = { updatedAt: new Date() };
-  if (parsed.data.role !== undefined) updates["role"] = parsed.data.role;
-  if (parsed.data.actif !== undefined) updates["actif"] = parsed.data.actif;
-  if (parsed.data.name !== undefined) updates["name"] = parsed.data.name;
+
+  const { role, actif, name } = parsed.data;
+  const updates: Partial<{ role: Role; actif: boolean; name: string; updatedAt: Date }> = {
+    updatedAt: new Date(),
+  };
+  if (role !== undefined) updates.role = role;
+  if (actif !== undefined) updates.actif = actif;
+  if (name !== undefined) updates.name = name;
 
   await db.update(schema.users).set(updates).where(eq(schema.users.id, id));
   return NextResponse.json({ ok: true });

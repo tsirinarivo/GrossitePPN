@@ -6,6 +6,8 @@ import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
+type Role = (typeof schema.roleEnum.enumValues)[number];
+
 export async function GET() {
   const users = await db.select({
     id: schema.users.id,
@@ -18,11 +20,13 @@ export async function GET() {
   return NextResponse.json(users);
 }
 
+const VALID_ROLES = schema.roleEnum.enumValues;
+
 const createSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(6),
-  role: z.string().default("agent"),
+  role: z.enum(schema.roleEnum.enumValues).default("agent"),
 });
 
 export async function POST(req: NextRequest) {
@@ -33,7 +37,6 @@ export async function POST(req: NextRequest) {
   }
   const { name, email, password, role } = parsed.data;
 
-  // Créer via Better-Auth puis mettre à jour le rôle
   const signUpRes = await fetch(new URL("/api/auth/sign-up/email", req.url), {
     method: "POST",
     headers: { "Content-Type": "application/json", "Origin": req.headers.get("origin") ?? "http://localhost:3000" },
@@ -49,7 +52,7 @@ export async function POST(req: NextRequest) {
   const userId = data.user?.id;
 
   if (userId && role !== "agent") {
-    await db.update(schema.users).set({ role }).where(eq(schema.users.id, userId));
+    await db.update(schema.users).set({ role: role as Role }).where(eq(schema.users.id, userId));
   }
 
   return NextResponse.json({ ok: true });
