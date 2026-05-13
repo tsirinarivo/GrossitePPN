@@ -114,13 +114,19 @@ export function PrinterSettings() {
 
   function sendTest() {
     startTest(async () => {
-      const res = await fetch("/api/print/test", { method: "POST" });
-      const data = await res.json();
-      if (data.ok) {
-        toast.success("Ticket de test envoyé");
-        fetchLogs();
-      } else {
-        toast.error(`Échec : ${data.errorMessage ?? "Erreur inconnue"}`);
+      try {
+        const res = await fetch("/api/print/test", { method: "POST" });
+        const data = await res.json();
+        if (data.ok) {
+          toast.success("Ticket de test envoyé à l'imprimante");
+          fetchLogs();
+        } else {
+          toast.error("Échec d'impression", {
+            description: data.errorMessage ?? `Erreur HTTP ${res.status}`,
+          });
+        }
+      } catch (e) {
+        toast.error("Erreur réseau", { description: e instanceof Error ? e.message : String(e) });
       }
     });
   }
