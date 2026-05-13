@@ -69,7 +69,7 @@ success "Build terminé"
 
 # ── 5. Migrations base de données ─────────────────────────────────────────────
 info "Application des migrations DB..."
-pnpm db:push
+DATABASE_URL="$DATABASE_URL" npx drizzle-kit push
 success "Migrations appliquées"
 
 # ── 6. PM2 — (re)démarrer l'app ──────────────────────────────────────────────
