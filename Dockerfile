@@ -25,7 +25,7 @@ ENV BETTER_AUTH_URL=http://localhost:3000
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-RUN pnpm build
+RUN node_modules/.bin/next build
 
 # ── Stage 3 : image finale ────────────────────────────────────────────────────
 FROM node:22-alpine AS runner
