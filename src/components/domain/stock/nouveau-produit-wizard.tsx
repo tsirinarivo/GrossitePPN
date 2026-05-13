@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import {
   ChevronRight,
@@ -56,23 +57,26 @@ const ETAPES = [
   { titre: "Récapitulatif", icon: CheckCircle2 },
 ];
 
-const CATEGORIES_OPTIONS = [
-  { id: "riz", label: "Riz" },
-  { id: "huile", label: "Huile" },
-  { id: "sucre", label: "Sucre" },
-  { id: "savon", label: "Savon" },
-  { id: "lait", label: "Lait" },
-  { id: "farine", label: "Farine" },
-  { id: "sel", label: "Sel" },
-  { id: "conserves", label: "Conserves" },
-  { id: "autre", label: "Autre" },
-];
+type CategorieOption = { id: string; label: string };
 
 const UNITES_BASE_SUGGESTIONS = ["kg", "L", "pièce", "bouteille", "boîte", "sachet", "paquet", "unité"];
 
 export function NouveauProduitWizard() {
+  const router = useRouter();
   const [etape, setEtape] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [categories, setCategories] = useState<CategorieOption[]>([]);
+
+  useEffect(() => {
+    fetch("/api/produits")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data.categories)) {
+          setCategories(data.categories.map((c: { id: string; nom: string }) => ({ id: c.id, label: c.nom })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const {
     register,
@@ -104,11 +108,27 @@ export function NouveauProduitWizard() {
 
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    setSubmitting(false);
-    toast.success(`Produit "${data.nom}" créé avec succès`, {
-      description: `${data.unitesVente.length} unité(s) de vente configurée(s)`,
-    });
+    try {
+      const res = await fetch("/api/produits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        const msg = typeof json.error === "string" ? json.error : "Erreur lors de la création";
+        toast.error(msg);
+        return;
+      }
+      toast.success(`Produit "${data.nom}" créé avec succès`, {
+        description: `${data.unitesVente.length} unité(s) de vente configurée(s)`,
+      });
+      router.push("/stock");
+    } catch {
+      toast.error("Erreur réseau — produit non enregistré");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const uniteBase = watchedValues.uniteBase ?? "unité";
@@ -196,7 +216,7 @@ export function NouveauProduitWizard() {
                         )}
                       >
                         <option value="">Sélectionner...</option>
-                        {CATEGORIES_OPTIONS.map((c) => (
+                        {categories.map((c) => (
                           <option key={c.id} value={c.id}>{c.label}</option>
                         ))}
                       </select>

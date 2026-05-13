@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
@@ -86,5 +87,90 @@ export async function GET() {
   } catch (e) {
     console.error("[api/produits]", e);
     return NextResponse.json({ produits: [], categories: [] });
+  }
+}
+
+const uniteVenteSchema = z.object({
+  nom: z.string().min(1),
+  facteurConversion: z.number().positive(),
+  prixGros: z.number().int().nonnegative().optional().nullable(),
+  prixSemiGros: z.number().int().nonnegative().optional().nullable(),
+  prixDetail: z.number().int().nonnegative().optional().nullable(),
+  codeBarres: z.string().optional().nullable(),
+  estDefaut: z.boolean().default(false),
+});
+
+const nouveauProduitSchema = z.object({
+  nom: z.string().min(1, "Nom requis"),
+  nomMG: z.string().optional().nullable(),
+  code: z.string().min(1, "Code requis"),
+  categorieId: z.string().optional().nullable(),
+  marque: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
+  uniteBase: z.string().min(1, "Unité de base requise"),
+  seuilAlerte: z.number().int().nonnegative().default(0),
+  aDLC: z.boolean().default(false),
+  tauxTVA: z.number().int().min(0).max(100).default(0),
+  unitesVente: z.array(uniteVenteSchema).min(1),
+  visibleEcommerce: z.boolean().default(false),
+  prixEcommerce: z.number().int().nonnegative().optional().nullable(),
+});
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json().catch(() => null);
+    const parsed = nouveauProduitSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+    }
+
+    const d = parsed.data;
+    const produitId = crypto.randomUUID();
+    const now = new Date();
+
+    await db.insert(schema.produits).values({
+      id: produitId,
+      code: d.code,
+      nom: d.nom,
+      nomMG: d.nomMG ?? null,
+      description: d.description ?? null,
+      categorieId: d.categorieId ?? null,
+      marque: d.marque ?? null,
+      uniteBase: d.uniteBase,
+      seuilAlerte: d.seuilAlerte,
+      aDLC: d.aDLC,
+      tauxTVA: d.tauxTVA,
+      visibleEcommerce: d.visibleEcommerce,
+      prixEcommerce: d.prixEcommerce ?? null,
+      actif: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    if (d.unitesVente.length > 0) {
+      await db.insert(schema.unitesVente).values(
+        d.unitesVente.map((u, i) => ({
+          id: crypto.randomUUID(),
+          produitId,
+          nom: u.nom,
+          facteurConversion: u.facteurConversion,
+          prixGros: u.prixGros ?? null,
+          prixSemiGros: u.prixSemiGros ?? null,
+          prixDetail: u.prixDetail ?? null,
+          codeBarres: u.codeBarres || null,
+          estDefaut: i === 0,
+          ordre: i,
+        }))
+      );
+    }
+
+    return NextResponse.json({ ok: true, id: produitId }, { status: 201 });
+  } catch (e) {
+    console.error("[api/produits POST]", e);
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("unique") || msg.includes("duplicate")) {
+      return NextResponse.json({ error: "Ce code produit existe déjà" }, { status: 409 });
+    }
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
