@@ -100,6 +100,8 @@ export function AdminView() {
   const [showPwd, setShowPwd] = useState(false);
   const [newUserSaving, startNewUserSave] = useTransition();
   const [editUser, setEditUser] = useState<User | null>(null);
+  const [editPwd, setEditPwd] = useState("");
+  const [showEditPwd, setShowEditPwd] = useState(false);
   const [editSaving, startEditSave] = useTransition();
 
   function loadUsers() {
@@ -130,13 +132,20 @@ export function AdminView() {
   function saveEditUser() {
     if (!editUser) return;
     startEditSave(async () => {
+      const payload: Record<string, unknown> = {
+        name: editUser.name,
+        role: editUser.role,
+        actif: editUser.actif,
+      };
+      if (editPwd.trim().length >= 6) payload.password = editPwd.trim();
       const res = await fetch(`/api/admin/users/${editUser.id}`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editUser.name, role: editUser.role, actif: editUser.actif }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         toast.success("Utilisateur mis à jour");
         setEditUser(null);
+        setEditPwd("");
         loadUsers();
       } else {
         toast.error("Erreur mise à jour");
@@ -397,7 +406,7 @@ export function AdminView() {
                       className="bg-[--background] rounded-2xl border border-[--border] p-6 w-full max-w-md space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-[--foreground]">Modifier {editUser.name}</h3>
-                        <button onClick={() => setEditUser(null)} className="text-[--foreground-muted] hover:text-[--foreground]">
+                        <button onClick={() => { setEditUser(null); setEditPwd(""); }} className="text-[--foreground-muted] hover:text-[--foreground]">
                           <X className="w-5 h-5" />
                         </button>
                       </div>
@@ -416,6 +425,24 @@ export function AdminView() {
                             className="w-full h-10 px-3 text-sm rounded-lg border border-[--border] bg-[--background] text-[--foreground] focus:outline-none focus:ring-2 focus:ring-[--primary]/40">
                             {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                           </select>
+                        </div>
+                        <div>
+                          <label className="text-xs text-[--foreground-muted] mb-1 block">
+                            Nouveau mot de passe <span className="text-[--foreground-subtle]">(laisser vide pour ne pas modifier)</span>
+                          </label>
+                          <div className="relative">
+                            <Input
+                              type={showEditPwd ? "text" : "password"}
+                              value={editPwd}
+                              onChange={e => setEditPwd(e.target.value)}
+                              placeholder="Minimum 6 caractères"
+                              className="pr-10"
+                            />
+                            <button type="button" onClick={() => setShowEditPwd(p => !p)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-[--foreground-subtle]">
+                              {showEditPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
                         </div>
                         <div className="flex items-center gap-3">
                           <label className="relative inline-flex items-center cursor-pointer">

@@ -215,6 +215,7 @@ export function POSPanier({ onClose, totalTTC, nbArticles }: Props) {
           variant="pos"
           size="pos-lg"
           className="w-full"
+          style={{ color: "#ffffff", backgroundColor: "#d97706" }}
           onClick={handleEnvoyer}
           loading={envoiEnCours}
         >
