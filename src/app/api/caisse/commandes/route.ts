@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { inArray, desc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { broadcastCommande } from "@/lib/sse/broadcast";
 
 export const dynamic = "force-dynamic";
 
@@ -160,6 +161,15 @@ export async function POST(req: NextRequest) {
     }));
 
     await db.insert(schema.lignesCommande).values(lignesValues);
+
+    // Notifier la caisse en temps réel via SSE
+    await broadcastCommande({
+      commandeId,
+      numero,
+      source: "pos_agent",
+      totalTTC: Math.round(totalTTC ?? 0),
+      clientId: client?.id ?? null,
+    });
 
     return NextResponse.json({ ok: true, commandeId, numero }, { status: 201 });
   } catch (e) {
