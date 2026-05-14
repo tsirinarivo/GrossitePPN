@@ -111,9 +111,9 @@ export async function POST(req: NextRequest) {
     await db.insert(schema.commandes).values({
       id: commandeId,
       numero,
-      clientId: client?.id ?? null,
-      agentId: agentId ?? session.user.id,
-      depotId: depotId ?? null,
+      clientId: client?.id || null,
+      agentId: agentId || session.user.id,
+      depotId: (depotId && depotId !== "default") ? depotId : null,
       source: "pos_agent",
       statut: "soumise",
       totalHT: Math.round(totalHT ?? 0),
