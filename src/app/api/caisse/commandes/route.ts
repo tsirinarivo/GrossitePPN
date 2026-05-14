@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
       id: commandeId,
       numero,
       clientId: client?.id ?? null,
-      agentId: agentId ?? null,
+      agentId: agentId ?? session.user.id,
       depotId: depotId ?? null,
       source: "pos_agent",
       statut: "soumise",

@@ -15,6 +15,7 @@ import { POSClientBar } from "./pos-client-bar";
 import { POSCategorieBar } from "./pos-categorie-bar";
 import { POSMesCommandes } from "./pos-mes-commandes";
 import { CATEGORIES_DEMO, PRODUITS_DEMO } from "./pos-data-demo";
+import { useSession } from "@/lib/auth/client";
 
 type CategorieAPI = {
   id: string;
@@ -39,15 +40,24 @@ export function POSAgent() {
     categorieActive,
     setCategorieActive,
     modeHorsLigne,
+    setAgent,
   } = usePOSStore();
   const connexion = useAppStore((s) => s.connexion);
   const { nbArticles, totalTTC } = usePOSTotaux();
+  const { data: session } = useSession();
 
   // Rehydrate the persisted POS store from localStorage after React hydration.
   // Must happen in useEffect (post-mount) to avoid React 19 error #185.
   useEffect(() => {
     usePOSStore.persist.rehydrate();
   }, []);
+
+  // Synchroniser agentId du store avec la session utilisateur connectée
+  useEffect(() => {
+    if (session?.user?.id) {
+      setAgent(session.user.id, usePOSStore.getState().depotId ?? "default");
+    }
+  }, [session?.user?.id, setAgent]);
 
   useEffect(() => {
     fetch("/api/produits")
