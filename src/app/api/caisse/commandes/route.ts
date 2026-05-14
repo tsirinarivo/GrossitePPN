@@ -12,7 +12,7 @@ export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   try {
-    // Fetch commandes in queue: soumise or validee (waiting for cashier)
+    // Fetch commandes in queue: soumise uniquement (validee = déjà encaissée)
     const commandes = await db
       .select({
         id: schema.commandes.id,
@@ -25,7 +25,7 @@ export async function GET() {
         agentId: schema.commandes.agentId,
       })
       .from(schema.commandes)
-      .where(inArray(schema.commandes.statut, ["soumise", "validee"]))
+      .where(inArray(schema.commandes.statut, ["soumise"]))
       .orderBy(desc(schema.commandes.soumiseAt))
       .limit(50);
 

@@ -214,13 +214,15 @@ export function HistoriqueView() {
                           <td className="px-4 py-3 text-xs text-[--foreground-subtle] hidden sm:table-cell">{cmd.nbArticles}</td>
                           <td className="px-4 py-3 text-right font-semibold">{formatMGA(cmd.totalTTC)}</td>
                           <td className="px-4 py-3 text-center">
-                            <span
-                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                              style={{ backgroundColor: badge.color + "20", color: badge.color }}
-                            >
-                              <badge.icon className="w-3 h-3" />
-                              {badge.label}
-                            </span>
+                            {badge && (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                                style={{ backgroundColor: badge.color + "20", color: badge.color }}
+                              >
+                                <badge.icon className="w-3 h-3" />
+                                {badge.label}
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3">
                             {cmd.statut === "validee" && (
