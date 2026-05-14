@@ -6,6 +6,39 @@ import * as schema from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
+function buildQrPayload(opts: {
+  numero: string;
+  client?: string | null;
+  totalTTC: number;
+  modePaiement?: string | null;
+  date: Date;
+}): string {
+  const dd = String(opts.date.getDate()).padStart(2, "0");
+  const mm = String(opts.date.getMonth() + 1).padStart(2, "0");
+  const yyyy = opts.date.getFullYear();
+  const hh = String(opts.date.getHours()).padStart(2, "0");
+  const mn = String(opts.date.getMinutes()).padStart(2, "0");
+  const dateStr = `${dd}/${mm}/${yyyy} ${hh}:${mn}`;
+
+  const totalStr = Math.round(opts.totalTTC)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " Ar";
+
+  const client = opts.client && opts.client !== "Client comptoir"
+    ? opts.client.slice(0, 40)
+    : "Comptoir";
+
+  const paie = (opts.modePaiement ?? "Especes").slice(0, 20);
+
+  return [
+    `CMD:${opts.numero}`,
+    `DATE:${dateStr}`,
+    `TOTAL:${totalStr}`,
+    `CLIENT:${client}`,
+    `PAIE:${paie}`,
+  ].join("\n");
+}
+
 export async function POST(req: NextRequest) {
   try {
     const cfg = await loadXprintConfig();
@@ -43,7 +76,7 @@ export async function POST(req: NextRequest) {
       tva: totalTVA > 0 ? totalTVA : null,
       total: totalTTC,
       modePaiement: modePaiement ?? "Especes",
-      qrPayload: `https://grossiste.dago-it.com/suivi/${commandeId ?? numero}`,
+      qrPayload: buildQrPayload({ numero, client, totalTTC, modePaiement, date: new Date() }),
       header: cfg.header,
       footer: cfg.footer,
     });
