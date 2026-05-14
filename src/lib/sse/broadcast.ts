@@ -1,7 +1,6 @@
 /**
  * Broadcaster SSE in-process.
  * Toutes les connexions /api/stream/caisse sont stockées dans un Set global.
- * Quand creerCommande() appelle broadcastCommande(), chaque client reçoit l'événement.
  * Fonctionne en dev (processus unique). En prod multi-instance, remplacer par Redis Pub/Sub.
  */
 
@@ -13,9 +12,15 @@ export interface CommandeEvent {
   clientId?: string | null;
 }
 
+export interface CommandeMiseAJourEvent {
+  commandeId: string;
+  numero: string;
+  totalTTC: number;
+  nbArticles: number;
+}
+
 type StreamController = ReadableStreamDefaultController<Uint8Array>;
 
-// Stockage global des connexions actives
 const clients = new Set<StreamController>();
 
 export function registerClient(controller: StreamController) {
@@ -23,8 +28,8 @@ export function registerClient(controller: StreamController) {
   return () => clients.delete(controller);
 }
 
-export async function broadcastCommande(event: CommandeEvent): Promise<void> {
-  const payload = `event: nouvelle_commande\ndata: ${JSON.stringify(event)}\n\n`;
+function send(eventName: string, data: unknown): void {
+  const payload = `event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`;
   const encoded = new TextEncoder().encode(payload);
   for (const ctrl of clients) {
     try {
@@ -33,6 +38,14 @@ export async function broadcastCommande(event: CommandeEvent): Promise<void> {
       clients.delete(ctrl);
     }
   }
+}
+
+export function broadcastCommande(event: CommandeEvent): void {
+  send("nouvelle_commande", event);
+}
+
+export function broadcastMiseAJour(event: CommandeMiseAJourEvent): void {
+  send("commande_modifiee", event);
 }
 
 export function sseKeepAlive(controller: StreamController) {

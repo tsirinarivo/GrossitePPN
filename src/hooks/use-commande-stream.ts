@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
-import type { CommandeEvent } from "@/lib/sse/broadcast";
+import type { CommandeEvent, CommandeMiseAJourEvent } from "@/lib/sse/broadcast";
 
-export function useCommandeStream(onCommande: (event: CommandeEvent) => void) {
-  const stableCallback = useCallback(onCommande, [onCommande]);
+type Options = {
+  onNouvelle?: (event: CommandeEvent) => void;
+  onMiseAJour?: (event: CommandeMiseAJourEvent) => void;
+};
+
+export function useCommandeStream({ onNouvelle, onMiseAJour }: Options) {
+  const stableNouvelle = useCallback(onNouvelle ?? (() => {}), [onNouvelle]);
+  const stableMiseAJour = useCallback(onMiseAJour ?? (() => {}), [onMiseAJour]);
 
   useEffect(() => {
     let es: EventSource | null = null;
@@ -17,11 +23,14 @@ export function useCommandeStream(onCommande: (event: CommandeEvent) => void) {
 
       es.addEventListener("nouvelle_commande", (e) => {
         try {
-          const data = JSON.parse(e.data) as CommandeEvent;
-          stableCallback(data);
-        } catch {
-          // JSON malformé — ignorer
-        }
+          stableNouvelle(JSON.parse(e.data) as CommandeEvent);
+        } catch { /* JSON malformé */ }
+      });
+
+      es.addEventListener("commande_modifiee", (e) => {
+        try {
+          stableMiseAJour(JSON.parse(e.data) as CommandeMiseAJourEvent);
+        } catch { /* JSON malformé */ }
       });
 
       es.onerror = () => {
@@ -34,9 +43,7 @@ export function useCommandeStream(onCommande: (event: CommandeEvent) => void) {
         }
       };
 
-      es.onopen = () => {
-        retries = 0;
-      };
+      es.onopen = () => { retries = 0; };
     };
 
     connect();
@@ -45,5 +52,5 @@ export function useCommandeStream(onCommande: (event: CommandeEvent) => void) {
       if (retryTimeout) clearTimeout(retryTimeout);
       es?.close();
     };
-  }, [stableCallback]);
+  }, [stableNouvelle, stableMiseAJour]);
 }

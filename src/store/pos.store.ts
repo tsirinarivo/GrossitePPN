@@ -57,6 +57,11 @@ export type ClientPOS = {
   pointsFidelite: number;
 };
 
+export type CommandeEnEdition = {
+  id: string;
+  numero: string;
+};
+
 type POSState = {
   // Session
   agentId: string | null;
@@ -68,6 +73,9 @@ type POSState = {
   notes: string;
   adresseLivraison: string;
   notesLivraison: string;
+
+  // Mode édition d'une commande existante
+  commandeEnEdition: CommandeEnEdition | null;
 
   // UI
   recherche: string;
@@ -90,6 +98,8 @@ type POSState = {
   setCategorieActive: (id: string | null) => void;
   setModeHorsLigne: (v: boolean) => void;
   viderPanier: () => void;
+  chargerPourEdition: (commande: CommandeEnEdition, lignes: LignePanier[]) => void;
+  annulerEdition: () => void;
 };
 
 function calculerLigne(
@@ -119,6 +129,7 @@ export const usePOSStore = create<POSState>()(
       notes: "",
       adresseLivraison: "",
       notesLivraison: "",
+      commandeEnEdition: null,
       recherche: "",
       categorieActive: null,
       modeHorsLigne: false,
@@ -216,7 +227,13 @@ export const usePOSStore = create<POSState>()(
       setRecherche: (v) => set({ recherche: v }),
       setCategorieActive: (id) => set({ categorieActive: id }),
       setModeHorsLigne: (v) => set({ modeHorsLigne: v }),
-      viderPanier: () => set({ lignes: [], client: null, notes: "", notesLivraison: "", adresseLivraison: "" }),
+      viderPanier: () => set({ lignes: [], client: null, notes: "", notesLivraison: "", adresseLivraison: "", commandeEnEdition: null }),
+
+      chargerPourEdition: (commande, lignes) =>
+        set({ commandeEnEdition: commande, lignes, notes: "" }),
+
+      annulerEdition: () =>
+        set({ commandeEnEdition: null, lignes: [], client: null, notes: "" }),
     }),
     {
       name: "ppn-pos-store",

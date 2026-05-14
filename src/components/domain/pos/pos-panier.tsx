@@ -12,6 +12,8 @@ import {
   MessageSquare,
   AlertCircle,
   CheckCircle2,
+  Edit3,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePOSStore, usePOSTotaux } from "@/store/pos.store";
@@ -40,6 +42,8 @@ export function POSPanier({ onClose, totalTTC, nbArticles }: Props) {
     modeHorsLigne,
     agentId,
     depotId,
+    commandeEnEdition,
+    annulerEdition,
   } = usePOSStore();
   const { totalHT, totalTVA, totalRemise } = usePOSTotaux();
   const [notesVisible, setNotesVisible] = useState(false);
@@ -49,6 +53,26 @@ export function POSPanier({ onClose, totalTTC, nbArticles }: Props) {
     if (lignes.length === 0) return;
     setEnvoiEnCours(true);
     try {
+      // Mode édition → PUT pour mettre à jour la commande existante
+      if (commandeEnEdition) {
+        const res = await fetch(`/api/caisse/commandes/${commandeEnEdition.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lignes, totalHT, totalTVA, totalTTC, totalRemise }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error ?? `Erreur ${res.status}`);
+        }
+        toast.success("Commande mise à jour", {
+          description: `${commandeEnEdition.numero} — ${formatMGA(totalTTC)}`,
+          icon: <CheckCircle2 className="w-4 h-4 text-green-500" />,
+        });
+        annulerEdition();
+        return;
+      }
+
+      // Mode normal → POST nouvelle commande
       const res = await fetch("/api/caisse/commandes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -90,9 +114,7 @@ export function POSPanier({ onClose, totalTTC, nbArticles }: Props) {
   if (lignes.length === 0) {
     return (
       <div className="flex flex-col h-full">
-        {/* Header */}
-        <PanierHeader nbArticles={0} onClose={onClose} />
-        {/* Empty state */}
+        <PanierHeader nbArticles={0} onClose={onClose} commandeEnEdition={commandeEnEdition ?? undefined} />
         <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8 text-center">
           <div className="w-16 h-16 rounded-2xl bg-[--pos-surface-hover] flex items-center justify-center">
             <ShoppingCart className="w-8 h-8 text-[--pos-text-muted]" />
@@ -103,6 +125,14 @@ export function POSPanier({ onClose, totalTTC, nbArticles }: Props) {
               Ajoutez des produits depuis le catalogue
             </p>
           </div>
+          {commandeEnEdition && (
+            <button
+              onClick={annulerEdition}
+              className="text-xs text-[--pos-text-muted] underline hover:text-[--pos-text]"
+            >
+              Annuler la modification
+            </button>
+          )}
         </div>
       </div>
     );
@@ -110,8 +140,12 @@ export function POSPanier({ onClose, totalTTC, nbArticles }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <PanierHeader nbArticles={nbArticles} onClose={onClose} onVider={viderPanier} />
+      <PanierHeader
+        nbArticles={nbArticles}
+        onClose={onClose}
+        onVider={commandeEnEdition ? annulerEdition : viderPanier}
+        commandeEnEdition={commandeEnEdition ?? undefined}
+      />
 
       {/* Lignes */}
       <div className="flex-1 overflow-y-auto">
@@ -215,13 +249,26 @@ export function POSPanier({ onClose, totalTTC, nbArticles }: Props) {
           variant="pos"
           size="pos-lg"
           className="w-full"
-          style={{ color: "#ffffff", backgroundColor: "#d97706" }}
+          style={{ color: "#ffffff", backgroundColor: commandeEnEdition ? "#0ea5e9" : "#d97706" }}
           onClick={handleEnvoyer}
           loading={envoiEnCours}
         >
-          <Send className="w-5 h-5" />
-          {modeHorsLigne ? "Sauvegarder la commande" : "Envoyer à la caisse"}
+          {commandeEnEdition ? (
+            <><RefreshCw className="w-5 h-5" />Mettre à jour la commande</>
+          ) : modeHorsLigne ? (
+            <><Send className="w-5 h-5" />Sauvegarder la commande</>
+          ) : (
+            <><Send className="w-5 h-5" />Envoyer à la caisse</>
+          )}
         </Button>
+        {commandeEnEdition && (
+          <button
+            onClick={annulerEdition}
+            className="w-full text-center text-xs text-[--pos-text-muted] hover:text-[--pos-text] transition-colors pt-1"
+          >
+            Annuler la modification
+          </button>
+        )}
       </div>
     </div>
   );
@@ -231,15 +278,31 @@ function PanierHeader({
   nbArticles,
   onClose,
   onVider,
+  commandeEnEdition,
 }: {
   nbArticles: number;
   onClose?: () => void;
   onVider?: () => void;
+  commandeEnEdition?: { id: string; numero: string };
 }) {
   return (
-    <div className="h-14 flex items-center gap-3 px-4 border-b border-[--pos-border] shrink-0">
-      <ShoppingCart className="w-5 h-5 text-[--pos-text-muted]" />
-      <span className="font-semibold text-[--pos-text] flex-1">Panier</span>
+    <div className={cn(
+      "h-14 flex items-center gap-3 px-4 border-b border-[--pos-border] shrink-0",
+      commandeEnEdition && "bg-sky-500/10 border-sky-500/30"
+    )}>
+      {commandeEnEdition ? (
+        <Edit3 className="w-5 h-5 text-sky-400 shrink-0" />
+      ) : (
+        <ShoppingCart className="w-5 h-5 text-[--pos-text-muted] shrink-0" />
+      )}
+      <div className="flex-1 min-w-0">
+        <span className="font-semibold text-[--pos-text] text-sm block truncate">
+          {commandeEnEdition ? `Modification` : "Panier"}
+        </span>
+        {commandeEnEdition && (
+          <span className="text-[10px] text-sky-400 font-mono">{commandeEnEdition.numero}</span>
+        )}
+      </div>
       {nbArticles > 0 && (
         <Badge className="bg-[--pos-primary]/20 text-[--pos-primary] ring-0 text-xs">
           {nbArticles} article{nbArticles > 1 ? "s" : ""}

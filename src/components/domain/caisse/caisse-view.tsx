@@ -106,7 +106,7 @@ export function CaisseView() {
       .finally(() => setLoadingLignes(false));
   }, [commandeSelectee?.id]);
 
-  // Écoute les nouvelles commandes en temps réel via SSE
+  // Nouvelle commande via SSE
   const handleNouvelleCommande = useCallback((event: CommandeEvent) => {
     const nouvelleCommande: CommandeFile = {
       id: event.commandeId,
@@ -122,7 +122,25 @@ export function CaisseView() {
     setFileCommandes((prev) => [nouvelleCommande, ...prev]);
   }, []);
 
-  useCommandeStream(handleNouvelleCommande);
+  // Mise à jour commande existante via SSE
+  const handleMiseAJour = useCallback((event: import("@/lib/sse/broadcast").CommandeMiseAJourEvent) => {
+    setFileCommandes((prev) =>
+      prev.map((c) =>
+        c.id === event.commandeId
+          ? { ...c, montant: event.totalTTC, nbArticles: event.nbArticles }
+          : c
+      )
+    );
+    // Si c'est la commande sélectionnée, recharger ses lignes
+    setCommandeSelectee((prev) =>
+      prev?.id === event.commandeId ? { ...prev, montant: event.totalTTC } : prev
+    );
+    toast.info(`Commande ${event.numero} modifiée par l'agent`, {
+      description: "Les lignes ont été mises à jour.",
+    });
+  }, []);
+
+  useCommandeStream({ onNouvelle: handleNouvelleCommande, onMiseAJour: handleMiseAJour });
 
   const totalHT = commandeDetail?.totalHT ?? lignes.reduce((s, l) => s + l.total, 0);
   const totalTVA = commandeDetail?.totalTVA ?? 0;

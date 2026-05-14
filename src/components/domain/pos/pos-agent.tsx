@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Search, ScanLine, User, ShoppingCart, Wifi, WifiOff, Package } from "lucide-react";
+import { Search, ScanLine, ShoppingCart, Wifi, WifiOff, ClipboardList, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePOSStore, usePOSTotaux } from "@/store/pos.store";
 import type { ProduitPOS } from "@/store/pos.store";
 import { useAppStore } from "@/store/app.store";
-import { formatMGA } from "@/lib/money";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +13,7 @@ import { POSProduitGrid } from "./pos-produit-grid";
 import { POSPanier } from "./pos-panier";
 import { POSClientBar } from "./pos-client-bar";
 import { POSCategorieBar } from "./pos-categorie-bar";
+import { POSMesCommandes } from "./pos-mes-commandes";
 import { CATEGORIES_DEMO, PRODUITS_DEMO } from "./pos-data-demo";
 
 type CategorieAPI = {
@@ -28,6 +28,7 @@ type ProduitAPI = ProduitPOS & { categorieId: string | null };
 
 export function POSAgent() {
   const [panierOuvert, setPanierOuvert] = useState(false);
+  const [mesCommandesOuvert, setMesCommandesOuvert] = useState(false);
   const [produits, setProduits] = useState<ProduitAPI[]>([]);
   const [categories, setCategories] = useState<CategorieAPI[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,7 +104,7 @@ export function POSAgent() {
   }));
 
   return (
-    <div className="flex h-[calc(100vh-3rem)] lg:h-screen bg-[--pos-bg] text-[--pos-text] overflow-hidden">
+    <div className="flex h-[calc(100vh-3rem)] lg:h-screen bg-[--pos-bg] text-[--pos-text] overflow-hidden relative">
       {/* ── Colonne gauche : catalogue ── */}
       <div
         className={cn(
@@ -145,6 +146,18 @@ export function POSAgent() {
 
           <Button variant="pos-ghost" size="icon" title="Scanner code-barres">
             <ScanLine className="w-5 h-5" />
+          </Button>
+
+          {/* Mes commandes */}
+          <Button
+            variant="pos-ghost"
+            size="pos-md"
+            className="gap-2 hidden sm:flex"
+            onClick={() => setMesCommandesOuvert(true)}
+            title="Mes commandes envoyées"
+          >
+            <ClipboardList className="w-4 h-4" />
+            <span className="hidden lg:inline text-sm">Mes commandes</span>
           </Button>
 
           {/* Panier toggle (mobile) */}
@@ -195,6 +208,19 @@ export function POSAgent() {
           )}
         </div>
       </div>
+
+      {/* ── Drawer : Mes commandes ── */}
+      {mesCommandesOuvert && (
+        <>
+          <div
+            className="absolute inset-0 bg-black/40 z-40"
+            onClick={() => setMesCommandesOuvert(false)}
+          />
+          <div className="absolute inset-y-0 right-0 z-50 w-full sm:w-[380px] shadow-2xl">
+            <POSMesCommandes onClose={() => setMesCommandesOuvert(false)} />
+          </div>
+        </>
+      )}
 
       {/* ── Colonne droite : panier ── */}
       <div
