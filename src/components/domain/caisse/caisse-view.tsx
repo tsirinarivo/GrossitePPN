@@ -251,15 +251,22 @@ export function CaisseView() {
   }, [commandeSelectee, lignes, totalHT, totalTVA, totalTTC, assujettieTV, modePaiement]);
 
   const handleConfirmer = useCallback(async () => {
+    if (!commandeSelectee) return;
     setLoadingConfirm(true);
     try {
+      // Marquer comme encaissée en DB (retire de la file pour tous les postes)
+      await fetch(`/api/caisse/commandes/${commandeSelectee.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ modePaiement }),
+      });
       if (modeImpression === "ticket") await imprimerTicket();
       else if (modeImpression === "pdf") await imprimerPDF();
       handleCommandeSuivante();
     } finally {
       setLoadingConfirm(false);
     }
-  }, [modeImpression, imprimerTicket, imprimerPDF]);
+  }, [commandeSelectee, modePaiement, modeImpression, imprimerTicket, imprimerPDF]);
 
   const handleCommandeSuivante = () => {
     setFileCommandes((prev) => {

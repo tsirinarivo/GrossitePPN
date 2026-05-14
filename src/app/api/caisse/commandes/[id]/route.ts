@@ -143,6 +143,35 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
+  const { id } = await params;
+  try {
+    const [commande] = await db
+      .select({ id: schema.commandes.id, statut: schema.commandes.statut, numero: schema.commandes.numero })
+      .from(schema.commandes)
+      .where(eq(schema.commandes.id, id))
+      .limit(1);
+
+    if (!commande) return NextResponse.json({ error: "Commande introuvable" }, { status: 404 });
+
+    await db
+      .update(schema.commandes)
+      .set({ statut: "validee", valideeAt: new Date() })
+      .where(eq(schema.commandes.id, id));
+
+    // Retire la commande de la file SSE pour tous les postes caisse connectés
+    broadcastAnnulation({ commandeId: id, numero: commande.numero });
+
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error("[api/caisse/commandes/[id] PATCH]", e);
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
