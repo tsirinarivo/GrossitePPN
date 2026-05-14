@@ -36,7 +36,7 @@ function buildQrPayload(opts: {
     `TOTAL:${totalStr}`,
     `CLIENT:${client}`,
     `PAIE:${paie}`,
-  ].join("\n");
+  ].join(" | ");
 }
 
 export async function POST(req: NextRequest) {
