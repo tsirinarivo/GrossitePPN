@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useCommandeStream } from "@/hooks/use-commande-stream";
-import type { CommandeEvent } from "@/lib/sse/broadcast";
+import type { CommandeEvent, CommandeAnnuleeEvent } from "@/lib/sse/broadcast";
 import {
   Receipt,
   Clock,
@@ -22,6 +22,7 @@ import {
   Wifi,
   Menu,
   Ban,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -143,7 +144,43 @@ export function CaisseView() {
     });
   }, []);
 
-  useCommandeStream({ onNouvelle: handleNouvelleCommande, onMiseAJour: handleMiseAJour });
+  const handleAnnulationSSE = useCallback((event: CommandeAnnuleeEvent) => {
+    setFileCommandes((prev) => prev.filter((c) => c.id !== event.commandeId));
+    if (commandeSelectee?.id === event.commandeId) {
+      setCommandeSelectee(null);
+      setCommandeDetail(null);
+      setLignes([]);
+      setEtape("detail");
+    }
+    toast.info(`Commande ${event.numero} annulée`);
+  }, [commandeSelectee?.id]);
+
+  const handleAnnuler = useCallback(async (cmd: { id: string; numero: string }) => {
+    if (!confirm(`Annuler la commande ${cmd.numero} ?`)) return;
+    try {
+      const res = await fetch(`/api/caisse/commandes/${cmd.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error("Annulation impossible", { description: data.error });
+        return;
+      }
+      setFileCommandes((prev) => prev.filter((c) => c.id !== cmd.id));
+      if (commandeSelectee?.id === cmd.id) {
+        setFileCommandes((prev) => {
+          setCommandeSelectee(prev[0] ?? null);
+          return prev;
+        });
+        setCommandeDetail(null);
+        setLignes([]);
+        setEtape("detail");
+      }
+      toast.success(`Commande ${cmd.numero} annulée`);
+    } catch {
+      toast.error("Erreur réseau");
+    }
+  }, [commandeSelectee?.id]);
+
+  useCommandeStream({ onNouvelle: handleNouvelleCommande, onMiseAJour: handleMiseAJour, onAnnulation: handleAnnulationSSE });
 
   const totalHT = commandeDetail?.totalHT ?? lignes.reduce((s, l) => s + l.total, 0);
   const totalTVA = commandeDetail?.totalTVA ?? 0;
@@ -328,12 +365,18 @@ export function CaisseView() {
                   </div>
                 </div>
 
-                <div className="shrink-0 text-right">
+                <div className="shrink-0 text-right flex flex-col items-end gap-1">
                   <div className="flex items-center gap-1 text-[11px] text-[--foreground-subtle]">
                     <Clock className="w-3 h-3" />
                     {cmd.soumiseAt}
                   </div>
-                  <ChevronRight className="w-4 h-4 text-[--foreground-subtle] mt-1 ml-auto" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleAnnuler(cmd); }}
+                    className="p-1 rounded-lg text-[--destructive]/60 hover:text-[--destructive] hover:bg-[--destructive]/10 transition-colors"
+                    title="Annuler la commande"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </button>
             ))

@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useCallback } from "react";
-import type { CommandeEvent, CommandeMiseAJourEvent } from "@/lib/sse/broadcast";
+import type { CommandeEvent, CommandeMiseAJourEvent, CommandeAnnuleeEvent } from "@/lib/sse/broadcast";
 
 type Options = {
   onNouvelle?: (event: CommandeEvent) => void;
   onMiseAJour?: (event: CommandeMiseAJourEvent) => void;
+  onAnnulation?: (event: CommandeAnnuleeEvent) => void;
 };
 
-export function useCommandeStream({ onNouvelle, onMiseAJour }: Options) {
+export function useCommandeStream({ onNouvelle, onMiseAJour, onAnnulation }: Options) {
   const stableNouvelle = useCallback(onNouvelle ?? (() => {}), [onNouvelle]);
   const stableMiseAJour = useCallback(onMiseAJour ?? (() => {}), [onMiseAJour]);
+  const stableAnnulation = useCallback(onAnnulation ?? (() => {}), [onAnnulation]);
 
   useEffect(() => {
     let es: EventSource | null = null;
@@ -33,6 +35,12 @@ export function useCommandeStream({ onNouvelle, onMiseAJour }: Options) {
         } catch { /* JSON malformé */ }
       });
 
+      es.addEventListener("commande_annulee", (e) => {
+        try {
+          stableAnnulation(JSON.parse(e.data) as CommandeAnnuleeEvent);
+        } catch { /* JSON malformé */ }
+      });
+
       es.onerror = () => {
         es?.close();
         es = null;
@@ -52,5 +60,5 @@ export function useCommandeStream({ onNouvelle, onMiseAJour }: Options) {
       if (retryTimeout) clearTimeout(retryTimeout);
       es?.close();
     };
-  }, [stableNouvelle, stableMiseAJour]);
+  }, [stableNouvelle, stableMiseAJour, stableAnnulation]);
 }

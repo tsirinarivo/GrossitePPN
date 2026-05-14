@@ -19,6 +19,11 @@ export interface CommandeMiseAJourEvent {
   nbArticles: number;
 }
 
+export interface CommandeAnnuleeEvent {
+  commandeId: string;
+  numero: string;
+}
+
 type StreamController = ReadableStreamDefaultController<Uint8Array>;
 
 const clients = new Set<StreamController>();
@@ -46,6 +51,10 @@ export function broadcastCommande(event: CommandeEvent): void {
 
 export function broadcastMiseAJour(event: CommandeMiseAJourEvent): void {
   send("commande_modifiee", event);
+}
+
+export function broadcastAnnulation(event: CommandeAnnuleeEvent): void {
+  send("commande_annulee", event);
 }
 
 export function sseKeepAlive(controller: StreamController) {

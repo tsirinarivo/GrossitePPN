@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Package,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
@@ -63,6 +64,7 @@ export function POSMesCommandes({ onClose }: Props) {
   const [commandes, setCommandes] = useState<CommandeResumee[]>([]);
   const [loading, setLoading] = useState(true);
   const [chargementId, setChargementId] = useState<string | null>(null);
+  const [annulationId, setAnnulationId] = useState<string | null>(null);
   const { chargerPourEdition } = usePOSStore();
 
   const charger = useCallback(async () => {
@@ -119,6 +121,29 @@ export function POSMesCommandes({ onClose }: Props) {
       toast.error("Impossible de charger la commande");
     } finally {
       setChargementId(null);
+    }
+  };
+
+  const handleAnnuler = async (cmd: CommandeResumee) => {
+    if (cmd.statut !== "soumise") {
+      toast.error("Annulation impossible", { description: "La caisse a déjà commencé le traitement." });
+      return;
+    }
+    if (!confirm(`Annuler la commande ${cmd.numero} ?`)) return;
+    setAnnulationId(cmd.id);
+    try {
+      const res = await fetch(`/api/caisse/commandes/${cmd.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error("Annulation impossible", { description: data.error });
+        return;
+      }
+      setCommandes((prev) => prev.filter((c) => c.id !== cmd.id));
+      toast.success(`Commande ${cmd.numero} annulée`);
+    } catch {
+      toast.error("Erreur réseau");
+    } finally {
+      setAnnulationId(null);
     }
   };
 
@@ -198,26 +223,45 @@ export function POSMesCommandes({ onClose }: Props) {
                       </div>
                     </div>
 
-                    {/* Bouton modifier */}
-                    <button
-                      onClick={() => handleModifier(cmd)}
-                      disabled={!modifiable || chargementId === cmd.id}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 6,
-                        fontSize: 12, fontWeight: 600,
-                        padding: "6px 12px", borderRadius: 8, border: "none",
-                        cursor: modifiable ? "pointer" : "not-allowed",
-                        flexShrink: 0,
-                        backgroundColor: modifiable ? "rgba(217,119,6,0.2)" : "rgba(255,255,255,0.05)",
-                        color: modifiable ? C.primary : C.muted,
-                      }}
-                    >
-                      {chargementId === cmd.id
-                        ? <Loader2 size={14} className="animate-spin" />
-                        : <Edit3 size={14} />
-                      }
-                      Modifier
-                    </button>
+                    {/* Boutons action */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, flexShrink: 0 }}>
+                      <button
+                        onClick={() => handleModifier(cmd)}
+                        disabled={!modifiable || chargementId === cmd.id}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 6,
+                          fontSize: 12, fontWeight: 600,
+                          padding: "6px 12px", borderRadius: 8, border: "none",
+                          cursor: modifiable ? "pointer" : "not-allowed",
+                          backgroundColor: modifiable ? "rgba(217,119,6,0.2)" : "rgba(255,255,255,0.05)",
+                          color: modifiable ? C.primary : C.muted,
+                        }}
+                      >
+                        {chargementId === cmd.id
+                          ? <Loader2 size={14} className="animate-spin" />
+                          : <Edit3 size={14} />
+                        }
+                        Modifier
+                      </button>
+                      <button
+                        onClick={() => handleAnnuler(cmd)}
+                        disabled={!modifiable || annulationId === cmd.id}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 6,
+                          fontSize: 12, fontWeight: 600,
+                          padding: "6px 12px", borderRadius: 8, border: "none",
+                          cursor: modifiable ? "pointer" : "not-allowed",
+                          backgroundColor: modifiable ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.05)",
+                          color: modifiable ? "#ef4444" : C.muted,
+                        }}
+                      >
+                        {annulationId === cmd.id
+                          ? <Loader2 size={14} className="animate-spin" />
+                          : <Trash2 size={14} />
+                        }
+                        Annuler
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
