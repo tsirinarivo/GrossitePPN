@@ -202,7 +202,7 @@ export function formatFactureTicket(opts: TicketFactureOpts): string {
   if (opts.qrPayload) {
     lines.push(divider());
     const qr = opts.qrPayload.slice(0, 256).replace(/</g, "").replace(/>/g, "");
-    lines.push(`<C><QR>${qr}</QR></C>`);
+    lines.push(`<QR>${qr}</QR>`);
   }
 
   lines.push("");
@@ -255,7 +255,7 @@ export function formatBonLivraison(opts: BonLivraisonOpts): string {
   if (opts.qrPayload) {
     lines.push("");
     const qr = opts.qrPayload.slice(0, 256).replace(/</g, "").replace(/>/g, "");
-    lines.push(`<C><QR>${qr}</QR></C>`);
+    lines.push(`<QR>${qr}</QR>`);
   }
 
   lines.push("");
