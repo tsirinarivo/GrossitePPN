@@ -16,8 +16,19 @@ import { formatMGA } from "@/lib/money";
 import { usePOSStore } from "@/store/pos.store";
 import type { LignePanier } from "@/store/pos.store";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
+// Palette fixe — indépendante des variables CSS
+const C = {
+  bg:       "#0d1117",
+  surface:  "#161b22",
+  hover:    "#1e2530",
+  border:   "#30363d",
+  text:     "#e2e8f0",
+  muted:    "#8b949e",
+  primary:  "#d97706",
+  success:  "#22c55e",
+  warning:  "#f59e0b",
+};
 
 type CommandeResumee = {
   id: string;
@@ -46,9 +57,7 @@ type LigneAPI = {
   totalTTC: number;
 };
 
-type Props = {
-  onClose: () => void;
-};
+type Props = { onClose: () => void };
 
 export function POSMesCommandes({ onClose }: Props) {
   const [commandes, setCommandes] = useState<CommandeResumee[]>([]);
@@ -74,7 +83,7 @@ export function POSMesCommandes({ onClose }: Props) {
   const handleModifier = async (cmd: CommandeResumee) => {
     if (cmd.statut !== "soumise") {
       toast.error("Commande déjà prise en charge", {
-        description: "La caisse a déjà commencé le traitement, modification impossible.",
+        description: "La caisse a déjà commencé le traitement.",
       });
       return;
     }
@@ -83,7 +92,6 @@ export function POSMesCommandes({ onClose }: Props) {
       const res = await fetch(`/api/caisse/commandes/${cmd.id}`);
       const data: { lignes: LigneAPI[] } = await res.json();
 
-      // Convertir les lignes API → LignePanier
       const lignesPanier: LignePanier[] = data.lignes.map((l) => ({
         id: crypto.randomUUID(),
         produitId: l.produitId,
@@ -115,88 +123,99 @@ export function POSMesCommandes({ onClose }: Props) {
   };
 
   return (
-    <div className="flex flex-col h-full text-[--pos-text] border-l border-[--pos-border]" style={{ backgroundColor: "#0d1117" }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", backgroundColor: C.bg, color: C.text, borderLeft: `1px solid ${C.border}` }}>
+
       {/* Header */}
-      <div className="h-14 flex items-center gap-3 px-4 border-b border-[--pos-border] shrink-0">
-        <Edit3 className="w-5 h-5 text-[--pos-primary]" />
-        <span className="font-semibold flex-1 text-sm">Mes commandes envoyées</span>
+      <div style={{ height: 56, display: "flex", alignItems: "center", gap: 12, padding: "0 16px", borderBottom: `1px solid ${C.border}`, flexShrink: 0, backgroundColor: C.surface }}>
+        <Edit3 size={18} color={C.primary} />
+        <span style={{ fontWeight: 600, fontSize: 14, flex: 1, color: C.text }}>Mes commandes envoyées</span>
         <button
           onClick={charger}
           disabled={loading}
-          className="p-1.5 rounded-lg hover:bg-[--pos-surface-hover] text-[--pos-text-muted] transition-colors"
+          style={{ padding: 6, borderRadius: 8, background: "none", border: "none", cursor: "pointer", color: C.muted }}
           title="Actualiser"
         >
-          <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+          <RefreshCw size={16} className={cn(loading && "animate-spin")} />
         </button>
         <button
           onClick={onClose}
-          className="p-1.5 rounded-lg hover:bg-[--pos-surface-hover] text-[--pos-text-muted] transition-colors"
+          style={{ padding: 6, borderRadius: 8, background: "none", border: "none", cursor: "pointer", color: C.muted }}
         >
-          <X className="w-5 h-5" />
+          <X size={20} />
         </button>
       </div>
 
       {/* Liste */}
-      <div className="flex-1 overflow-y-auto">
+      <div style={{ flex: 1, overflowY: "auto" }}>
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-[--pos-text-muted]">
-            <Loader2 className="w-5 h-5 animate-spin" />
+          <div style={{ display: "flex", justifyContent: "center", padding: "64px 0", color: C.muted }}>
+            <Loader2 size={20} className="animate-spin" />
           </div>
         ) : commandes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 gap-3 text-[--pos-text-muted]">
-            <Package className="w-10 h-10 opacity-30" />
-            <p className="text-sm">Aucune commande en attente</p>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "64px 16px", gap: 12, color: C.muted }}>
+            <Package size={40} style={{ opacity: 0.3 }} />
+            <p style={{ fontSize: 14, margin: 0 }}>Aucune commande en attente</p>
           </div>
         ) : (
-          <div className="divide-y divide-[--pos-border]">
+          <div>
             {commandes.map((cmd) => {
               const modifiable = cmd.statut === "soumise";
               return (
-                <div key={cmd.id} className="px-4 py-3 hover:bg-[--pos-surface-hover] transition-colors">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-xs font-mono text-[--pos-text-muted]">{cmd.numero}</span>
-                        <Badge
-                          className={cn(
-                            "text-[9px] py-0 px-1.5",
-                            modifiable
-                              ? "bg-[--pos-warning]/20 text-[--pos-warning] border-[--pos-warning]/30"
-                              : "bg-[--pos-success]/20 text-[--pos-success] border-[--pos-success]/30"
-                          )}
-                        >
-                          {modifiable ? (
-                            <><AlertCircle className="w-2.5 h-2.5 mr-0.5" />En attente</>
-                          ) : (
-                            <><CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />Prise en charge</>
-                          )}
-                        </Badge>
+                <div
+                  key={cmd.id}
+                  style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, backgroundColor: C.bg }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = C.hover)}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = C.bg)}
+                >
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      {/* Numéro + badge */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 11, fontFamily: "monospace", color: C.muted }}>{cmd.numero}</span>
+                        <span style={{
+                          fontSize: 10, padding: "1px 6px", borderRadius: 9999, fontWeight: 600,
+                          backgroundColor: modifiable ? "rgba(245,158,11,0.15)" : "rgba(34,197,94,0.15)",
+                          color: modifiable ? C.warning : C.success,
+                          display: "inline-flex", alignItems: "center", gap: 3,
+                        }}>
+                          {modifiable
+                            ? <><AlertCircle size={10} />En attente</>
+                            : <><CheckCircle2 size={10} />Prise en charge</>
+                          }
+                        </span>
                       </div>
-                      <p className="text-sm font-medium truncate">{cmd.client}</p>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-[--pos-text-muted]">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />{cmd.soumiseAt}
+                      {/* Client */}
+                      <p style={{ margin: "0 0 4px 0", fontSize: 14, fontWeight: 500, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {cmd.client}
+                      </p>
+                      {/* Méta */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 12, color: C.muted }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                          <Clock size={12} />{cmd.soumiseAt}
                         </span>
                         <span>{cmd.nbArticles} art.</span>
-                        <span className="font-semibold text-[--pos-text]">{formatMGA(cmd.totalTTC)}</span>
+                        <span style={{ fontWeight: 600, color: C.text }}>{formatMGA(cmd.totalTTC)}</span>
                       </div>
                     </div>
 
+                    {/* Bouton modifier */}
                     <button
                       onClick={() => handleModifier(cmd)}
                       disabled={!modifiable || chargementId === cmd.id}
-                      className={cn(
-                        "flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0",
-                        modifiable
-                          ? "bg-[--pos-primary]/15 text-[--pos-primary] hover:bg-[--pos-primary]/25"
-                          : "bg-[--pos-surface-hover] text-[--pos-text-muted] cursor-not-allowed"
-                      )}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 6,
+                        fontSize: 12, fontWeight: 600,
+                        padding: "6px 12px", borderRadius: 8, border: "none",
+                        cursor: modifiable ? "pointer" : "not-allowed",
+                        flexShrink: 0,
+                        backgroundColor: modifiable ? "rgba(217,119,6,0.2)" : "rgba(255,255,255,0.05)",
+                        color: modifiable ? C.primary : C.muted,
+                      }}
                     >
-                      {chargementId === cmd.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Edit3 className="w-3.5 h-3.5" />
-                      )}
+                      {chargementId === cmd.id
+                        ? <Loader2 size={14} className="animate-spin" />
+                        : <Edit3 size={14} />
+                      }
                       Modifier
                     </button>
                   </div>
@@ -207,10 +226,10 @@ export function POSMesCommandes({ onClose }: Props) {
         )}
       </div>
 
-      {/* Footer info */}
-      <div className="px-4 py-3 border-t border-[--pos-border] bg-[--pos-surface-hover]">
-        <p className="text-[11px] text-[--pos-text-muted] text-center">
-          Seules les commandes encore en attente peuvent être modifiées
+      {/* Footer */}
+      <div style={{ padding: "10px 16px", borderTop: `1px solid ${C.border}`, backgroundColor: C.surface, textAlign: "center" }}>
+        <p style={{ margin: 0, fontSize: 11, color: C.muted }}>
+          Seules les commandes en attente peuvent être modifiées
         </p>
       </div>
     </div>
