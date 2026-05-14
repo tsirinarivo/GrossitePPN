@@ -26,6 +26,7 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 import { useSession, signOut } from "@/lib/auth/client";
 import { toast } from "sonner";
 import { canAccess, ROLE_LABELS, type AppRole } from "@/lib/permissions";
+import { FullscreenToggle } from "@/components/ui/fullscreen-toggle";
 
 const ALL_NAV_ITEMS = [
   { href: "/pos/agent",  label: "Point de vente", icon: ShoppingCart, badge: null, couleur: "text-[--color-ocre-600]" },
@@ -141,9 +142,14 @@ export function DashboardNav({ role, onClose }: { role?: string; onClose?: () =>
         })}
       </div>
 
-      {/* Sélecteur de langue */}
-      <div className="px-3 pb-2 lg:hidden xl:block">
+      {/* Sélecteur de langue + plein écran */}
+      <div className="px-3 pb-2 lg:hidden xl:block space-y-1">
         <LocaleSwitcher className="w-full justify-around" />
+        <FullscreenToggle className="w-full justify-center" />
+      </div>
+      {/* Plein écran mode icône (lg sans labels) */}
+      <div className="hidden lg:flex xl:hidden justify-center pb-2">
+        <FullscreenToggle iconOnly />
       </div>
 
       {/* Statut connexion */}

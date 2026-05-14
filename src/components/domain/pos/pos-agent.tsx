@@ -16,6 +16,7 @@ import { POSCategorieBar } from "./pos-categorie-bar";
 import { POSMesCommandes } from "./pos-mes-commandes";
 import { CATEGORIES_DEMO, PRODUITS_DEMO } from "./pos-data-demo";
 import { useSession } from "@/lib/auth/client";
+import { FullscreenToggle } from "@/components/ui/fullscreen-toggle";
 
 type CategorieAPI = {
   id: string;
@@ -157,6 +158,11 @@ export function POSAgent() {
           <Button variant="pos-ghost" size="icon" title="Scanner code-barres">
             <ScanLine className="w-5 h-5" />
           </Button>
+
+          <FullscreenToggle
+            iconOnly
+            className="text-[--pos-text-muted] hover:text-[--pos-text] hover:bg-[--pos-surface-hover] hidden sm:flex"
+          />
 
           {/* Mes commandes */}
           <Button
