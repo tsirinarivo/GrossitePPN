@@ -115,7 +115,7 @@ export function POSMesCommandes({ onClose }: Props) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[--pos-surface] text-[--pos-text]">
+    <div className="flex flex-col h-full bg-[--pos-bg] text-[--pos-text] border-l border-[--pos-border]">
       {/* Header */}
       <div className="h-14 flex items-center gap-3 px-4 border-b border-[--pos-border] shrink-0">
         <Edit3 className="w-5 h-5 text-[--pos-primary]" />
