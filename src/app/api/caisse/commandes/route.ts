@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { inArray, desc } from "drizzle-orm";
+import { inArray, desc, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { broadcastCommande } from "@/lib/sse/broadcast";
@@ -52,22 +52,19 @@ export async function GET() {
       for (const a of agents) agentsMap.set(a.id, a.name ?? "");
     }
 
-    // Count lines per commande
-    const lignesCount = await db
-      .select({
-        commandeId: schema.lignesCommande.commandeId,
-      })
-      .from(schema.lignesCommande)
-      .where(
-        inArray(
-          schema.lignesCommande.commandeId,
-          commandes.map((c) => c.id)
-        )
-      );
-    const countMap = new Map<string, number>();
-    for (const l of lignesCount) {
-      countMap.set(l.commandeId, (countMap.get(l.commandeId) ?? 0) + 1);
-    }
+    // Count lines per commande via SQL GROUP BY (avoids fetching all rows)
+    const commandeIds = commandes.map((c) => c.id);
+    const lignesCount = commandeIds.length > 0
+      ? await db
+          .select({
+            commandeId: schema.lignesCommande.commandeId,
+            count: sql<number>`COUNT(*)`.as("count"),
+          })
+          .from(schema.lignesCommande)
+          .where(inArray(schema.lignesCommande.commandeId, commandeIds))
+          .groupBy(schema.lignesCommande.commandeId)
+      : [];
+    const countMap = new Map(lignesCount.map((l) => [l.commandeId, Number(l.count)]));
 
     const result = commandes.map((c, i) => ({
       id: c.id,

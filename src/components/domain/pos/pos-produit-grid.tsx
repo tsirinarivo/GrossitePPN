@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import { Plus, ChevronDown, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
@@ -22,7 +22,7 @@ export function POSProduitGrid({ produits }: Props) {
   );
 }
 
-function ProduitCard({ produit }: { produit: ProduitPOS }) {
+const ProduitCard = memo(function ProduitCard({ produit }: { produit: ProduitPOS }) {
   const { ajouterLigne, client } = usePOSStore();
   const palier = client?.palier ?? "detail";
 
@@ -174,4 +174,4 @@ function ProduitCard({ produit }: { produit: ProduitPOS }) {
       </div>
     </div>
   );
-}
+});

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -38,19 +38,16 @@ export async function GET() {
       .select()
       .from(schema.unitesVente);
 
-    // Get stock (sum across all depots)
+    // Get stock aggregated per product via SQL (avoids full-table JS scan)
     const stocks = await db
       .select({
         produitId: schema.stocks.produitId,
-        quantiteBase: schema.stocks.quantiteBase,
+        total: sql<number>`SUM(${schema.stocks.quantiteBase})`.as("total"),
       })
-      .from(schema.stocks);
+      .from(schema.stocks)
+      .groupBy(schema.stocks.produitId);
 
-    // Aggregate stock per product
-    const stockMap = new Map<string, number>();
-    for (const s of stocks) {
-      stockMap.set(s.produitId, (stockMap.get(s.produitId) ?? 0) + s.quantiteBase);
-    }
+    const stockMap = new Map(stocks.map((s) => [s.produitId, s.total ?? 0]));
 
     // Group units by product
     const unitesMap = new Map<string, typeof unites>();
@@ -83,7 +80,9 @@ export async function GET() {
         })),
     }));
 
-    return NextResponse.json({ produits: result, categories });
+    return NextResponse.json({ produits: result, categories }, {
+      headers: { "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60" },
+    });
   } catch (e) {
     console.error("[api/produits]", e);
     return NextResponse.json({ produits: [], categories: [] });
