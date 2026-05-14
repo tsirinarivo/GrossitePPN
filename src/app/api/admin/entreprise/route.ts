@@ -1,11 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
+async function requireAdminOrGerant() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) return false;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const role = (session.user as any).role ?? "agent";
+  return role === "admin" || role === "gerant";
+}
+
 export async function GET() {
+  if (!await requireAdminOrGerant()) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
   const rows = await db.select().from(schema.entreprise).limit(1);
   const e = rows[0];
   if (!e) return NextResponse.json({});
@@ -29,6 +43,9 @@ const entrepriseSchema = z.object({
 });
 
 export async function PUT(req: NextRequest) {
+  if (!await requireAdminOrGerant()) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+  }
   const body = await req.json().catch(() => null);
   const parsed = entrepriseSchema.safeParse(body);
   if (!parsed.success) {

@@ -24,79 +24,27 @@ import { useAppStore } from "@/store/app.store";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { useSession, signOut } from "@/lib/auth/client";
 import { toast } from "sonner";
+import { canAccess, ROLE_LABELS, type AppRole } from "@/lib/permissions";
 
-const navItems = [
-  {
-    href: "/pos/agent",
-    label: "Point de vente",
-    icon: ShoppingCart,
-    badge: null,
-    couleur: "text-[--color-ocre-600]",
-  },
-  {
-    href: "/pos/caisse",
-    label: "Caisse",
-    icon: Receipt,
-    badge: null,
-    couleur: "text-[--color-vanille-600]",
-  },
-  {
-    href: "/stock",
-    label: "Stock",
-    icon: Package,
-    badge: null,
-    couleur: "text-[--color-indigo-600]",
-  },
-  {
-    href: "/clients",
-    label: "Clients",
-    icon: Users,
-    badge: null,
-    couleur: null,
-  },
-  {
-    href: "/livraisons",
-    label: "Livraisons",
-    icon: Truck,
-    badge: null,
-    couleur: null,
-  },
-  {
-    href: "/achats",
-    label: "Achats",
-    icon: ShoppingBag,
-    badge: null,
-    couleur: null,
-  },
-  {
-    href: "/rapports",
-    label: "Rapports",
-    icon: BarChart3,
-    badge: null,
-    couleur: null,
-  },
-  {
-    href: "/shop",
-    label: "Boutique",
-    icon: Store,
-    badge: null,
-    couleur: null,
-    external: true,
-  },
-  {
-    href: "/admin",
-    label: "Admin",
-    icon: Settings,
-    badge: null,
-    couleur: null,
-  },
+const ALL_NAV_ITEMS = [
+  { href: "/pos/agent",  label: "Point de vente", icon: ShoppingCart, badge: null, couleur: "text-[--color-ocre-600]" },
+  { href: "/pos/caisse", label: "Caisse",          icon: Receipt,      badge: null, couleur: "text-[--color-vanille-600]" },
+  { href: "/stock",      label: "Stock",           icon: Package,      badge: null, couleur: "text-[--color-indigo-600]" },
+  { href: "/clients",    label: "Clients",         icon: Users,        badge: null, couleur: null },
+  { href: "/livraisons", label: "Livraisons",      icon: Truck,        badge: null, couleur: null },
+  { href: "/achats",     label: "Achats",          icon: ShoppingBag,  badge: null, couleur: null },
+  { href: "/rapports",   label: "Rapports",        icon: BarChart3,    badge: null, couleur: null },
+  { href: "/shop",       label: "Boutique",        icon: Store,        badge: null, couleur: null, external: true },
+  { href: "/admin",      label: "Admin",           icon: Settings,     badge: null, couleur: null },
 ];
 
-export function DashboardNav() {
+export function DashboardNav({ role }: { role?: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const connexion = useAppStore((s) => s.connexion);
   const { data: session } = useSession();
+
+  const navItems = ALL_NAV_ITEMS.filter((item) => canAccess(role, item.href));
 
   const handleSignOut = async () => {
     try {
@@ -225,11 +173,9 @@ export function DashboardNav() {
           {/* Nom + rôle */}
           <div className="hidden lg:flex flex-col flex-1 min-w-0">
             <span className="text-xs font-medium text-[--foreground] truncate">{userName}</span>
-            {session?.user?.email && session.user.name && (
-              <span className="text-[10px] text-[--foreground-subtle] truncate">
-                {session.user.email}
-              </span>
-            )}
+            <span className="text-[10px] text-[--foreground-subtle] truncate">
+              {role ? (ROLE_LABELS[role as AppRole] ?? role) : ""}
+            </span>
           </div>
 
           {/* Bouton déconnexion */}
