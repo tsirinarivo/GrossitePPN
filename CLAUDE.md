@@ -19,5 +19,5 @@ Après chaque `git push`, afficher systématiquement ce bloc à l'utilisateur :
 
 ```
 Pour déployer sur le VPS :
-ssh user@grossiste.dago-it.com "cd /opt/grossiteppn && git pull origin claude/wholesale-management-pwa-khts0"
+cd /opt/grossiteppn && git pull origin claude/wholesale-management-pwa-khts0
 ```
