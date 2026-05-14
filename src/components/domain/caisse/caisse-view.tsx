@@ -272,7 +272,7 @@ export function CaisseView() {
       </div>
 
       {/* ── Détail commande / facturation ── */}
-      <div className="flex-1 overflow-auto flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* Mobile queue toggle bar */}
         <div className="lg:hidden flex items-center gap-3 px-4 h-12 border-b border-[--border] bg-[--card] shrink-0">
           <button
@@ -286,11 +286,11 @@ export function CaisseView() {
             {fileCommandes.length}
           </Badge>
         </div>
-      <div className="flex-1 overflow-auto p-4 md:p-6">
+      <div className="flex-1 min-h-0 flex flex-col p-4 md:p-6">
         {commandeSelectee ? (
-          <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+          <div className="max-w-2xl w-full mx-auto flex flex-col flex-1 min-h-0 gap-6 animate-fade-in">
             {/* Étapes */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0">
               {(["detail", "paiement", "confirmation"] as const).map((e, i) => (
                 <div key={e} className="flex items-center gap-2">
                   <div className={cn(
@@ -313,8 +313,8 @@ export function CaisseView() {
             </div>
 
             {etape === "detail" && (
-              <Card>
-                <CardHeader>
+              <Card className="flex flex-col flex-1 min-h-0">
+                <CardHeader className="shrink-0">
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>{commandeSelectee.numero}</CardTitle>
@@ -328,9 +328,9 @@ export function CaisseView() {
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Lignes commande */}
-                  <div className="rounded-xl border border-[--border] overflow-hidden overflow-x-auto">
+                <CardContent className="flex flex-col flex-1 min-h-0 gap-4 pb-6">
+                  {/* Lignes commande — scrollable */}
+                  <div className="flex-1 min-h-0 rounded-xl border border-[--border] overflow-hidden overflow-x-auto overflow-y-auto">
                     {loadingLignes ? (
                       <div className="flex items-center justify-center py-8 text-[--foreground-muted]">
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -371,7 +371,7 @@ export function CaisseView() {
                   </div>
 
                   {/* Totaux */}
-                  <div className="space-y-1.5 text-sm">
+                  <div className="space-y-1.5 text-sm shrink-0">
                     <div className="flex justify-between text-[--foreground-muted]">
                       <span>Total HT</span>
                       <span className="text-mga">{formatMGA(totalHT)}</span>
@@ -395,7 +395,7 @@ export function CaisseView() {
                   </div>
 
                   <Button
-                    className="w-full"
+                    className="w-full shrink-0"
                     size="lg"
                     disabled={loadingLignes}
                     onClick={() => setEtape("paiement")}
