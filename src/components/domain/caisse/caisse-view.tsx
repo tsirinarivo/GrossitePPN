@@ -225,8 +225,11 @@ export function CaisseView() {
   }, [modeImpression, imprimerTicket, imprimerPDF]);
 
   const handleCommandeSuivante = () => {
-    setFileCommandes((prev) => prev.filter((c) => c.id !== commandeSelectee?.id));
-    setCommandeSelectee(null);
+    setFileCommandes((prev) => {
+      const restantes = prev.filter((c) => c.id !== commandeSelectee?.id);
+      setCommandeSelectee(restantes[0] ?? null);
+      return restantes;
+    });
     setCommandeDetail(null);
     setLignes([]);
     setEtape("detail");
