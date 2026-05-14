@@ -75,7 +75,7 @@ export function CaisseView() {
   const [modePaiement, setModePaiement] = useState<string>("especes");
   const [modeImpression, setModeImpression] = useState<"ticket" | "pdf" | "aucune">("ticket");
   const [loadingConfirm, setLoadingConfirm] = useState(false);
-  const [etape, setEtape] = useState<"detail" | "paiement" | "confirmation">("detail");
+  const [etape, setEtape] = useState<"detail" | "paiement">("detail");
 
   // Load queue on mount
   useEffect(() => {
@@ -218,7 +218,7 @@ export function CaisseView() {
     try {
       if (modeImpression === "ticket") await imprimerTicket();
       else if (modeImpression === "pdf") await imprimerPDF();
-      setEtape("confirmation");
+      handleCommandeSuivante();
     } finally {
       setLoadingConfirm(false);
     }
@@ -371,23 +371,23 @@ export function CaisseView() {
           <div className="max-w-2xl w-full mx-auto flex flex-col flex-1 min-h-0 gap-6 animate-fade-in">
             {/* Étapes */}
             <div className="flex items-center gap-3 shrink-0">
-              {(["detail", "paiement", "confirmation"] as const).map((e, i) => (
+              {(["detail", "paiement"] as const).map((e, i) => (
                 <div key={e} className="flex items-center gap-2">
                   <div className={cn(
                     "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
-                    etape === e || (e === "detail" && etape === "paiement") || (etape === "confirmation")
+                    etape === e || (e === "detail" && etape === "paiement")
                       ? "bg-[--primary] text-white"
                       : "bg-[--border] text-[--foreground-muted]"
                   )}>
                     {i + 1}
                   </div>
                   <span className={cn(
-                    "text-sm font-medium capitalize",
+                    "text-sm font-medium",
                     etape === e ? "text-[--foreground]" : "text-[--foreground-muted]"
                   )}>
-                    {e === "detail" ? "Commande" : e === "paiement" ? "Paiement" : "Confirmation"}
+                    {e === "detail" ? "Commande" : "Encaissement"}
                   </span>
-                  {i < 2 && <ChevronRight className="w-4 h-4 text-[--foreground-subtle]" />}
+                  {i < 1 && <ChevronRight className="w-4 h-4 text-[--foreground-subtle]" />}
                 </div>
               ))}
             </div>
@@ -583,35 +583,6 @@ export function CaisseView() {
               </Card>
             )}
 
-            {etape === "confirmation" && (
-              <Card>
-                <CardContent className="pt-8 pb-8 text-center space-y-5">
-                  <div className="w-20 h-20 rounded-full bg-[--success]/15 flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="w-10 h-10 text-[--success]" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold">Paiement confirmé</h3>
-                    <p className="text-[--foreground-muted] text-sm mt-1">
-                      {commandeSelectee.numero} — <span className="text-mga font-semibold">{formatMGA(totalTTC)}</span>
-                    </p>
-                    <p className="text-xs text-[--foreground-subtle] mt-1 capitalize">{modePaiement.replace(/_/g, " ")}</p>
-                  </div>
-                  <div className="flex gap-3 justify-center">
-                    <Button variant="outline" size="sm" onClick={imprimerTicket}>
-                      <Printer className="w-4 h-4" />
-                      Réimprimer ticket
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={imprimerPDF}>
-                      <FileText className="w-4 h-4" />
-                      PDF A4
-                    </Button>
-                  </div>
-                  <Button size="lg" onClick={handleCommandeSuivante}>
-                    Commande suivante
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-[--foreground-muted]">
