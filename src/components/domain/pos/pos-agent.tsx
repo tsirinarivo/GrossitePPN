@@ -103,7 +103,7 @@ export function POSAgent() {
   }));
 
   return (
-    <div className="flex h-screen bg-[--pos-bg] text-[--pos-text] overflow-hidden">
+    <div className="flex h-[calc(100vh-3rem)] lg:h-screen bg-[--pos-bg] text-[--pos-text] overflow-hidden">
       {/* ── Colonne gauche : catalogue ── */}
       <div
         className={cn(

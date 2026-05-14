@@ -75,7 +75,7 @@ export function LivraisonsView() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-display-sm text-[--foreground]">Livraisons</h1>
@@ -113,7 +113,7 @@ export function LivraisonsView() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-5 gap-4 min-h-[500px]">
+      <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4 min-h-[500px]">
         <Card className="lg:col-span-2 overflow-hidden">
           <CardContent className="p-0">
             <div className="px-4 py-3 bg-[--background-subtle] border-b border-[--border]">

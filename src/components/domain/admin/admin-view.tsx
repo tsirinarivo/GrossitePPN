@@ -162,7 +162,7 @@ export function AdminView() {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <div>
         <h1 className="text-display-sm text-[--foreground]">Administration</h1>
         <p className="text-[--foreground-muted] mt-1">Paramètres de l&apos;entreprise et configuration</p>

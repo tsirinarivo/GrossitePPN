@@ -17,6 +17,7 @@ import {
   Receipt,
   LogOut,
   User,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +39,7 @@ const ALL_NAV_ITEMS = [
   { href: "/admin",      label: "Admin",           icon: Settings,     badge: null, couleur: null },
 ];
 
-export function DashboardNav({ role }: { role?: string }) {
+export function DashboardNav({ role, onClose }: { role?: string; onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const connexion = useAppStore((s) => s.connexion);
@@ -64,18 +65,28 @@ export function DashboardNav({ role }: { role?: string }) {
     .join("");
 
   return (
-    <nav className="w-16 lg:w-56 h-screen flex flex-col border-r border-[--border] bg-[--card] shrink-0 transition-all duration-200">
+    <nav className="w-64 lg:w-16 xl:w-56 h-screen flex flex-col border-r border-[--border] bg-[--card] shrink-0 transition-all duration-200">
       {/* Logo */}
       <div className="h-14 flex items-center px-4 border-b border-[--border]">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           <div className="w-8 h-8 rounded-lg bg-[--primary] flex items-center justify-center shrink-0">
             <Package className="w-4 h-4 text-white" />
           </div>
-          <div className="hidden lg:block min-w-0">
+          <div className="lg:hidden xl:block min-w-0 flex-1">
             <div className="text-sm font-bold tracking-tight truncate">GrossistePPN</div>
             <div className="text-[10px] text-[--foreground-subtle] truncate">Madagascar</div>
           </div>
         </div>
+        {/* Close button - mobile only */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="lg:hidden p-1 rounded-lg text-[--foreground-muted] hover:bg-[--accent] transition-colors"
+            aria-label="Fermer le menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Nav items */}
@@ -104,20 +115,20 @@ export function DashboardNav({ role }: { role?: string }) {
                   isActive && !item.couleur ? "text-[--primary]" : ""
                 )}
               />
-              <span className="hidden lg:block truncate">{item.label}</span>
+              <span className="lg:hidden xl:block truncate">{item.label}</span>
               {item.badge && (
                 <Badge
                   variant="destructive"
-                  className="hidden lg:flex ml-auto text-[10px] h-5 min-w-5 px-1.5"
+                  className="lg:hidden xl:flex ml-auto text-[10px] h-5 min-w-5 px-1.5"
                 >
                   {item.badge}
                 </Badge>
               )}
               {isActive && (
-                <ChevronRight className="hidden lg:block w-4 h-4 ml-auto text-[--primary] opacity-60" />
+                <ChevronRight className="lg:hidden xl:block w-4 h-4 ml-auto text-[--primary] opacity-60" />
               )}
-              {/* Tooltip pour mode réduit */}
-              <div className="lg:hidden absolute left-full ml-2 px-2 py-1 bg-[--foreground] text-[--background] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+              {/* Tooltip pour mode réduit (lg only) */}
+              <div className="hidden lg:block xl:hidden absolute left-full ml-2 px-2 py-1 bg-[--foreground] text-[--background] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
                 {item.label}
                 {item.badge && (
                   <span className="ml-1 px-1 bg-[--destructive] text-white rounded-full text-[10px]">
@@ -131,7 +142,7 @@ export function DashboardNav({ role }: { role?: string }) {
       </div>
 
       {/* Sélecteur de langue */}
-      <div className="px-3 pb-2 hidden lg:block">
+      <div className="px-3 pb-2 lg:hidden xl:block">
         <LocaleSwitcher className="w-full justify-around" />
       </div>
 
@@ -152,7 +163,7 @@ export function DashboardNav({ role }: { role?: string }) {
           ) : (
             <Wifi className="w-4 h-4 shrink-0" />
           )}
-          <span className="hidden lg:block font-medium">
+          <span className="lg:hidden xl:block font-medium">
             {connexion === "online"
               ? "En ligne"
               : connexion === "slow"
@@ -171,7 +182,7 @@ export function DashboardNav({ role }: { role?: string }) {
           </div>
 
           {/* Nom + rôle */}
-          <div className="hidden lg:flex flex-col flex-1 min-w-0">
+          <div className="lg:hidden xl:flex flex-col flex-1 min-w-0">
             <span className="text-xs font-medium text-[--foreground] truncate">{userName}</span>
             <span className="text-[10px] text-[--foreground-subtle] truncate">
               {role ? (ROLE_LABELS[role as AppRole] ?? role) : ""}
@@ -189,8 +200,8 @@ export function DashboardNav({ role }: { role?: string }) {
             )}
           >
             <LogOut className="w-4 h-4" />
-            {/* Tooltip mode réduit */}
-            <div className="lg:hidden absolute left-full ml-2 px-2 py-1 bg-[--foreground] text-[--background] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+            {/* Tooltip mode réduit (lg only) */}
+            <div className="hidden lg:block xl:hidden absolute left-full ml-2 px-2 py-1 bg-[--foreground] text-[--background] text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
               Se déconnecter
             </div>
           </button>

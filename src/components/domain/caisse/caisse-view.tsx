@@ -12,6 +12,7 @@ import {
   Globe,
   ShoppingCart,
   ChevronRight,
+  ChevronLeft,
   Banknote,
   Smartphone,
   CreditCard,
@@ -19,6 +20,7 @@ import {
   FileText,
   Loader2,
   Wifi,
+  Menu,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -65,6 +67,7 @@ export function CaisseView() {
   const [fileCommandes, setFileCommandes] = useState<CommandeFile[]>([]);
   const [loadingFile, setLoadingFile] = useState(true);
   const [commandeSelectee, setCommandeSelectee] = useState<CommandeFile | null>(null);
+  const [fileOuverte, setFileOuverte] = useState(false);
   const [commandeDetail, setCommandeDetail] = useState<CommandeDetail | null>(null);
   const [lignes, setLignes] = useState<Ligne[]>([]);
   const [loadingLignes, setLoadingLignes] = useState(false);
@@ -135,15 +138,37 @@ export function CaisseView() {
   };
 
   return (
-    <div className="flex h-screen bg-[--background] overflow-hidden">
+    <div className="flex h-[calc(100vh-3rem)] lg:h-screen bg-[--background] overflow-hidden relative">
+      {/* Mobile overlay backdrop */}
+      {fileOuverte && (
+        <div
+          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          onClick={() => setFileOuverte(false)}
+        />
+      )}
+
       {/* ── File d'attente ── */}
-      <div className="w-80 xl:w-96 flex flex-col border-r border-[--border] bg-[--card] shrink-0">
+      <div className={cn(
+        "flex flex-col border-r border-[--border] bg-[--card] shrink-0",
+        "w-80 xl:w-96",
+        // Mobile: hidden drawer sliding in from left
+        "fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto h-full",
+        "transition-transform duration-200 ease-in-out",
+        fileOuverte ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
         <div className="h-14 flex items-center gap-3 px-4 border-b border-[--border]">
           <Receipt className="w-5 h-5 text-[--primary]" />
           <span className="font-semibold flex-1">File d'attente</span>
           <Badge variant="destructive" className="text-xs">
             {fileCommandes.length}
           </Badge>
+          <button
+            onClick={() => setFileOuverte(false)}
+            className="lg:hidden p-1 rounded-lg text-[--foreground-muted] hover:bg-[--accent] transition-colors"
+            aria-label="Fermer la file"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto divide-y divide-[--border]">
@@ -229,7 +254,21 @@ export function CaisseView() {
       </div>
 
       {/* ── Détail commande / facturation ── */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto flex flex-col min-w-0">
+        {/* Mobile queue toggle bar */}
+        <div className="lg:hidden flex items-center gap-3 px-4 h-12 border-b border-[--border] bg-[--card] shrink-0">
+          <button
+            onClick={() => setFileOuverte(true)}
+            className="flex items-center gap-2 text-sm font-medium text-[--foreground-muted] hover:text-[--foreground] transition-colors"
+          >
+            <Menu className="w-4 h-4" />
+            File d&apos;attente
+          </button>
+          <Badge variant="destructive" className="text-xs">
+            {fileCommandes.length}
+          </Badge>
+        </div>
+      <div className="flex-1 overflow-auto p-4 md:p-6">
         {commandeSelectee ? (
           <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
             {/* Étapes */}
@@ -273,7 +312,7 @@ export function CaisseView() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Lignes commande */}
-                  <div className="rounded-xl border border-[--border] overflow-hidden">
+                  <div className="rounded-xl border border-[--border] overflow-hidden overflow-x-auto">
                     {loadingLignes ? (
                       <div className="flex items-center justify-center py-8 text-[--foreground-muted]">
                         <Loader2 className="w-5 h-5 animate-spin" />
@@ -522,9 +561,10 @@ export function CaisseView() {
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-4 text-[--foreground-muted]">
             <ShoppingCart className="w-12 h-12 opacity-20" />
-            <p className="text-sm">Sélectionnez une commande dans la file d'attente</p>
+            <p className="text-sm">Sélectionnez une commande dans la file d&apos;attente</p>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

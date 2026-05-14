@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { canAccess, homeForRole } from "@/lib/permissions";
-import { DashboardNav } from "@/components/domain/dashboard-nav";
+import { homeForRole } from "@/lib/permissions";
+import { DashboardShell } from "@/components/domain/dashboard-shell";
 
 export default async function DashboardLayout({
   children,
@@ -25,12 +25,9 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-[--background] overflow-hidden">
-      <DashboardNav role={role} />
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
-    </div>
+    <DashboardShell role={role}>
+      {children}
+    </DashboardShell>
   );
 }
 
