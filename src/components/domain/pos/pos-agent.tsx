@@ -229,10 +229,14 @@ export function POSAgent() {
       {mesCommandesOuvert && (
         <>
           <div
-            className="absolute inset-0 bg-black/40 z-40"
+            className="absolute inset-0 z-40"
+            style={{ backgroundColor: "rgba(0,0,0,0.85)" }}
             onClick={() => setMesCommandesOuvert(false)}
           />
-          <div className="absolute inset-y-0 right-0 z-50 w-full sm:w-[380px] shadow-2xl" style={{ backgroundColor: "#0d1117" }}>
+          <div
+            className="absolute inset-y-0 right-0 z-50 w-full sm:w-[420px] shadow-2xl flex flex-col"
+            style={{ backgroundColor: "#0d1117" }}
+          >
             <POSMesCommandes onClose={() => setMesCommandesOuvert(false)} />
           </div>
         </>
