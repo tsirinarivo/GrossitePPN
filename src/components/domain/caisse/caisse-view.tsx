@@ -21,6 +21,7 @@ import {
   Loader2,
   Wifi,
   Menu,
+  Ban,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,8 @@ export function CaisseView() {
   const [lignes, setLignes] = useState<Ligne[]>([]);
   const [loadingLignes, setLoadingLignes] = useState(false);
   const [modePaiement, setModePaiement] = useState<string>("especes");
+  const [modeImpression, setModeImpression] = useState<"ticket" | "pdf" | "aucune">("ticket");
+  const [loadingConfirm, setLoadingConfirm] = useState(false);
   const [etape, setEtape] = useState<"detail" | "paiement" | "confirmation">("detail");
 
   // Load queue on mount
@@ -146,6 +149,80 @@ export function CaisseView() {
   const totalTVA = commandeDetail?.totalTVA ?? 0;
   const totalTTC = commandeDetail?.totalTTC ?? lignes.reduce((s, l) => s + l.totalTTC, 0);
   const assujettieTV = commandeDetail?.assujettieTV ?? false;
+
+  const imprimerTicket = useCallback(async () => {
+    if (!commandeSelectee) return;
+    try {
+      const res = await fetch("/api/print/ticket", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          numero: commandeSelectee.numero,
+          client: commandeSelectee.client,
+          commandeId: commandeSelectee.id,
+          lignes: lignes.map((l) => ({ nom: l.nom, unite: l.unite, qte: l.qte, prix: l.prix, total: l.total })),
+          totalHT, totalTVA, totalTTC, modePaiement, assujettieTV,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        toast.success("Ticket envoyé à l'imprimante cloud");
+        return;
+      }
+      if (!data.errorMessage?.includes("non configurée")) {
+        toast.error("Échec impression cloud", { description: data.errorMessage });
+        return;
+      }
+    } catch { /* fall through to WebUSB */ }
+    try {
+      const { connectPrinter, printTicket, releasePrinter } = await import("@/lib/print/escpos");
+      const printer = await connectPrinter();
+      await printTicket(printer, {
+        nomEntreprise: "GrossistePPN SARL",
+        adresseEntreprise: "Analakely, Antananarivo 101",
+        numero: commandeSelectee.numero,
+        date: new Date().toLocaleString("fr-FR"),
+        caissier: "Caissier",
+        client: commandeSelectee.client,
+        lignes: lignes.map((l) => ({ nom: l.nom, unite: l.unite, qte: l.qte, prix: l.prix, total: l.total })),
+        totalHT, totalTVA, totalTTC, modePaiement, assujettieTV,
+      });
+      await releasePrinter(printer);
+    } catch (e) {
+      toast.error("Imprimante USB", { description: e instanceof Error ? e.message : String(e) });
+    }
+  }, [commandeSelectee, lignes, totalHT, totalTVA, totalTTC, modePaiement, assujettieTV]);
+
+  const imprimerPDF = useCallback(async () => {
+    if (!commandeSelectee) return;
+    const { genererFacturePDF, downloadPDF } = await import("@/lib/print/pdf-facture");
+    const bytes = await genererFacturePDF({
+      nomEntreprise: "GrossistePPN SARL",
+      adresseEntreprise: "Analakely, Antananarivo 101",
+      numero: commandeSelectee.numero,
+      date: new Date().toLocaleDateString("fr-FR"),
+      client: commandeSelectee.client,
+      lignes: lignes.map((l) => ({
+        description: l.nom, unite: l.unite, quantite: l.qte,
+        prixUnitaire: l.prix, totalHT: l.total, tauxTVA: l.tauxTVA,
+        totalTVA: Math.round(l.total * l.tauxTVA / 100), totalTTC: l.totalTTC,
+      })),
+      totalHT, totalTVA, totalTTC, totalRegle: totalTTC, soldeRestant: 0,
+      assujettieTV, modePaiement,
+    });
+    downloadPDF(bytes, `facture-${commandeSelectee.numero}.pdf`);
+  }, [commandeSelectee, lignes, totalHT, totalTVA, totalTTC, assujettieTV, modePaiement]);
+
+  const handleConfirmer = useCallback(async () => {
+    setLoadingConfirm(true);
+    try {
+      if (modeImpression === "ticket") await imprimerTicket();
+      else if (modeImpression === "pdf") await imprimerPDF();
+      setEtape("confirmation");
+    } finally {
+      setLoadingConfirm(false);
+    }
+  }, [modeImpression, imprimerTicket, imprimerPDF]);
 
   const handleCommandeSuivante = () => {
     setFileCommandes((prev) => prev.filter((c) => c.id !== commandeSelectee?.id));
@@ -415,39 +492,87 @@ export function CaisseView() {
                     Montant à régler : <strong className="text-[--foreground] text-mga">{formatMGA(totalTTC)}</strong>
                   </p>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: "especes", label: "Espèces", icon: Banknote },
-                      { id: "mvola", label: "Mvola", icon: Smartphone },
-                      { id: "orange_money", label: "Orange Money", icon: Smartphone },
-                      { id: "airtel_money", label: "Airtel Money", icon: Smartphone },
-                      { id: "virement", label: "Virement", icon: CreditCard },
-                      { id: "credit", label: "Crédit client", icon: CreditCard },
-                    ].map((m) => (
-                      <button
-                        key={m.id}
-                        onClick={() => setModePaiement(m.id)}
-                        className={cn(
-                          "flex items-center gap-3 p-3 rounded-xl border text-sm font-medium",
-                          "transition-all duration-150",
-                          modePaiement === m.id
-                            ? "border-[--primary] bg-[--primary]/5 text-[--primary]"
-                            : "border-[--border] hover:border-[--border-strong] text-[--foreground-muted]"
-                        )}
-                      >
-                        <m.icon className="w-4 h-4 shrink-0" />
-                        {m.label}
-                      </button>
-                    ))}
+                <CardContent className="space-y-5">
+                  {/* Mode de paiement */}
+                  <div>
+                    <p className="text-[11px] font-semibold text-[--foreground-subtle] uppercase tracking-wider mb-2">
+                      Mode de paiement
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: "especes", label: "Espèces", icon: Banknote },
+                        { id: "mvola", label: "Mvola", icon: Smartphone },
+                        { id: "orange_money", label: "Orange Money", icon: Smartphone },
+                        { id: "airtel_money", label: "Airtel Money", icon: Smartphone },
+                        { id: "virement", label: "Virement", icon: CreditCard },
+                        { id: "credit", label: "Crédit client", icon: CreditCard },
+                      ].map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={() => setModePaiement(m.id)}
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-xl border text-sm font-medium",
+                            "transition-all duration-150",
+                            modePaiement === m.id
+                              ? "border-[--primary] bg-[--primary]/5 text-[--primary]"
+                              : "border-[--border] hover:border-[--border-strong] text-[--foreground-muted]"
+                          )}
+                        >
+                          <m.icon className="w-4 h-4 shrink-0" />
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Mode impression */}
+                  <div>
+                    <p className="text-[11px] font-semibold text-[--foreground-subtle] uppercase tracking-wider mb-2">
+                      Impression
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: "ticket" as const, label: "Ticket", icon: Printer },
+                        { id: "pdf"    as const, label: "PDF A4",  icon: FileText },
+                        { id: "aucune" as const, label: "Aucune",  icon: Ban },
+                      ].map((imp) => (
+                        <button
+                          key={imp.id}
+                          onClick={() => setModeImpression(imp.id)}
+                          className={cn(
+                            "flex flex-col items-center gap-2 p-3 rounded-xl border text-xs font-medium",
+                            "transition-all duration-150",
+                            modeImpression === imp.id
+                              ? "border-[--primary] bg-[--primary]/5 text-[--primary]"
+                              : "border-[--border] hover:border-[--border-strong] text-[--foreground-muted]"
+                          )}
+                        >
+                          <imp.icon className="w-5 h-5 shrink-0" />
+                          {imp.label}
+                          {imp.id === "ticket" && modeImpression === "ticket" && (
+                            <span className="text-[9px] bg-[--primary] text-white rounded-full px-1.5 py-0.5 leading-none">
+                              défaut
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="flex gap-3">
                     <Button variant="outline" className="flex-1" onClick={() => setEtape("detail")}>
                       Retour
                     </Button>
-                    <Button className="flex-1" size="lg" onClick={() => setEtape("confirmation")}>
-                      <CheckCircle2 className="w-4 h-4" />
+                    <Button
+                      className="flex-1"
+                      size="lg"
+                      disabled={loadingConfirm}
+                      onClick={handleConfirmer}
+                    >
+                      {loadingConfirm
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <CheckCircle2 className="w-4 h-4" />
+                      }
                       Confirmer l'encaissement
                     </Button>
                   </div>
@@ -457,119 +582,28 @@ export function CaisseView() {
 
             {etape === "confirmation" && (
               <Card>
-                <CardContent className="pt-6 text-center space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-[--success]/15 flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="w-8 h-8 text-[--success]" />
+                <CardContent className="pt-8 pb-8 text-center space-y-5">
+                  <div className="w-20 h-20 rounded-full bg-[--success]/15 flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-10 h-10 text-[--success]" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold">Paiement confirmé</h3>
+                    <h3 className="text-xl font-bold">Paiement confirmé</h3>
                     <p className="text-[--foreground-muted] text-sm mt-1">
-                      {commandeSelectee.numero} — {formatMGA(totalTTC)}
+                      {commandeSelectee.numero} — <span className="text-mga font-semibold">{formatMGA(totalTTC)}</span>
                     </p>
+                    <p className="text-xs text-[--foreground-subtle] mt-1 capitalize">{modePaiement.replace(/_/g, " ")}</p>
                   </div>
-                  <div className="flex gap-3 justify-center flex-wrap">
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={async () => {
-                        // 1. Try cloud printer (Xprint) first
-                        try {
-                          const res = await fetch("/api/print/ticket", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              numero: commandeSelectee.numero,
-                              client: commandeSelectee.client,
-                              commandeId: commandeSelectee.id,
-                              lignes: lignes.map((l) => ({ nom: l.nom, unite: l.unite, qte: l.qte, prix: l.prix, total: l.total })),
-                              totalHT,
-                              totalTVA,
-                              totalTTC,
-                              modePaiement,
-                              assujettieTV,
-                            }),
-                          });
-                          const data = await res.json();
-                          if (data.ok) {
-                            toast.success("Ticket envoyé à l'imprimante cloud", {
-                              description: "L'imprimante imprimera le ticket dans quelques secondes",
-                              icon: <Wifi className="w-4 h-4 text-green-500" />,
-                            });
-                            return;
-                          }
-                          // If not configured, fall through to WebUSB
-                          if (!data.errorMessage?.includes("non configurée")) {
-                            toast.error("Échec impression cloud", { description: data.errorMessage });
-                            return;
-                          }
-                        } catch {
-                          // Network error — fall through to WebUSB
-                        }
-
-                        // 2. Fallback: WebUSB ESC/POS
-                        try {
-                          const { connectPrinter, printTicket, releasePrinter } = await import("@/lib/print/escpos");
-                          const printer = await connectPrinter();
-                          await printTicket(printer, {
-                            nomEntreprise: "GrossistePPN SARL",
-                            adresseEntreprise: "Analakely, Antananarivo 101",
-                            numero: commandeSelectee.numero,
-                            date: new Date().toLocaleString("fr-FR"),
-                            caissier: "Caissier",
-                            client: commandeSelectee.client,
-                            lignes: lignes.map((l) => ({ nom: l.nom, unite: l.unite, qte: l.qte, prix: l.prix, total: l.total })),
-                            totalHT,
-                            totalTVA,
-                            totalTTC,
-                            modePaiement,
-                            assujettieTV,
-                          });
-                          await releasePrinter(printer);
-                        } catch (e) {
-                          toast.error("Imprimante USB", { description: e instanceof Error ? e.message : String(e) });
-                        }
-                      }}
-                    >
+                  <div className="flex gap-3 justify-center">
+                    <Button variant="outline" size="sm" onClick={imprimerTicket}>
                       <Printer className="w-4 h-4" />
-                      Imprimer ticket
+                      Réimprimer ticket
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      onClick={async () => {
-                        const { genererFacturePDF, downloadPDF } = await import("@/lib/print/pdf-facture");
-                        const bytes = await genererFacturePDF({
-                          nomEntreprise: "GrossistePPN SARL",
-                          adresseEntreprise: "Analakely, Antananarivo 101",
-                          numero: commandeSelectee.numero,
-                          date: new Date().toLocaleDateString("fr-FR"),
-                          client: commandeSelectee.client,
-                          lignes: lignes.map((l) => ({
-                            description: l.nom,
-                            unite: l.unite,
-                            quantite: l.qte,
-                            prixUnitaire: l.prix,
-                            totalHT: l.total,
-                            tauxTVA: l.tauxTVA,
-                            totalTVA: Math.round(l.total * l.tauxTVA / 100),
-                            totalTTC: l.totalTTC,
-                          })),
-                          totalHT,
-                          totalTVA,
-                          totalTTC,
-                          totalRegle: totalTTC,
-                          soldeRestant: 0,
-                          assujettieTV,
-                          modePaiement,
-                        });
-                        downloadPDF(bytes, `facture-${commandeSelectee.numero}.pdf`);
-                      }}
-                    >
+                    <Button variant="outline" size="sm" onClick={imprimerPDF}>
                       <FileText className="w-4 h-4" />
                       PDF A4
                     </Button>
                   </div>
-                  <Button variant="ghost" onClick={handleCommandeSuivante}>
+                  <Button size="lg" onClick={handleCommandeSuivante}>
                     Commande suivante
                   </Button>
                 </CardContent>
