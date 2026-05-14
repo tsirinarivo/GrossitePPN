@@ -53,7 +53,7 @@ const buttonVariants = cva(
         ],
         // POS-specific — dark background, high contrast
         pos: [
-          "bg-[--pos-primary] text-white font-semibold",
+          "bg-[--pos-primary] !text-white font-semibold",
           "hover:opacity-90",
           "shadow-md",
         ],

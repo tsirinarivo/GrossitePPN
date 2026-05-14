@@ -97,14 +97,23 @@
     --radius: 0.625rem;
 
     /* ── POS specific ── */
+    --pos-bg: #0d1117;
     --pos-bg: oklch(0.10 0.02 250);
+    --pos-surface: #161b22;
     --pos-surface: oklch(0.14 0.025 250);
+    --pos-surface-hover: #1e2530;
     --pos-surface-hover: oklch(0.18 0.025 250);
+    --pos-border: #2d3748;
     --pos-border: oklch(0.22 0.03 250);
+    --pos-text: #f0f4f8;
     --pos-text: oklch(0.96 0.005 240);
+    --pos-text-muted: #8a9ab0;
     --pos-text-muted: oklch(0.65 0.015 240);
+    --pos-primary: #d97706;
     --pos-primary: oklch(0.60 0.19 47);
+    --pos-success: #16a34a;
     --pos-success: oklch(0.60 0.18 162);
+    --pos-danger: #dc2626;
     --pos-danger: oklch(0.60 0.20 25);
 
     /* ── Shadows ── */
