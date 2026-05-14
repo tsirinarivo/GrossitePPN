@@ -14,10 +14,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const lignes = await db
       .select({
         id: schema.lignesCommande.id,
+        produitId: schema.lignesCommande.produitId,
+        uniteVenteId: schema.lignesCommande.uniteVenteId,
         nom: schema.lignesCommande.nomProduit,
         unite: schema.lignesCommande.nomUnite,
+        facteurConversion: schema.lignesCommande.facteurConversion,
         qte: schema.lignesCommande.quantite,
+        qteBase: schema.lignesCommande.quantiteBase,
         prix: schema.lignesCommande.prixUnitaire,
+        tauxRemise: schema.lignesCommande.tauxRemise,
+        montantRemise: schema.lignesCommande.montantRemise,
         total: schema.lignesCommande.totalHT,
         tauxTVA: schema.lignesCommande.tauxTVA,
         totalTTC: schema.lignesCommande.totalTTC,

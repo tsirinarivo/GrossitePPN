@@ -31,10 +31,16 @@ type CommandeResumee = {
 
 type LigneAPI = {
   id: string;
+  produitId: string;
+  uniteVenteId: string | null;
   nom: string;
   unite: string;
+  facteurConversion: number;
   qte: number;
+  qteBase: number;
   prix: number;
+  tauxRemise: number;
+  montantRemise: number;
   total: number;
   tauxTVA: number;
   totalTTC: number;
@@ -80,16 +86,16 @@ export function POSMesCommandes({ onClose }: Props) {
       // Convertir les lignes API → LignePanier
       const lignesPanier: LignePanier[] = data.lignes.map((l) => ({
         id: crypto.randomUUID(),
-        produitId: l.id, // On utilise l'id ligne comme référence
+        produitId: l.produitId,
         nomProduit: l.nom,
-        uniteId: "default",
+        uniteId: l.uniteVenteId ?? "default",
         nomUnite: l.unite,
-        facteurConversion: 1,
+        facteurConversion: l.facteurConversion,
         quantite: l.qte,
-        quantiteBase: l.qte,
+        quantiteBase: l.qteBase,
         prixUnitaire: l.prix,
-        tauxRemise: 0,
-        montantRemise: 0,
+        tauxRemise: l.tauxRemise,
+        montantRemise: l.montantRemise,
         tauxTVA: l.tauxTVA,
         totalHT: l.total,
         totalTVA: Math.round(l.total * l.tauxTVA / 100),
