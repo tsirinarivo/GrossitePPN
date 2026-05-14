@@ -485,14 +485,14 @@ export function CaisseView() {
             )}
 
             {etape === "paiement" && (
-              <Card>
-                <CardHeader>
+              <Card className="flex flex-col flex-1 min-h-0">
+                <CardHeader className="shrink-0">
                   <CardTitle>Encaissement</CardTitle>
                   <p className="text-sm text-[--foreground-muted]">
                     Montant à régler : <strong className="text-[--foreground] text-mga">{formatMGA(totalTTC)}</strong>
                   </p>
                 </CardHeader>
-                <CardContent className="space-y-5">
+                <CardContent className="flex flex-col flex-1 min-h-0 gap-5 overflow-y-auto pb-6">
                   {/* Mode de paiement */}
                   <div>
                     <p className="text-[11px] font-semibold text-[--foreground-subtle] uppercase tracking-wider mb-2">
