@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -74,7 +74,7 @@ export function StockView() {
   const [stocksDepot, setStocksDepot] = useState<{ depotId: string; depotNom: string; estPrincipal: boolean; quantiteBase: number }[]>([]);
   const [stocksEdites, setStocksEdites] = useState<Record<string, string>>({});
   const [stocksLoading, setStocksLoading] = useState(false);
-  const [savingDepot, startSaving] = useTransition();
+  const [savingDepotId, setSavingDepotId] = useState<string | null>(null);
 
   // Fetch depots list once
   useEffect(() => {
@@ -167,31 +167,37 @@ export function StockView() {
       .finally(() => setStocksLoading(false));
   }
 
-  function sauvegarderDepot(depotId: string) {
-    if (!drawerProduit) return;
-    const qte = parseFloat(stocksEdites[depotId] ?? "0");
+  async function sauvegarderDepot(cibleDepotId: string) {
+    if (!drawerProduit || savingDepotId) return;
+    const qte = parseFloat(stocksEdites[cibleDepotId] ?? "0");
     if (isNaN(qte) || qte < 0) { toast.error("Quantité invalide"); return; }
-    startSaving(async () => {
+    setSavingDepotId(cibleDepotId);
+    try {
       const res = await fetch(`/api/stock/${drawerProduit.id}/depots`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ depotId, quantiteBase: qte }),
+        body: JSON.stringify({ depotId: cibleDepotId, quantiteBase: qte }),
       });
       if (res.ok) {
         toast.success("Stock mis à jour");
         setStocksDepot((prev) =>
-          prev.map((s) => s.depotId === depotId ? { ...s, quantiteBase: qte } : s)
+          prev.map((s) => s.depotId === cibleDepotId ? { ...s, quantiteBase: qte } : s)
         );
-        // Rafraîchir la liste principale
-        const url = depotId ? `/api/stock?depotId=${depotId}` : "/api/stock";
-        fetch(url).then(r => r.json()).then(data => {
+        // Rafraîchir la liste principale avec le filtre actif
+        const refreshUrl = depotId ? `/api/stock?depotId=${depotId}` : "/api/stock";
+        fetch(refreshUrl).then(r => r.json()).then(data => {
           setProduitsDB(data.produits ?? []);
           setStats(data.stats ?? stats);
         });
       } else {
-        toast.error("Erreur lors de la sauvegarde");
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error ?? "Erreur lors de la sauvegarde");
       }
-    });
+    } catch {
+      toast.error("Erreur réseau");
+    } finally {
+      setSavingDepotId(null);
+    }
   }
 
   return (
@@ -505,7 +511,7 @@ export function StockView() {
                           <Button
                             size="sm"
                             onClick={() => sauvegarderDepot(s.depotId)}
-                            disabled={savingDepot || stocksEdites[s.depotId] === String(s.quantiteBase)}
+                            disabled={savingDepotId === s.depotId || String(stocksEdites[s.depotId] ?? "0") === String(s.quantiteBase)}
                           >
                             <Check className="w-3.5 h-3.5" />
                             Enregistrer

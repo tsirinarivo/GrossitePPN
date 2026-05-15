@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
         id: crypto.randomUUID(),
         produitId: l.produitId,
         depotId: safeDepotId,
-        type: "entree",
+        type: "entrée",
         quantiteBase: l.quantiteBase,
         quantiteAvant,
         quantiteApres,

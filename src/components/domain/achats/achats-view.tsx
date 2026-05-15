@@ -909,6 +909,24 @@ function ReceptionModal({ bc, onClose, onSaved }: {
   );
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [depots, setDepots] = useState<{ id: string; nom: string; estPrincipal: boolean }[]>([]);
+  const [selectedDepotId, setSelectedDepotId] = useState<string>(bc.depotId ?? "");
+
+  useEffect(() => {
+    fetch("/api/depots")
+      .then(r => r.json())
+      .then(d => {
+        const list = d.depots ?? [];
+        setDepots(list);
+        // Pré-sélectionner le dépôt du BC, sinon le dépôt principal, sinon le premier
+        if (!selectedDepotId && list.length > 0) {
+          const principal = list.find((d: { estPrincipal: boolean }) => d.estPrincipal);
+          setSelectedDepotId(principal?.id ?? list[0]?.id ?? "");
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -921,6 +939,7 @@ function ReceptionModal({ bc, onClose, onSaved }: {
         quantiteBase: qtesRecues[l.id] ?? 0,
       }));
     if (lignesRecep.length === 0) { toast.error("Aucune quantité renseignée"); return; }
+    if (!selectedDepotId) { toast.error("Sélectionnez un dépôt de destination"); return; }
     setSaving(true);
     try {
       const res = await fetch("/api/achats/receptions", {
@@ -928,7 +947,7 @@ function ReceptionModal({ bc, onClose, onSaved }: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bonCommandeId: bc.id,
-          depotId: bc.depotId ?? null,
+          depotId: selectedDepotId,
           notes: notes || null,
           lignes: lignesRecep,
         }),
@@ -962,6 +981,28 @@ function ReceptionModal({ bc, onClose, onSaved }: {
             <Button type="button" variant="ghost" size="icon-sm" onClick={onClose}><X className="w-4 h-4" /></Button>
           </div>
           <div className="p-6 space-y-4">
+            {/* Sélecteur dépôt destination */}
+            <div>
+              <label className="text-xs font-semibold text-[--foreground-muted] uppercase tracking-wider">
+                Dépôt de destination *
+              </label>
+              {depots.length === 0 ? (
+                <p className="mt-1 text-xs text-[--foreground-muted]">Aucun dépôt actif — créez-en un dans Admin → Dépôts</p>
+              ) : (
+                <select
+                  value={selectedDepotId}
+                  onChange={e => setSelectedDepotId(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-[--border] bg-[--background] text-[--foreground] px-3 py-2 text-sm"
+                >
+                  <option value="">— Choisir un dépôt —</option>
+                  {depots.map(d => (
+                    <option key={d.id} value={d.id}>
+                      {d.nom}{d.estPrincipal ? " ★" : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
             <div>
               <p className="text-xs font-semibold text-[--foreground-muted] uppercase tracking-wider mb-2">Quantités reçues</p>
               <div className="space-y-2">
