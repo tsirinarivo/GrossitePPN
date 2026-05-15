@@ -198,7 +198,11 @@ export function FinancesView() {
     try {
       const res  = await fetch(`/api/finances?${buildQuery()}`);
       const json = await res.json();
-      setData(json);
+      if (json?.kpi) {
+        setData(json);
+      } else {
+        toast.error("Erreur serveur", { description: json?.error ?? "Vérifier la base de données" });
+      }
     } catch {
       toast.error("Impossible de charger les finances");
     } finally {
