@@ -124,11 +124,11 @@ export function POSAgent() {
         )}
       >
         {/* Header */}
-        <div className="h-14 flex items-center gap-3 px-4 border-b border-[--pos-border] bg-[--pos-surface] shrink-0">
-          {/* Connexion indicator */}
+        <div className="h-12 sm:h-14 flex items-center gap-1.5 sm:gap-3 px-2 sm:px-4 border-b border-[--pos-border] bg-[--pos-surface] shrink-0">
+          {/* Connexion indicator — icône seule sur mobile */}
           <div
             className={cn(
-              "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full",
+              "flex items-center gap-1.5 text-xs font-medium px-1.5 sm:px-2 py-1 rounded-full shrink-0",
               connexion === "offline" || modeHorsLigne
                 ? "bg-[--pos-danger]/20 text-[--pos-danger]"
                 : "bg-[--pos-success]/20 text-[--pos-success]"
@@ -144,50 +144,49 @@ export function POSAgent() {
             </span>
           </div>
 
-          {/* Search */}
-          <div className="relative flex-1 max-w-lg">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[--pos-text-muted]" />
+          {/* Search — prend tout l'espace disponible */}
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-[--pos-text-muted]" />
             <Input
               value={recherche}
               onChange={(e) => setRecherche(e.target.value)}
-              placeholder="Rechercher un produit, code-barres..."
-              className="pl-9 bg-[--pos-surface-hover] border-[--pos-border] text-[--pos-text] placeholder:text-[--pos-text-muted] h-9"
+              placeholder="Rechercher..."
+              className="pl-8 sm:pl-9 bg-[--pos-surface-hover] border-[--pos-border] text-[--pos-text] placeholder:text-[--pos-text-muted] h-8 sm:h-9 text-sm"
             />
           </div>
 
-          <Button variant="pos-ghost" size="icon" title="Scanner code-barres">
-            <ScanLine className="w-5 h-5" />
+          <Button variant="pos-ghost" size="icon" title="Scanner code-barres" className="shrink-0 h-8 w-8 sm:h-9 sm:w-9">
+            <ScanLine className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
 
           <FullscreenToggle
             iconOnly
-            className="text-[--pos-text-muted] hover:text-[--pos-text] hover:bg-[--pos-surface-hover] hidden sm:flex"
+            className="text-[--pos-text-muted] hover:text-[--pos-text] hover:bg-[--pos-surface-hover] hidden md:flex"
           />
 
-          {/* Mes commandes */}
+          {/* Mes commandes — toujours visible, icône seule sur mobile */}
           <Button
             variant="pos-ghost"
-            size="pos-md"
-            className="gap-2 hidden sm:flex"
+            size="icon"
+            className="shrink-0 h-8 w-8 sm:h-9 sm:w-auto sm:px-3 sm:gap-2"
             onClick={() => setMesCommandesOuvert(true)}
             title="Mes commandes envoyées"
           >
             <ClipboardList className="w-4 h-4" />
-            <span className="hidden lg:inline text-sm">Mes commandes</span>
+            <span className="hidden sm:inline text-sm">Mes commandes</span>
           </Button>
 
-          {/* Panier toggle (mobile) */}
+          {/* Panier toggle (mobile uniquement) */}
           <Button
             variant="pos"
-            size="pos-md"
-            className="relative md:hidden gap-2"
+            size="icon"
+            className="relative md:hidden shrink-0 h-8 w-8 sm:h-9 sm:w-9"
             onClick={() => setPanierOuvert(true)}
           >
-            <ShoppingCart className="w-5 h-5" />
-            <span>Panier</span>
+            <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
             {nbArticles > 0 && (
-              <span className="ml-1 bg-white text-[--pos-primary] rounded-full text-[10px] font-bold w-5 h-5 flex items-center justify-center shrink-0">
-                {nbArticles}
+              <span className="absolute -top-1 -right-1 bg-white text-[--pos-primary] rounded-full text-[9px] font-bold w-4 h-4 flex items-center justify-center">
+                {nbArticles > 9 ? "9+" : nbArticles}
               </span>
             )}
           </Button>

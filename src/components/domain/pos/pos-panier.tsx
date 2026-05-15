@@ -375,7 +375,7 @@ function LignePanierItem({
         </div>
 
         {/* Total */}
-        <div className="text-right shrink-0 min-w-[90px]">
+        <div className="text-right shrink-0 min-w-[75px] sm:min-w-[90px]">
           <p className="text-sm font-bold text-[--pos-text] text-mga">
             {formatMGA(ligne.totalTTC)}
           </p>

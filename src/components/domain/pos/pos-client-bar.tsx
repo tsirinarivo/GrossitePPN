@@ -76,7 +76,7 @@ export function POSClientBar() {
                 {PALIER_LABELS[client.palier]}
               </Badge>
             </div>
-            <div className="flex items-center gap-3 text-[11px] text-[--pos-text-muted]">
+            <div className="hidden sm:flex items-center gap-3 text-[11px] text-[--pos-text-muted]">
               {client.creditAutorise && (
                 <span className="flex items-center gap-1">
                   <CreditCard className="w-3 h-3" />

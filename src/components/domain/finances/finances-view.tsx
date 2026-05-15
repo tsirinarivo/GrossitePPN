@@ -282,7 +282,7 @@ export function FinancesView() {
           </div>
 
           {/* ── KPI Cards ─────────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             <KpiCard label="Chiffre d'affaires HT" value={kpi.caHT} icon={TrendingUp}
               color="#3b82f6" sub={`${kpi.nbCommandes} commandes`} />
             <KpiCard label="Coût des ventes (COGS)" value={kpi.cogs} icon={ShoppingCart}
@@ -417,22 +417,22 @@ export function FinancesView() {
                   <thead>
                     <tr className="border-b border-[--border] bg-[--muted]/30">
                       <th className="text-left px-4 py-2 text-xs text-[--foreground-subtle] font-medium">Catégorie</th>
-                      <th className="text-right px-4 py-2 text-xs text-[--foreground-subtle] font-medium">CA HT</th>
-                      <th className="text-right px-4 py-2 text-xs text-[--foreground-subtle] font-medium">COGS</th>
+                      <th className="text-right px-4 py-2 text-xs text-[--foreground-subtle] font-medium hidden sm:table-cell">CA HT</th>
+                      <th className="text-right px-4 py-2 text-xs text-[--foreground-subtle] font-medium hidden md:table-cell">COGS</th>
                       <th className="text-right px-4 py-2 text-xs text-[--foreground-subtle] font-medium">Marge brute</th>
-                      <th className="text-left px-4 py-2 text-xs text-[--foreground-subtle] font-medium w-32">Taux %</th>
+                      <th className="text-left px-4 py-2 text-xs text-[--foreground-subtle] font-medium w-24 hidden sm:table-cell">Taux %</th>
                     </tr>
                   </thead>
                   <tbody>
                     {margesCategorie.map((c, i) => (
                       <tr key={c.id} className={`border-b border-[--border] last:border-0 ${i % 2 ? "bg-[--muted]/10" : ""}`}>
                         <td className="px-4 py-2.5 font-medium">{c.nom}</td>
-                        <td className="px-4 py-2.5 text-right text-sm">{formatMGA(c.ca)}</td>
-                        <td className="px-4 py-2.5 text-right text-sm text-[--foreground-subtle]">{formatMGA(c.cogs)}</td>
+                        <td className="px-4 py-2.5 text-right text-sm hidden sm:table-cell">{formatMGA(c.ca)}</td>
+                        <td className="px-4 py-2.5 text-right text-sm text-[--foreground-subtle] hidden md:table-cell">{formatMGA(c.cogs)}</td>
                         <td className="px-4 py-2.5 text-right text-sm font-semibold" style={{ color: c.margeB >= 0 ? "#22c55e" : "#ef4444" }}>
                           {formatMGA(c.margeB)}
                         </td>
-                        <td className="px-4 py-2.5">
+                        <td className="px-4 py-2.5 hidden sm:table-cell">
                           <div className="flex items-center gap-2">
                             <div className="flex-1 h-1.5 bg-[--muted] rounded-full overflow-hidden">
                               <div className="h-full rounded-full"
@@ -484,7 +484,7 @@ export function FinancesView() {
                   <thead>
                     <tr className="border-b border-[--border] bg-[--muted]/30">
                       <th className="text-left px-4 py-2 text-xs text-[--foreground-subtle] font-medium">Libellé</th>
-                      <th className="text-left px-4 py-2 text-xs text-[--foreground-subtle] font-medium">Catégorie</th>
+                      <th className="text-left px-4 py-2 text-xs text-[--foreground-subtle] font-medium hidden sm:table-cell">Catégorie</th>
                       <th className="text-right px-4 py-2 text-xs text-[--foreground-subtle] font-medium">Montant</th>
                       <th className="px-4 py-2 w-16"></th>
                     </tr>
@@ -496,7 +496,7 @@ export function FinancesView() {
                           <div className="font-medium">{c.libelle}</div>
                           {c.notes && <div className="text-xs text-[--foreground-subtle]">{c.notes}</div>}
                         </td>
-                        <td className="px-4 py-2.5">
+                        <td className="px-4 py-2.5 hidden sm:table-cell">
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
                             style={{ backgroundColor: (CAT_COLORS[c.categorie] ?? "#94a3b8") + "20", color: CAT_COLORS[c.categorie] ?? "#94a3b8" }}>
                             {CAT_LABELS[c.categorie] ?? c.categorie}
@@ -520,7 +520,8 @@ export function FinancesView() {
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-[--border] bg-[--muted]/30">
-                      <td colSpan={2} className="px-4 py-2.5 text-xs font-semibold text-[--foreground-subtle]">TOTAL CHARGES</td>
+                      <td colSpan={1} className="px-4 py-2.5 text-xs font-semibold text-[--foreground-subtle]">TOTAL CHARGES</td>
+                      <td className="hidden sm:table-cell" />
                       <td className="px-4 py-2.5 text-right font-bold text-red-500">{formatMGA(kpi.chargesOp)}</td>
                       <td />
                     </tr>
