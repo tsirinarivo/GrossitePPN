@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
@@ -101,10 +101,6 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       }
     }
 
-    if (Object.keys(updates).length === 0) {
-      return NextResponse.json({ error: "Aucun champ à mettre à jour" }, { status: 400 });
-    }
-
     updates.updatedAt = new Date();
 
     const rows = await db
@@ -117,7 +113,65 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: "Produit introuvable" }, { status: 404 });
     }
 
-    return NextResponse.json({ produit: rows[0] });
+    // Sync unitesVente if provided
+    if (Array.isArray(body.unitesVente)) {
+      const incoming = body.unitesVente as Array<{
+        id?: string;
+        nom: string;
+        facteurConversion: number;
+        prixGros?: number | null;
+        prixSemiGros?: number | null;
+        prixDetail?: number | null;
+        prixAchat?: number | null;
+        codeBarres?: string | null;
+        estDefaut?: boolean;
+        ordre?: number;
+      }>;
+
+      const existantes = await db
+        .select({ id: schema.unitesVente.id })
+        .from(schema.unitesVente)
+        .where(eq(schema.unitesVente.produitId, id));
+
+      const idsExistants = new Set(existantes.map((u) => u.id));
+      const idsIncoming = new Set(incoming.filter((u) => u.id).map((u) => u.id as string));
+
+      // Delete removed units
+      const aSupprimer = [...idsExistants].filter((uid) => !idsIncoming.has(uid));
+      if (aSupprimer.length > 0) {
+        await db.delete(schema.unitesVente).where(inArray(schema.unitesVente.id, aSupprimer));
+      }
+
+      // Upsert each unit
+      for (let i = 0; i < incoming.length; i++) {
+        const u = incoming[i]!;
+        const vals = {
+          produitId: id,
+          nom: u.nom,
+          facteurConversion: u.facteurConversion,
+          prixGros: u.prixGros ?? null,
+          prixSemiGros: u.prixSemiGros ?? null,
+          prixDetail: u.prixDetail ?? null,
+          prixAchat: u.prixAchat ?? null,
+          codeBarres: u.codeBarres || null,
+          estDefaut: u.estDefaut ?? i === 0,
+          ordre: u.ordre ?? i,
+        };
+        if (u.id && idsExistants.has(u.id)) {
+          await db.update(schema.unitesVente).set(vals).where(eq(schema.unitesVente.id, u.id));
+        } else {
+          await db.insert(schema.unitesVente).values({ id: crypto.randomUUID(), ...vals });
+        }
+      }
+    }
+
+    const unitesVente = await db
+      .select()
+      .from(schema.unitesVente)
+      .where(eq(schema.unitesVente.produitId, id))
+      .orderBy(schema.unitesVente.ordre);
+
+    return NextResponse.json({ produit: rows[0], unitesVente });
   } catch (e) {
     console.error("[api/produits/[id] PATCH]", e);
     const msg = e instanceof Error ? e.message : String(e);

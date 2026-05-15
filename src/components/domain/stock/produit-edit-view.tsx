@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Save, Package, DollarSign, BarChart2, Settings } from "lucide-react";
+import { ArrowLeft, Save, Package, DollarSign, BarChart2, Settings, Plus, Trash2, GripVertical } from "lucide-react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ interface Categorie {
 }
 
 interface UniteVente {
-  id: string;
+  id?: string;
   nom: string;
   facteurConversion: number;
   prixGros: number | null;
@@ -25,7 +25,20 @@ interface UniteVente {
   prixDetail: number | null;
   prixAchat: number | null;
   codeBarres: string | null;
+  estDefaut: boolean;
+  ordre: number;
 }
+
+const UNITE_VIDE: Omit<UniteVente, "ordre"> = {
+  nom: "",
+  facteurConversion: 1,
+  prixGros: null,
+  prixSemiGros: null,
+  prixDetail: null,
+  prixAchat: null,
+  codeBarres: null,
+  estDefaut: false,
+};
 
 interface ProduitData {
   id: string;
@@ -104,7 +117,9 @@ export function ProduitEditView({ id }: { id: string }) {
 
         const data = await produitRes.json();
         const p: ProduitData = data.produit;
-        setUnitesVente(data.unitesVente ?? []);
+        setUnitesVente(
+          (data.unitesVente ?? []).map((u: UniteVente, i: number) => ({ ...u, ordre: u.ordre ?? i }))
+        );
 
         setForm({
           nom: p.nom ?? "",
@@ -142,6 +157,7 @@ export function ProduitEditView({ id }: { id: string }) {
     setSaving(true);
     try {
       const body: Record<string, unknown> = {
+        unitesVente: unitesVente.map((u, i) => ({ ...u, ordre: i })),
         nom: form.nom,
         nomMG: form.nomMG || null,
         code: form.code,
@@ -295,6 +311,141 @@ export function ProduitEditView({ id }: { id: string }) {
             <label className="text-xs font-medium text-[--foreground-muted]">Prix détail (Ar)</label>
             <Input type="number" min={0} value={form.prixVenteDetail} onChange={(e) => set("prixVenteDetail", e.target.value)} placeholder="0" />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Conditionnements */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Package className="w-4 h-4" /> Conditionnements
+            </CardTitle>
+            <button
+              type="button"
+              onClick={() => setUnitesVente((prev) => [...prev, { ...UNITE_VIDE, ordre: prev.length, estDefaut: prev.length === 0 }])}
+              className="flex items-center gap-1.5 text-xs font-medium text-[--primary] hover:opacity-80 transition-opacity"
+            >
+              <Plus className="w-3.5 h-3.5" /> Ajouter
+            </button>
+          </div>
+          <p className="text-xs text-[--foreground-muted] mt-0.5">
+            Carton, pack, bidon, sac… avec facteur de conversion et prix par palier
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {unitesVente.length === 0 ? (
+            <p className="text-sm text-[--foreground-muted] text-center py-4">
+              Aucun conditionnement — cliquez <strong>Ajouter</strong> pour créer un carton, pack, etc.
+            </p>
+          ) : (
+            unitesVente.map((u, i) => (
+              <div key={i} className="border border-[--border] rounded-xl p-4 space-y-3 bg-[--muted]/30">
+                <div className="flex items-center gap-2">
+                  <GripVertical className="w-4 h-4 text-[--foreground-muted] shrink-0" />
+                  <span className="text-xs font-semibold text-[--foreground-muted] uppercase tracking-wide">
+                    Conditionnement {i + 1}
+                    {u.estDefaut && <span className="ml-2 text-[--primary]">· Défaut</span>}
+                  </span>
+                  <div className="flex-1" />
+                  {!u.estDefaut && (
+                    <button
+                      type="button"
+                      onClick={() => setUnitesVente((prev) => prev.map((x, j) => ({ ...x, estDefaut: j === i })))}
+                      className="text-xs text-[--foreground-muted] hover:text-[--primary] transition-colors"
+                    >
+                      Définir défaut
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setUnitesVente((prev) => prev.filter((_, j) => j !== i))}
+                    className="text-[--destructive] hover:opacity-70 transition-opacity"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[--foreground-muted]">Nom *</label>
+                    <Input
+                      value={u.nom}
+                      onChange={(e) => setUnitesVente((prev) => prev.map((x, j) => j === i ? { ...x, nom: e.target.value } : x))}
+                      placeholder="ex: Carton 24, Pack 6, Bidon 5L"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[--foreground-muted]">
+                      Facteur ({form.uniteBase || "unité base"})
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      step={0.001}
+                      value={u.facteurConversion}
+                      onChange={(e) => setUnitesVente((prev) => prev.map((x, j) => j === i ? { ...x, facteurConversion: Number(e.target.value) } : x))}
+                      placeholder="ex: 24"
+                    />
+                    {u.facteurConversion > 1 && (
+                      <p className="text-xs text-[--foreground-muted]">
+                        1 {u.nom || "…"} = {u.facteurConversion} {form.uniteBase || "unités"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[--foreground-muted]">Prix achat (Ar)</label>
+                    <Input
+                      type="number" min={0}
+                      value={u.prixAchat ?? ""}
+                      onChange={(e) => setUnitesVente((prev) => prev.map((x, j) => j === i ? { ...x, prixAchat: e.target.value === "" ? null : Number(e.target.value) } : x))}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[--foreground-muted]">Prix gros (Ar)</label>
+                    <Input
+                      type="number" min={0}
+                      value={u.prixGros ?? ""}
+                      onChange={(e) => setUnitesVente((prev) => prev.map((x, j) => j === i ? { ...x, prixGros: e.target.value === "" ? null : Number(e.target.value) } : x))}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[--foreground-muted]">Prix demi-gros (Ar)</label>
+                    <Input
+                      type="number" min={0}
+                      value={u.prixSemiGros ?? ""}
+                      onChange={(e) => setUnitesVente((prev) => prev.map((x, j) => j === i ? { ...x, prixSemiGros: e.target.value === "" ? null : Number(e.target.value) } : x))}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-[--foreground-muted]">Prix détail (Ar)</label>
+                    <Input
+                      type="number" min={0}
+                      value={u.prixDetail ?? ""}
+                      onChange={(e) => setUnitesVente((prev) => prev.map((x, j) => j === i ? { ...x, prixDetail: e.target.value === "" ? null : Number(e.target.value) } : x))}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-[--foreground-muted]">Code-barres</label>
+                  <Input
+                    value={u.codeBarres ?? ""}
+                    onChange={(e) => setUnitesVente((prev) => prev.map((x, j) => j === i ? { ...x, codeBarres: e.target.value || null } : x))}
+                    placeholder="EAN-13, QR…"
+                    className="max-w-xs"
+                  />
+                </div>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
 
