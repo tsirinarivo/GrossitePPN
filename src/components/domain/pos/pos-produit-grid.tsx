@@ -49,7 +49,7 @@ const ProduitCard = memo(function ProduitCard({ produit }: { produit: ProduitPOS
   const stockBas = stockEnUnite < 5;
 
   const handleAjouter = () => {
-    if (!prixActuel) return;
+    if (!prixActuel || produit.stockDisponible <= 0) return;
     ajouterLigne({
       produitId: produit.id,
       nomProduit: produit.nom,
