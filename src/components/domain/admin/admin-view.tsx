@@ -34,6 +34,11 @@ interface User {
   id: string; name: string; email: string; role: string; actif: boolean; createdAt: string;
 }
 
+interface Depot {
+  id: string; nom: string; adresse: string | null; telephone: string | null;
+  estPrincipal: boolean; actif: boolean; createdAt: string;
+}
+
 function Toggle({ active, onClick, label, description }: {
   active: boolean; onClick: () => void; label: string; description: string;
 }) {
@@ -110,6 +115,72 @@ export function AdminView() {
   }
 
   useEffect(() => { if (section === "utilisateurs") loadUsers(); }, [section]);
+
+  // ── Dépôts ────────────────────────────────────────────────────────────────
+  const [depots, setDepots] = useState<Depot[]>([]);
+  const [depotsLoading, setDepotsLoading] = useState(false);
+  const [showNewDepot, setShowNewDepot] = useState(false);
+  const [newDepot, setNewDepot] = useState({ nom: "", adresse: "", telephone: "" });
+  const [newDepotSaving, startNewDepotSave] = useTransition();
+  const [editDepot, setEditDepot] = useState<Depot | null>(null);
+  const [editDepotData, setEditDepotData] = useState({ nom: "", adresse: "", telephone: "" });
+  const [editDepotSaving, startEditDepotSave] = useTransition();
+
+  function loadDepots() {
+    setDepotsLoading(true);
+    fetch("/api/depots").then(r => r.json()).then(d => setDepots(d.depots ?? [])).finally(() => setDepotsLoading(false));
+  }
+
+  useEffect(() => { if (section === "depots") loadDepots(); }, [section]);
+
+  function createDepot() {
+    startNewDepotSave(async () => {
+      const res = await fetch("/api/depots", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newDepot),
+      });
+      if (res.ok) {
+        toast.success("Dépôt créé");
+        setShowNewDepot(false);
+        setNewDepot({ nom: "", adresse: "", telephone: "" });
+        loadDepots();
+      } else {
+        const d = await res.json();
+        toast.error(d.error ?? "Erreur");
+      }
+    });
+  }
+
+  function saveDepot() {
+    if (!editDepot) return;
+    startEditDepotSave(async () => {
+      const res = await fetch(`/api/depots/${editDepot.id}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editDepotData),
+      });
+      if (res.ok) {
+        toast.success("Dépôt mis à jour");
+        setEditDepot(null);
+        loadDepots();
+      } else toast.error("Erreur lors de la sauvegarde");
+    });
+  }
+
+  async function setPrincipal(id: string) {
+    await fetch(`/api/depots/${id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estPrincipal: true }),
+    });
+    loadDepots();
+  }
+
+  async function toggleDepotActif(depot: Depot) {
+    await fetch(`/api/depots/${depot.id}`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actif: !depot.actif }),
+    });
+    loadDepots();
+  }
 
   function createUser() {
     startNewUserSave(async () => {
@@ -278,17 +349,125 @@ export function AdminView() {
 
           {/* ── DÉPÔTS ── */}
           {section === "depots" && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-base inline-flex items-center gap-2">
-                    <Warehouse className="w-4 h-4" /> Dépôts
+                    <Warehouse className="w-4 h-4" /> Dépôts & Entrepôts
                   </CardTitle>
+                  <Button size="sm" onClick={() => { setShowNewDepot(true); setEditDepot(null); }}>
+                    <Plus className="w-4 h-4" /> Nouveau dépôt
+                  </Button>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-[--foreground-muted]">Gestion des dépôts disponible prochainement.</p>
+                <CardContent className="space-y-3">
+                  {depotsLoading ? (
+                    <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-[--foreground-muted]" /></div>
+                  ) : depots.length === 0 ? (
+                    <div className="text-center py-10 text-[--foreground-muted]">
+                      <Warehouse className="w-10 h-10 opacity-20 mx-auto mb-3" />
+                      <p className="text-sm">Aucun dépôt configuré</p>
+                      <Button size="sm" className="mt-3" onClick={() => setShowNewDepot(true)}>
+                        <Plus className="w-4 h-4" /> Créer le premier dépôt
+                      </Button>
+                    </div>
+                  ) : depots.map((d) => (
+                    <div key={d.id} className="flex items-start gap-3 p-3 rounded-xl border border-[--border] bg-[--accent]/30">
+                      <div className="w-9 h-9 rounded-xl bg-[--primary]/10 flex items-center justify-center shrink-0">
+                        <Warehouse className="w-4 h-4 text-[--primary]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm text-[--foreground]">{d.nom}</span>
+                          {d.estPrincipal && <Badge variant="default" className="text-[10px]">Principal</Badge>}
+                          {!d.actif && <Badge variant="outline" className="text-[10px]">Inactif</Badge>}
+                        </div>
+                        {d.adresse && <p className="text-xs text-[--foreground-muted] mt-0.5">{d.adresse}</p>}
+                        {d.telephone && <p className="text-xs text-[--foreground-subtle] font-mono">{d.telephone}</p>}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {!d.estPrincipal && d.actif && (
+                          <Button variant="outline" size="sm" className="text-xs h-7 px-2" onClick={() => setPrincipal(d.id)}>
+                            Définir principal
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon-sm" onClick={() => {
+                          setEditDepot(d);
+                          setEditDepotData({ nom: d.nom, adresse: d.adresse ?? "", telephone: d.telephone ?? "" });
+                          setShowNewDepot(false);
+                        }}>
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" onClick={() => toggleDepotActif(d)}
+                          className={d.actif ? "text-[--foreground-muted]" : "text-green-500"}>
+                          {d.actif ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
+
+              {/* Formulaire nouveau dépôt */}
+              <AnimatePresence>
+                {showNewDepot && !editDepot && (
+                  <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm">Nouveau dépôt</CardTitle>
+                        <Button variant="ghost" size="icon-sm" onClick={() => setShowNewDepot(false)}><X className="w-4 h-4" /></Button>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div>
+                          <label className="text-xs font-medium text-[--foreground-muted]">Nom *</label>
+                          <Input value={newDepot.nom} onChange={e => setNewDepot(p => ({ ...p, nom: e.target.value }))} placeholder="Ex: Entrepôt Tana Nord" className="mt-1" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-[--foreground-muted]">Adresse</label>
+                          <Input value={newDepot.adresse} onChange={e => setNewDepot(p => ({ ...p, adresse: e.target.value }))} placeholder="Rue, quartier, ville" className="mt-1" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-[--foreground-muted]">Téléphone</label>
+                          <Input value={newDepot.telephone} onChange={e => setNewDepot(p => ({ ...p, telephone: e.target.value }))} placeholder="034 XX XXX XX" className="mt-1" />
+                        </div>
+                        <Button onClick={createDepot} loading={newDepotSaving} disabled={!newDepot.nom.trim()}>
+                          <Check className="w-4 h-4" /> Créer le dépôt
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Formulaire édition dépôt */}
+              <AnimatePresence>
+                {editDepot && (
+                  <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm">Modifier — {editDepot.nom}</CardTitle>
+                        <Button variant="ghost" size="icon-sm" onClick={() => setEditDepot(null)}><X className="w-4 h-4" /></Button>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div>
+                          <label className="text-xs font-medium text-[--foreground-muted]">Nom *</label>
+                          <Input value={editDepotData.nom} onChange={e => setEditDepotData(p => ({ ...p, nom: e.target.value }))} className="mt-1" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-[--foreground-muted]">Adresse</label>
+                          <Input value={editDepotData.adresse} onChange={e => setEditDepotData(p => ({ ...p, adresse: e.target.value }))} className="mt-1" />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-[--foreground-muted]">Téléphone</label>
+                          <Input value={editDepotData.telephone} onChange={e => setEditDepotData(p => ({ ...p, telephone: e.target.value }))} className="mt-1" />
+                        </div>
+                        <Button onClick={saveDepot} loading={editDepotSaving} disabled={!editDepotData.nom.trim()}>
+                          <Check className="w-4 h-4" /> Enregistrer
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
 
