@@ -234,7 +234,7 @@ export function POSAgent() {
           />
           <div
             className="absolute inset-y-0 right-0 z-50 w-full sm:w-[420px] shadow-2xl flex flex-col"
-            style={{ backgroundColor: "#0d1117" }}
+            style={{ backgroundColor: "var(--pos-surface)" }}
           >
             <POSMesCommandes onClose={() => setMesCommandesOuvert(false)} />
           </div>

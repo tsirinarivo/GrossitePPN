@@ -248,8 +248,10 @@ export function POSPanier({ onClose, totalTTC, nbArticles }: Props) {
         <Button
           variant="pos"
           size="pos-lg"
-          className="w-full"
-          style={{ color: "#ffffff", backgroundColor: commandeEnEdition ? "#0ea5e9" : "#d97706" }}
+          className={cn(
+            "w-full",
+            commandeEnEdition && "!bg-none !bg-blue-500 hover:!bg-blue-400 hover:shadow-[0_0_20px_rgba(59,130,246,0.4)]"
+          )}
           onClick={handleEnvoyer}
           loading={envoiEnCours}
         >

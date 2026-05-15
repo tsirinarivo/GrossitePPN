@@ -176,6 +176,30 @@
     --pos-primary:      #FF4D00;
     --pos-success:      #10B981;
     --pos-danger:       #EF4444;
+
+    /* ── Variables couleur sémantiques (dark-appropriate)
+          Utilisées par dashboard-home, caisse, analytics, shop, stock ── */
+    /* Ocre / Orange */
+    --color-ocre-50:   rgba(255, 77,  0, 0.12);
+    --color-ocre-100:  rgba(255, 77,  0, 0.15);
+    --color-ocre-300:  #FF9060;
+    --color-ocre-500:  #FF4D00;
+    --color-ocre-600:  #FF6D30;
+    --color-ocre-950:  rgba(255, 77,  0, 0.08);
+
+    /* Vanille / Vert */
+    --color-vanille-50:  rgba(16, 185, 129, 0.12);
+    --color-vanille-100: rgba(16, 185, 129, 0.15);
+    --color-vanille-500: #10B981;
+    --color-vanille-600: #34D399;
+    --color-vanille-950: rgba(16, 185, 129, 0.08);
+
+    /* Indigo / Violet */
+    --color-indigo-50:  rgba(99, 102, 241, 0.12);
+    --color-indigo-100: rgba(99, 102, 241, 0.15);
+    --color-indigo-500: #6366F1;
+    --color-indigo-600: #818CF8;
+    --color-indigo-950: rgba(99, 102, 241, 0.08);
   }
 }
 
