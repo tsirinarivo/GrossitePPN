@@ -2,24 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  ShoppingCart,
-  ShoppingBag,
-  Package,
-  Users,
-  Truck,
-  BarChart3,
-  DollarSign,
-  Settings,
-  Store,
-  ChevronRight,
-  Wifi,
-  WifiOff,
-  Receipt,
-  History,
-  LogOut,
-  User,
-  X,
+  ShoppingCart, ShoppingBag, Package, Users, Truck,
+  BarChart3, DollarSign, Settings, Store,
+  Wifi, WifiOff, Receipt, History, LogOut, User,
+  X, ChevronLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app.store";
@@ -27,23 +15,29 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 import { useSession, signOut } from "@/lib/auth/client";
 import { toast } from "sonner";
 import { canAccess, ROLE_LABELS, type AppRole } from "@/lib/permissions";
-import { FullscreenToggle } from "@/components/ui/fullscreen-toggle";
 
 const ALL_NAV_ITEMS = [
-  { href: "/pos/agent",  label: "Point de vente",  icon: ShoppingCart, accent: "#f59e0b" },
-  { href: "/pos/caisse", label: "Caisse",           icon: Receipt,      accent: "#a78bfa" },
-  { href: "/historique", label: "Historique ventes",icon: History,      accent: null },
-  { href: "/finances",   label: "Finances",         icon: DollarSign,   accent: "#34d399" },
-  { href: "/stock",      label: "Stock",            icon: Package,      accent: "#60a5fa" },
-  { href: "/clients",    label: "Clients",          icon: Users,        accent: null },
-  { href: "/livraisons", label: "Livraisons",       icon: Truck,        accent: null },
-  { href: "/achats",     label: "Achats",           icon: ShoppingBag,  accent: null },
-  { href: "/rapports",   label: "Rapports",         icon: BarChart3,    accent: null },
-  { href: "/shop",       label: "Boutique",         icon: Store,        accent: null },
-  { href: "/admin",      label: "Admin",            icon: Settings,     accent: null },
+  { href: "/pos/agent",  label: "Point de vente",   icon: ShoppingCart, color: "#FF4D00" },
+  { href: "/pos/caisse", label: "Caisse",            icon: Receipt,      color: "#8B5CF6" },
+  { href: "/historique", label: "Historique",        icon: History,      color: "#6B7280" },
+  { href: "/finances",   label: "Finances",          icon: DollarSign,   color: "#10B981" },
+  { href: "/stock",      label: "Stock",             icon: Package,      color: "#3B82F6" },
+  { href: "/clients",    label: "Clients",           icon: Users,        color: "#F59E0B" },
+  { href: "/livraisons", label: "Livraisons",        icon: Truck,        color: "#6B7280" },
+  { href: "/achats",     label: "Achats",            icon: ShoppingBag,  color: "#6B7280" },
+  { href: "/rapports",   label: "Rapports",          icon: BarChart3,    color: "#6B7280" },
+  { href: "/shop",       label: "Boutique",          icon: Store,        color: "#6B7280" },
+  { href: "/admin",      label: "Admin",             icon: Settings,     color: "#6B7280" },
 ];
 
-export function DashboardNav({ role, onClose }: { role?: string; onClose?: () => void }) {
+type Props = {
+  role?: string;
+  collapsed: boolean;
+  onToggle: () => void;
+  onClose?: () => void;
+};
+
+export function DashboardNav({ role, collapsed, onToggle, onClose }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const connexion = useAppStore((s) => s.connexion);
@@ -69,177 +63,217 @@ export function DashboardNav({ role, onClose }: { role?: string; onClose?: () =>
     .join("");
 
   return (
-    <nav
-      className="w-64 lg:w-16 xl:w-56 h-screen flex flex-col shrink-0 transition-all duration-200"
-      style={{ backgroundColor: "var(--sidebar)", borderRight: "1px solid var(--sidebar-border)" }}
+    <motion.nav
+      animate={{ width: collapsed ? 72 : 240 }}
+      transition={{ duration: 0.2, ease: "easeInOut" }}
+      className="h-screen flex flex-col shrink-0 overflow-hidden relative"
+      style={{
+        backgroundColor: "#111118",
+        borderRight: "1px solid #1E1E2E",
+        minWidth: collapsed ? 72 : 240,
+      }}
     >
-      {/* Logo */}
+      {/* ── Logo ── */}
       <div
-        className="h-14 flex items-center px-4"
-        style={{ borderBottom: "1px solid var(--sidebar-border)" }}
+        className="h-14 flex items-center px-4 shrink-0"
+        style={{ borderBottom: "1px solid #1E1E2E" }}
       >
-        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+        <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
+          {/* Logo icon avec gradient */}
           <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm"
-            style={{ backgroundColor: "var(--sidebar-primary)" }}
+            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-lg"
+            style={{ background: "linear-gradient(135deg, #FF4D00 0%, #FFB800 100%)" }}
           >
             <Package className="w-4 h-4 text-white" />
           </div>
-          <div className="lg:hidden xl:block min-w-0 flex-1">
-            <div className="text-sm font-bold tracking-tight truncate" style={{ color: "var(--sidebar-fg)" }}>
-              GrossistePPN
-            </div>
-            <div className="text-[10px]" style={{ color: "var(--sidebar-muted)" }}>Madagascar</div>
-          </div>
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.div
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -8 }}
+                transition={{ duration: 0.15 }}
+                className="min-w-0 overflow-hidden"
+              >
+                <div className="text-sm font-bold text-white truncate leading-tight">
+                  GrossistePPN
+                </div>
+                <div className="text-[10px] text-brand-muted truncate">Madagascar</div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
+
+        {/* Close on mobile */}
         {onClose && (
           <button
             onClick={onClose}
-            className="lg:hidden p-1.5 rounded-lg transition-colors"
-            style={{ color: "var(--sidebar-muted)" }}
-            aria-label="Fermer le menu"
+            className="lg:hidden p-1.5 rounded-lg text-brand-muted hover:text-white hover:bg-white/5 transition-colors shrink-0"
+            aria-label="Fermer"
           >
             <X className="w-5 h-5" />
           </button>
         )}
       </div>
 
-      {/* Nav items */}
-      <div className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+      {/* ── Nav items ── */}
+      <div className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5 no-scrollbar">
         {navItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
-          const activeColor = item.accent ?? "var(--sidebar-primary)";
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-2.5 py-2 rounded-lg",
-                "text-sm font-medium transition-all duration-150 group relative"
+                "sidebar-item relative group",
+                isActive && "active"
               )}
-              style={
-                isActive
-                  ? { backgroundColor: "rgba(245,158,11,0.12)", color: "var(--sidebar-primary)" }
-                  : { color: "var(--sidebar-muted)" }
-              }
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = "var(--sidebar-accent)";
-                  (e.currentTarget as HTMLElement).style.color = "var(--sidebar-accent-fg)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  (e.currentTarget as HTMLElement).style.backgroundColor = "";
-                  (e.currentTarget as HTMLElement).style.color = "var(--sidebar-muted)";
-                }
-              }}
+              title={collapsed ? item.label : undefined}
             >
-              <item.icon
-                className="w-5 h-5 shrink-0"
-                style={isActive ? { color: activeColor } : {}}
-              />
-              <span className="lg:hidden xl:block truncate">{item.label}</span>
-              {isActive && (
-                <ChevronRight
-                  className="lg:hidden xl:block w-3.5 h-3.5 ml-auto opacity-50"
-                  style={{ color: "var(--sidebar-primary)" }}
-                />
-              )}
-              {/* Tooltip mode icône (lg) */}
+              {/* Icône colorée selon section */}
               <div
-                className="hidden lg:block xl:hidden absolute left-full ml-3 px-2.5 py-1.5 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl"
-                style={{
-                  backgroundColor: "var(--sidebar-deeper)",
-                  color: "var(--sidebar-fg)",
-                  border: "1px solid var(--sidebar-border)",
-                }}
+                className="w-5 h-5 shrink-0 flex items-center justify-center"
+                style={isActive ? { color: item.color } : {}}
               >
-                {item.label}
+                <item.icon className="w-5 h-5" />
               </div>
+
+              <AnimatePresence>
+                {!collapsed && (
+                  <motion.span
+                    initial={{ opacity: 0, x: -4 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -4 }}
+                    transition={{ duration: 0.12 }}
+                    className="truncate text-sm"
+                  >
+                    {item.label}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+
+              {/* Tooltip en mode réduit */}
+              {collapsed && (
+                <div className="pointer-events-none absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity shadow-xl"
+                  style={{
+                    backgroundColor: "#050508",
+                    color: "white",
+                    border: "1px solid #1E1E2E",
+                  }}
+                >
+                  {item.label}
+                </div>
+              )}
             </Link>
           );
         })}
       </div>
 
-      {/* Langue + plein écran */}
-      <div className="px-3 pb-2 lg:hidden xl:block space-y-1">
-        <LocaleSwitcher className="w-full justify-around" />
-        <FullscreenToggle className="w-full justify-center" />
-      </div>
-      <div className="hidden lg:flex xl:hidden justify-center pb-2">
-        <FullscreenToggle iconOnly />
+      {/* ── Toggle collapse (desktop) ── */}
+      <div className="hidden lg:flex justify-center py-2 px-2" style={{ borderTop: "1px solid #1E1E2E" }}>
+        <button
+          onClick={onToggle}
+          className="flex items-center justify-center w-8 h-8 rounded-lg text-brand-muted hover:text-white hover:bg-white/5 transition-colors"
+          title={collapsed ? "Développer" : "Réduire"}
+        >
+          <motion.div animate={{ rotate: collapsed ? 180 : 0 }} transition={{ duration: 0.2 }}>
+            <ChevronLeft className="w-4 h-4" />
+          </motion.div>
+        </button>
       </div>
 
-      {/* Statut connexion */}
-      <div className="px-3 py-2" style={{ borderTop: "1px solid var(--sidebar-border)" }}>
+      {/* ── Langue (mode expanded seulement) ── */}
+      <AnimatePresence>
+        {!collapsed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="px-3 pb-2"
+          >
+            <LocaleSwitcher className="w-full justify-around" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Connexion ── */}
+      <div className="px-3 py-2" style={{ borderTop: "1px solid #1E1E2E" }}>
         <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium">
           {connexion === "offline" ? (
             <WifiOff className="w-4 h-4 shrink-0 text-red-400" />
           ) : (
             <Wifi className="w-4 h-4 shrink-0 text-green-400" />
           )}
-          <span
-            className="lg:hidden xl:block"
-            style={{
-              color: connexion === "online" ? "#4ade80"
-                   : connexion === "slow"   ? "#fbbf24"
-                   : "#f87171",
-            }}
-          >
-            {connexion === "online" ? "En ligne"
-             : connexion === "slow" ? "Réseau lent"
-             : "Hors ligne"}
-          </span>
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{
+                  color: connexion === "online" ? "#4ade80"
+                       : connexion === "slow"   ? "#fbbf24"
+                       : "#f87171",
+                }}
+              >
+                {connexion === "online" ? "En ligne"
+                 : connexion === "slow" ? "Réseau lent"
+                 : "Hors ligne"}
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Profil */}
-      <div className="p-3" style={{ borderTop: "1px solid var(--sidebar-border)" }}>
+      {/* ── Profil ── */}
+      <div className="p-3" style={{ borderTop: "1px solid #1E1E2E" }}>
         <div className="flex items-center gap-2.5 min-w-0">
+          {/* Avatar */}
           <div
-            className="w-8 h-8 rounded-full flex items-center justify-center font-semibold text-xs shrink-0"
-            style={{ backgroundColor: "rgba(245,158,11,0.18)", color: "var(--sidebar-primary)" }}
+            className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0"
+            style={{
+              background: "linear-gradient(135deg, #FF4D00 0%, #FFB800 100%)",
+              color: "white",
+            }}
           >
-            {userInitials || <User className="w-4 h-4" />}
+            {userInitials || <User className="w-3.5 h-3.5" />}
           </div>
-          <div className="lg:hidden xl:flex flex-col flex-1 min-w-0">
-            <span className="text-xs font-semibold truncate" style={{ color: "var(--sidebar-fg)" }}>
-              {userName}
-            </span>
-            <span className="text-[10px]" style={{ color: "var(--sidebar-muted)" }}>
-              {role ? (ROLE_LABELS[role as AppRole] ?? role) : ""}
-            </span>
-          </div>
+
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.div
+                initial={{ opacity: 0, x: -4 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -4 }}
+                transition={{ duration: 0.12 }}
+                className="flex-1 min-w-0 overflow-hidden"
+              >
+                <div className="text-xs font-semibold text-white truncate">{userName}</div>
+                <div className="text-[10px] text-brand-muted truncate">
+                  {role ? (ROLE_LABELS[role as AppRole] ?? role) : ""}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Logout */}
           <button
             onClick={handleSignOut}
             title="Se déconnecter"
-            className="p-1.5 rounded-lg transition-colors group relative"
-            style={{ color: "var(--sidebar-muted)" }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = "rgba(248,113,113,0.15)";
-              (e.currentTarget as HTMLElement).style.color = "#f87171";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor = "";
-              (e.currentTarget as HTMLElement).style.color = "var(--sidebar-muted)";
-            }}
+            className="p-1.5 rounded-lg text-brand-muted hover:text-red-400 hover:bg-red-500/10 transition-colors shrink-0 group relative"
           >
             <LogOut className="w-4 h-4" />
-            <div
-              className="hidden lg:block xl:hidden absolute left-full ml-3 px-2.5 py-1.5 text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl"
-              style={{
-                backgroundColor: "var(--sidebar-deeper)",
-                color: "var(--sidebar-fg)",
-                border: "1px solid var(--sidebar-border)",
-              }}
-            >
-              Se déconnecter
-            </div>
+            {collapsed && (
+              <div className="pointer-events-none absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity shadow-xl"
+                style={{ backgroundColor: "#050508", color: "white", border: "1px solid #1E1E2E" }}
+              >
+                Se déconnecter
+              </div>
+            )}
           </button>
         </div>
       </div>
-    </nav>
+    </motion.nav>
   );
 }

@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
   [
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg",
-    "text-sm font-medium tracking-tight",
-    "transition-all duration-150 ease-out",
-    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--ring] focus-visible:ring-offset-2",
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap",
+    "text-sm font-semibold tracking-tight",
+    "transition-all duration-200 ease-out",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF4D00]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-brand-dark",
     "disabled:pointer-events-none disabled:opacity-40",
     "active:scale-[0.97]",
     "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
@@ -18,63 +18,66 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // Primary — gradient orange
         default: [
-          "bg-[--primary] text-[--primary-foreground]",
-          "hover:bg-[--primary-hover]",
-          "shadow-sm",
+          "rounded-xl bg-gradient-to-br from-[#FF4D00] to-[#FF6B00] text-white shadow-sm",
+          "hover:shadow-[0_0_30px_rgba(255,77,0,0.30)] hover:-translate-y-px",
+          "active:translate-y-0",
         ],
+        // Secondary — dark card
         secondary: [
-          "bg-[--secondary] text-[--secondary-foreground]",
-          "hover:bg-[--secondary-hover]",
-          "shadow-sm",
+          "rounded-xl bg-brand-card border border-brand-border text-brand-muted",
+          "hover:border-[#FF4D00]/50 hover:text-[#FF4D00]",
         ],
+        // Destructive
         destructive: [
-          "bg-[--destructive] text-[--destructive-foreground]",
-          "hover:opacity-90",
-          "shadow-sm",
+          "rounded-xl bg-red-500/10 border border-red-500/20 text-red-400",
+          "hover:bg-red-500/20 hover:border-red-500/40",
         ],
-        outline: [
-          "border border-[--border-strong] bg-transparent text-[--foreground]",
-          "hover:bg-[--accent] hover:text-[--accent-foreground]",
-        ],
+        // Ghost
         ghost: [
-          "bg-transparent text-[--foreground]",
-          "hover:bg-[--accent] hover:text-[--accent-foreground]",
+          "rounded-xl bg-transparent text-brand-muted",
+          "hover:bg-white/5 hover:text-white",
         ],
+        // Outline
+        outline: [
+          "rounded-xl border border-brand-border bg-transparent text-brand-muted",
+          "hover:border-[#FF4D00]/50 hover:text-white hover:bg-white/5",
+        ],
+        // Link
         link: [
-          "bg-transparent text-[--primary] underline-offset-4",
+          "bg-transparent text-[#FF4D00] underline-offset-4",
           "hover:underline",
           "h-auto p-0",
         ],
+        // Success
         success: [
-          "bg-[--success] text-[--success-foreground]",
-          "hover:opacity-90",
-          "shadow-sm",
+          "rounded-xl bg-green-500/10 border border-green-500/20 text-green-400",
+          "hover:bg-green-500/20 hover:border-green-500/40",
         ],
-        // POS-specific — dark background, high contrast
+        // POS — interface agent (cohérent avec nouveau design)
         pos: [
-          "bg-[--pos-primary] !text-white font-semibold",
-          "hover:opacity-90",
-          "shadow-md",
+          "rounded-xl bg-gradient-to-br from-[#FF4D00] to-[#FF6B00] !text-white font-semibold",
+          "hover:shadow-[0_0_30px_rgba(255,77,0,0.30)] hover:-translate-y-px",
+          "active:translate-y-0",
         ],
         "pos-ghost": [
-          "bg-[--pos-surface-hover] text-[--pos-text] border border-[--pos-border]",
-          "hover:bg-[--pos-border]",
+          "rounded-xl bg-white/5 text-white/80 border border-white/10",
+          "hover:bg-white/10 hover:text-white",
         ],
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 px-3 text-xs",
-        lg: "h-11 px-6 text-base",
-        xl: "h-14 px-8 text-lg",
-        icon: "h-9 w-9 p-0",
+        default:   "h-9 px-4 py-2",
+        sm:        "h-8 px-3 text-xs",
+        lg:        "h-11 px-6 text-base",
+        xl:        "h-14 px-8 text-lg",
+        icon:      "h-9 w-9 p-0",
         "icon-sm": "h-8 w-8 p-0",
         "icon-lg": "h-11 w-11 p-0",
         "icon-xl": "h-14 w-14 p-0",
-        // POS touch-optimized
-        "pos-md": "h-12 px-5 text-base",
-        "pos-lg": "h-16 px-6 text-lg font-semibold",
-        "pos-icon": "h-12 w-12 p-0",
+        "pos-md":  "h-12 px-5 text-base",
+        "pos-lg":  "h-16 px-6 text-lg font-semibold",
+        "pos-icon":"h-12 w-12 p-0",
       },
     },
     defaultVariants: {
@@ -109,19 +112,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
               fill="none"
               viewBox="0 0 24 24"
             >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              />
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
             {children}
           </>

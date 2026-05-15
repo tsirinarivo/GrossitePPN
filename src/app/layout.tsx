@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Toaster } from "sonner";
@@ -7,16 +7,18 @@ import "@/styles/globals.css";
 import { Providers } from "./providers";
 import { PwaRegister } from "@/components/pwa-register";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
   subsets: ["latin"],
   display: "swap",
+  weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
@@ -37,10 +39,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f9f5f0" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e0f1a" },
-  ],
+  themeColor: "#0A0A0F",
 };
 
 export default async function RootLayout({
@@ -54,7 +53,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen`}
+        className={`${inter.variable} ${playfair.variable} min-h-screen`}
         suppressHydrationWarning
       >
         <NextIntlClientProvider messages={messages}>
@@ -68,7 +67,7 @@ export default async function RootLayout({
               toastOptions={{
                 classNames: {
                   toast:
-                    "font-[family-name:var(--font-geist-sans)] rounded-xl border border-[--border] shadow-lg",
+                    "font-sans rounded-xl border border-brand-border shadow-card bg-brand-card text-white",
                 },
               }}
             />
