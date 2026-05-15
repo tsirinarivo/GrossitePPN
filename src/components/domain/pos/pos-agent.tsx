@@ -187,7 +187,8 @@ export function POSAgent() {
               <ShoppingCart className="w-5 h-5" />
             </Button>
             {nbArticles > 0 && (
-              <span className="pointer-events-none absolute -top-1.5 -right-1.5 z-10 min-w-[20px] h-5 px-1 bg-white text-[--pos-primary] rounded-full text-[10px] font-extrabold flex items-center justify-center shadow-md">
+              <span className="pointer-events-none absolute -top-2 -right-2 z-10 min-w-[22px] h-[22px] px-1 rounded-full text-[11px] font-extrabold flex items-center justify-center shadow-lg"
+                style={{ backgroundColor: "#ffffff", color: "#FF4D00" }}>
                 {nbArticles > 9 ? "9+" : nbArticles}
               </span>
             )}
