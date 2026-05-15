@@ -11,9 +11,13 @@ export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   const mois = new URL(req.url).searchParams.get("mois") ?? new Date().toISOString().slice(0, 7);
-  const rows = await db.select().from(schema.chargesOperationnelles)
-    .where(eq(schema.chargesOperationnelles.mois, mois));
-  return NextResponse.json(rows);
+  try {
+    const rows = await db.select().from(schema.chargesOperationnelles)
+      .where(eq(schema.chargesOperationnelles.mois, mois));
+    return NextResponse.json(rows);
+  } catch {
+    return NextResponse.json([]);
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -23,9 +27,13 @@ export async function POST(req: NextRequest) {
   const { libelle, categorie, montant, mois, notes } = body;
   if (!libelle || !categorie || !montant || !mois)
     return NextResponse.json({ error: "Champs requis manquants" }, { status: 400 });
-  const id = crypto.randomUUID();
-  await db.insert(schema.chargesOperationnelles).values({
-    id, libelle, categorie, montant: Math.round(montant), mois, notes: notes ?? null,
-  });
-  return NextResponse.json({ ok: true, id }, { status: 201 });
+  try {
+    const id = crypto.randomUUID();
+    await db.insert(schema.chargesOperationnelles).values({
+      id, libelle, categorie, montant: Math.round(montant), mois, notes: notes ?? null,
+    });
+    return NextResponse.json({ ok: true, id }, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "Table absente — exécutez pnpm drizzle-kit push sur le VPS" }, { status: 503 });
+  }
 }

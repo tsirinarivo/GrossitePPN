@@ -88,11 +88,16 @@ export async function GET(req: NextRequest) {
       .from(schema.categories);
     const catMap = new Map(categories.map((c) => [c.id, c.nom]));
 
-    // ── 4. Charges sur le mois ────────────────────────────────────────────────
-    const charges = await db
-      .select()
-      .from(schema.chargesOperationnelles)
-      .where(eq(schema.chargesOperationnelles.mois, mois));
+    // ── 4. Charges sur le mois (table peut ne pas exister encore) ────────────
+    let charges: typeof schema.chargesOperationnelles.$inferSelect[] = [];
+    try {
+      charges = await db
+        .select()
+        .from(schema.chargesOperationnelles)
+        .where(eq(schema.chargesOperationnelles.mois, mois));
+    } catch {
+      // Table absente — retourner des charges vides jusqu'à ce que drizzle-kit push soit exécuté
+    }
 
     // ── 5. Calcul KPIs ────────────────────────────────────────────────────────
     const caHT      = commandes.reduce((s, c) => s + c.totalHT, 0);

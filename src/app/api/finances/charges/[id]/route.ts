@@ -13,16 +13,24 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const body = await req.json();
   const { libelle, categorie, montant, notes } = body;
-  await db.update(schema.chargesOperationnelles)
-    .set({ libelle, categorie, montant: Math.round(montant), notes: notes ?? null, updatedAt: new Date() })
-    .where(eq(schema.chargesOperationnelles.id, id));
-  return NextResponse.json({ ok: true });
+  try {
+    await db.update(schema.chargesOperationnelles)
+      .set({ libelle, categorie, montant: Math.round(montant), notes: notes ?? null, updatedAt: new Date() })
+      .where(eq(schema.chargesOperationnelles.id, id));
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "Table absente — exécutez pnpm drizzle-kit push sur le VPS" }, { status: 503 });
+  }
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   const { id } = await params;
-  await db.delete(schema.chargesOperationnelles).where(eq(schema.chargesOperationnelles.id, id));
-  return NextResponse.json({ ok: true });
+  try {
+    await db.delete(schema.chargesOperationnelles).where(eq(schema.chargesOperationnelles.id, id));
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "Table absente" }, { status: 503 });
+  }
 }
