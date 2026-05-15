@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
         uniteBase: p.uniteBase,
         stockBase: stock,
         seuilAlerte: seuil,
-        alerteRupture: stock <= seuil && seuil > 0,
+        alerteRupture: stock <= 0 || (seuil > 0 && stock <= seuil),
         prixAchat,
         prixVente,
         valeurStock: Math.round(stock * prixAchat),

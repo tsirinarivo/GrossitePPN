@@ -68,6 +68,7 @@ export function StockView() {
   const [erreur, setErreur] = useState(false);
   const [depots, setDepots] = useState<Depot[]>([]);
   const [depotId, setDepotId] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Drawer stock par dépôt
   const [drawerProduit, setDrawerProduit] = useState<ProduitStock | null>(null);
@@ -78,20 +79,20 @@ export function StockView() {
 
   // Fetch depots list once
   useEffect(() => {
-    fetch("/api/depots")
+    fetch("/api/depots", { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => setDepots(data.depots ?? []))
       .catch(() => {});
   }, []);
 
-  // Fetch stock whenever depot selection changes
+  // Fetch stock whenever depot selection or reloadKey changes
   useEffect(() => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 12000);
     const url = depotId ? `/api/stock?depotId=${depotId}` : "/api/stock";
 
     setLoading(true);
-    fetch(url, { signal: ctrl.signal })
+    fetch(url, { signal: ctrl.signal, cache: "no-store" })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -111,7 +112,7 @@ export function StockView() {
       });
 
     return () => { ctrl.abort(); clearTimeout(timer); };
-  }, [depotId]);
+  }, [depotId, reloadKey]);
 
   const produits = produitsDB.filter((p) => {
     const q = recherche.toLowerCase();
@@ -183,12 +184,8 @@ export function StockView() {
         setStocksDepot((prev) =>
           prev.map((s) => s.depotId === cibleDepotId ? { ...s, quantiteBase: qte } : s)
         );
-        // Rafraîchir la liste principale avec le filtre actif
-        const refreshUrl = depotId ? `/api/stock?depotId=${depotId}` : "/api/stock";
-        fetch(refreshUrl).then(r => r.json()).then(data => {
-          setProduitsDB(data.produits ?? []);
-          setStats(data.stats ?? stats);
-        });
+        // Forcer rechargement de la liste (contourne le cache navigateur)
+        setReloadKey((k) => k + 1);
       } else {
         const err = await res.json().catch(() => ({}));
         toast.error(err.error ?? "Erreur lors de la sauvegarde");
