@@ -15,6 +15,7 @@ import {
   Filter,
   Download,
   Loader2,
+  Warehouse,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
@@ -49,6 +50,13 @@ type Stats = {
   totalSorties: number;
 };
 
+type Depot = {
+  id: string;
+  nom: string;
+  adresse: string | null;
+  estPrincipal: boolean;
+};
+
 export function StockView() {
   const [recherche, setRecherche] = useState("");
   const [alerteOnly, setAlerteOnly] = useState(false);
@@ -56,12 +64,25 @@ export function StockView() {
   const [stats, setStats] = useState<Stats>({ valeurTotale: 0, nbAlertes: 0, totalMvt: 0, totalEntrees: 0, totalSorties: 0 });
   const [loading, setLoading] = useState(true);
   const [erreur, setErreur] = useState(false);
+  const [depots, setDepots] = useState<Depot[]>([]);
+  const [depotId, setDepotId] = useState<string | null>(null);
 
+  // Fetch depots list once
+  useEffect(() => {
+    fetch("/api/depots")
+      .then((r) => r.json())
+      .then((data) => setDepots(data.depots ?? []))
+      .catch(() => {});
+  }, []);
+
+  // Fetch stock whenever depot selection changes
   useEffect(() => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 12000);
+    const url = depotId ? `/api/stock?depotId=${depotId}` : "/api/stock";
 
-    fetch("/api/stock", { signal: ctrl.signal })
+    setLoading(true);
+    fetch(url, { signal: ctrl.signal })
       .then((r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
         return r.json();
@@ -69,6 +90,7 @@ export function StockView() {
       .then((data: { produits: ProduitStock[]; stats: Stats }) => {
         setProduitsDB(data.produits ?? []);
         setStats(data.stats ?? { valeurTotale: 0, nbAlertes: 0, totalMvt: 0, totalEntrees: 0, totalSorties: 0 });
+        setErreur(false);
       })
       .catch((e) => {
         if (e?.name !== "AbortError") console.error("[stock-view]", e);
@@ -80,7 +102,7 @@ export function StockView() {
       });
 
     return () => { ctrl.abort(); clearTimeout(timer); };
-  }, []);
+  }, [depotId]);
 
   const produits = produitsDB.filter((p) => {
     const q = recherche.toLowerCase();
@@ -126,7 +148,9 @@ export function StockView() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-display-sm text-[--foreground]">Stock & Entrepôt</h1>
-          <p className="text-[--foreground-muted] mt-1">Dépôt principal — Antananarivo</p>
+          <p className="text-[--foreground-muted] mt-1">
+            {depotId ? (depots.find((d) => d.id === depotId)?.nom ?? "Dépôt sélectionné") : "Tous les dépôts"}
+          </p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm">
@@ -141,6 +165,39 @@ export function StockView() {
           </Button>
         </div>
       </div>
+
+      {/* Sélecteur dépôt — visible seulement si plusieurs dépôts */}
+      {depots.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Warehouse className="w-4 h-4 text-[--foreground-muted] shrink-0" />
+          <button
+            onClick={() => setDepotId(null)}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+              !depotId
+                ? "bg-[--primary] text-white"
+                : "bg-[--accent] text-[--foreground-muted] hover:text-[--foreground]"
+            )}
+          >
+            Tous
+          </button>
+          {depots.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => setDepotId(d.id)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                depotId === d.id
+                  ? "bg-[--primary] text-white"
+                  : "bg-[--accent] text-[--foreground-muted] hover:text-[--foreground]"
+              )}
+            >
+              {d.nom}
+              {d.estPrincipal && <span className="ml-1 text-[10px] opacity-60">★</span>}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

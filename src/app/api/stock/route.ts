@@ -1,13 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    // Products with their total stock across all depots
+    const { searchParams } = new URL(req.url);
+    const depotId = searchParams.get("depotId");
+
+    // Products with stock — filtered by depot if provided, otherwise all depots
+    const stockJoinCond = depotId
+      ? and(eq(schema.stocks.produitId, schema.produits.id), eq(schema.stocks.depotId, depotId))
+      : eq(schema.stocks.produitId, schema.produits.id);
+
     const rows = await db
       .select({
         id: schema.produits.id,
@@ -22,7 +29,7 @@ export async function GET() {
         stockBase: sql<number>`COALESCE(SUM(${schema.stocks.quantiteBase}), 0)`,
       })
       .from(schema.produits)
-      .leftJoin(schema.stocks, eq(schema.stocks.produitId, schema.produits.id))
+      .leftJoin(schema.stocks, stockJoinCond)
       .where(eq(schema.produits.actif, true))
       .groupBy(schema.produits.id);
 
@@ -30,14 +37,21 @@ export async function GET() {
     const categories = await db.select().from(schema.categories);
     const catMap = new Map(categories.map((c) => [c.id, c.nom]));
 
-    // Today's movements — CURRENT_DATE évite tout binding Date côté Drizzle
+    // Today's movements (filtered by depot if provided)
+    const mvtWhere = depotId
+      ? and(
+          sql`${schema.mouvementsStock.createdAt} >= CURRENT_DATE`,
+          eq(schema.mouvementsStock.depotId, depotId)
+        )
+      : sql`${schema.mouvementsStock.createdAt} >= CURRENT_DATE`;
+
     const mouvements = await db
       .select({
         produitId: schema.mouvementsStock.produitId,
         type: schema.mouvementsStock.type,
       })
       .from(schema.mouvementsStock)
-      .where(sql`${schema.mouvementsStock.createdAt} >= CURRENT_DATE`);
+      .where(mvtWhere);
 
     const mvtMap = new Map<string, { entrees: number; sorties: number }>();
     for (const m of mouvements) {

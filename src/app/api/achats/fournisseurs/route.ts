@@ -27,6 +27,7 @@ export async function GET() {
         createdAt: schema.fournisseurs.createdAt,
         nbCommandes: sql<number>`cast(count(${schema.bonsCommande.id}) as integer)`,
         totalAchats: sql<number>`coalesce(cast(sum(${schema.bonsCommande.totalTTC}) as bigint), 0)`,
+        detteEnCours: sql<number>`coalesce(cast(sum(CASE WHEN ${schema.bonsCommande.statut} NOT IN ('brouillon','annule') THEN ${schema.bonsCommande.totalTTC} ELSE 0 END) as bigint), 0)`,
       })
       .from(schema.fournisseurs)
       .leftJoin(

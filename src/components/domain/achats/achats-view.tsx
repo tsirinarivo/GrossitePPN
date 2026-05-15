@@ -68,6 +68,7 @@ interface Fournisseur {
   notes?: string | null;
   nbCommandes: number;
   totalAchats: number;
+  detteEnCours: number;
   actif: boolean;
 }
 
@@ -173,6 +174,7 @@ export function AchatsView() {
     totalMoisHT: commandes.reduce((s, b) => s + b.totalHT, 0),
     fournisseursActifs: fournisseurs.filter((f) => f.actif).length,
     receptionsEnCours: commandes.filter((b) => b.statut === "partiellement_recu").length,
+    totalDette: fournisseurs.reduce((s, f) => s + (f.detteEnCours ?? 0), 0),
   };
 
   return (
@@ -205,10 +207,10 @@ export function AchatsView() {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "BC en attente",       valeur: stats.enAttente.toString(),                            sous: "Envoyés / Confirmés",    icon: Clock,      couleur: "text-[--warning-foreground]" },
-          { label: "Achats (total)",       valeur: formatMGA(stats.totalMoisHT, { compact: true }),       sous: "Valeur HT tous BC",      icon: ShoppingBag,couleur: "text-[--primary]" },
-          { label: "Fournisseurs actifs",  valeur: stats.fournisseursActifs.toString(),                   sous: `sur ${fournisseurs.length} total`, icon: Building2, couleur: "text-[--foreground-muted]" },
-          { label: "Réceptions partielles",valeur: stats.receptionsEnCours.toString(),                    sous: "Livraisons incomplètes", icon: Truck,      couleur: "text-[--success]" },
+          { label: "BC en attente",        valeur: stats.enAttente.toString(),                            sous: "Envoyés / Confirmés",    icon: Clock,       couleur: "text-[--warning-foreground]" },
+          { label: "Achats (total)",        valeur: formatMGA(stats.totalMoisHT, { compact: true }),       sous: "Valeur HT tous BC",      icon: ShoppingBag, couleur: "text-[--primary]" },
+          { label: "Dette fournisseurs",    valeur: formatMGA(stats.totalDette, { compact: true }),         sous: "Commandes non soldées",  icon: AlertCircle, couleur: "text-red-400" },
+          { label: "Fournisseurs actifs",   valeur: stats.fournisseursActifs.toString(),                   sous: `sur ${fournisseurs.length} total`, icon: Building2, couleur: "text-[--foreground-muted]" },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}>
             <Card>
@@ -355,9 +357,15 @@ export function AchatsView() {
                       </p>
                       {f.telephone && <p className="text-[10px] text-[--foreground-subtle] font-mono">{f.telephone}</p>}
                     </div>
-                    <div className="text-right hidden sm:block">
-                      <p className="text-xs text-[--foreground-muted]">{f.nbCommandes} BC</p>
-                      <p className="font-semibold text-sm">{formatMGA(f.totalAchats, { compact: true })}</p>
+                    <div className="text-right hidden sm:block shrink-0">
+                      <p className="text-xs text-[--foreground-muted]">{f.nbCommandes} BC · {formatMGA(f.totalAchats, { compact: true })}</p>
+                      {f.detteEnCours > 0 ? (
+                        <p className="font-semibold text-sm text-red-400">
+                          Dette : {formatMGA(f.detteEnCours, { compact: true })}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-green-500 font-medium">Soldé</p>
+                      )}
                     </div>
                     <Button variant="outline" size="sm" onClick={() => setFournisseurEdit(f)}>
                       <Edit3 className="w-4 h-4" />
