@@ -1,88 +1,30 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import {
-  TrendingUp,
-  ShoppingBag,
-  Package,
-  Loader2,
-  AlertTriangle,
-  BarChart2,
-  Layers,
-} from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { TrendingUp, ShoppingBag, Package, Loader2, AlertTriangle, BarChart2, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// ── Types ─────────────────────────────────────────────
-
 type Periode = "jour" | "7jours" | "mois" | "annee";
 
 interface FinancesData {
-  kpi: {
-    caHT: number;
-    caTTC: number;
-    tva: number;
-    remises: number;
-    cogs: number;
-    margeB: number;
-    chargesOp: number;
-    margeN: number;
-    nbCommandes: number;
-  };
-  margesCategorie: Array<{
-    id: string;
-    nom: string;
-    ca: number;
-    cogs: number;
-    margeB: number;
-    tauxMarge: number;
-  }>;
+  kpi: { caHT: number; caTTC: number; tva: number; remises: number; cogs: number; margeB: number; chargesOp: number; margeN: number; nbCommandes: number };
+  margesCategorie: Array<{ id: string; nom: string; ca: number; cogs: number; margeB: number; tauxMarge: number }>;
   evolution: Array<{ date: string; ca: number; cogs: number; margeB: number }>;
   chargesParCat: Record<string, number>;
   charges: unknown[];
 }
 
 interface StockData {
-  produits: Array<{
-    id: string;
-    nom: string;
-    code: string;
-    stockBase: number;
-    seuilAlerte: number;
-    alerteRupture: boolean;
-    valeurStock: number;
-    prixAchat: number;
-    categorie: string;
-  }>;
-  stats: {
-    valeurTotale: number;
-    nbAlertes: number;
-    totalMvt: number;
-    totalEntrees: number;
-    totalSorties: number;
-  };
+  produits: Array<{ id: string; nom: string; code: string; stockBase: number; seuilAlerte: number; alerteRupture: boolean; valeurStock: number; prixAchat: number; categorie: string }>;
+  stats: { valeurTotale: number; nbAlertes: number; totalMvt: number; totalEntrees: number; totalSorties: number };
 }
 
-// ── Helpers ───────────────────────────────────────────
-
-function formatDate(dateStr: string): string {
-  try {
-    const d = new Date(dateStr);
-    return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
-  } catch {
-    return dateStr;
-  }
+function fmtDate(s: string) {
+  try { const d = new Date(s); return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`; } catch { return s; }
 }
 
 const PERIODES: { key: Periode; label: string }[] = [
@@ -92,17 +34,7 @@ const PERIODES: { key: Periode; label: string }[] = [
   { key: "annee", label: "Cette année" },
 ];
 
-// ── Tooltip custom ─────────────────────────────────────
-
-function TooltipCustom({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: Array<{ name: string; value: number; color: string }>;
-  label?: string;
-}) {
+function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[--card] border border-[--border] rounded-xl px-4 py-3 shadow-xl">
@@ -111,31 +43,15 @@ function TooltipCustom({
         <div key={p.name} className="flex items-center gap-2 text-sm">
           <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
           <span className="text-[--foreground-muted]">{p.name}</span>
-          <span className="font-bold text-[--foreground] ml-auto">
-            {formatMGA(p.value, { compact: true })}
-          </span>
+          <span className="font-bold text-[--foreground] ml-auto">{formatMGA(p.value, { compact: true })}</span>
         </div>
       ))}
     </div>
   );
 }
 
-// ── KPI Card ──────────────────────────────────────────
-
-function KpiCard({
-  label,
-  value,
-  sub,
-  icon: Icon,
-  iconClass,
-  bgClass,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  icon: React.ElementType;
-  iconClass: string;
-  bgClass: string;
+function KpiCard({ label, value, sub, icon: Icon, iconClass, bgClass }: {
+  label: string; value: string; sub?: string; icon: React.ElementType; iconClass: string; bgClass: string;
 }) {
   return (
     <Card className="overflow-hidden">
@@ -154,8 +70,6 @@ function KpiCard({
     </Card>
   );
 }
-
-// ── Main component ─────────────────────────────────────
 
 export function DashboardAnalytics() {
   const [periode, setPeriode] = useState<Periode>("mois");
@@ -185,36 +99,23 @@ export function DashboardAnalytics() {
     }
   }, [periode]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Derived data
   const kpi = finances?.kpi;
-  const evolutionData = (finances?.evolution ?? []).map((d) => ({
-    ...d,
-    date: formatDate(d.date),
-  }));
+  const evolutionData = (finances?.evolution ?? []).map((d) => ({ ...d, date: fmtDate(d.date) }));
   const margesCategorie = finances?.margesCategorie ?? [];
   const stockStats = stock?.stats;
-  const produitsRisque = (stock?.produits ?? [])
-    .filter((p) => p.alerteRupture)
-    .slice(0, 8);
-  const tauxMargeB =
-    kpi && kpi.caHT > 0 ? ((kpi.margeB / kpi.caHT) * 100).toFixed(1) : null;
+  const produitsRisque = (stock?.produits ?? []).filter((p) => p.alerteRupture).slice(0, 8);
+  const tauxMargeB = kpi && kpi.caHT > 0 ? ((kpi.margeB / kpi.caHT) * 100).toFixed(1) : null;
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-[1400px]">
-      {/* Header */}
+      {/* Header + period selector */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-display-sm text-[--foreground]">Rapports & Analytiques</h1>
-          <p className="text-[--foreground-muted] text-sm mt-0.5">
-            Données financières et stock en temps réel
-          </p>
+          <p className="text-[--foreground-muted] text-sm mt-0.5">Données financières et stock en temps réel</p>
         </div>
-
-        {/* Period selector */}
         <div className="flex items-center gap-1 bg-[--muted] rounded-xl p-1">
           {PERIODES.map((p) => (
             <button
@@ -233,7 +134,6 @@ export function DashboardAnalytics() {
         </div>
       </div>
 
-      {/* Loading / Error states */}
       {loading && (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 animate-spin text-[--primary]" />
@@ -286,19 +186,13 @@ export function DashboardAnalytics() {
 
           {/* Charts row */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* Evolution CA + Marge — Area chart */}
+            {/* Evolution CA + Marge */}
             <Card className="xl:col-span-2">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Évolution CA & Marge brute</CardTitle>
                 <div className="flex items-center gap-4 text-xs text-[--foreground-muted]">
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-3 h-0.5 rounded bg-[--primary]" />
-                    CA
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="inline-block w-3 h-0.5 rounded bg-[--success]" />
-                    Marge brute
-                  </span>
+                  <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-0.5 rounded bg-[--primary]" />CA</span>
+                  <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-0.5 rounded bg-[--success]" />Marge brute</span>
                 </div>
               </CardHeader>
               <CardContent>
@@ -319,45 +213,12 @@ export function DashboardAnalytics() {
                           <stop offset="95%" stopColor="var(--success)" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="var(--border)"
-                        vertical={false}
-                      />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 11, fill: "var(--foreground-muted)" }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 10, fill: "var(--foreground-muted)" }}
-                        axisLine={false}
-                        tickLine={false}
-                        tickFormatter={(v: number) => `${(v / 1_000_000).toFixed(1)}M`}
-                        width={42}
-                      />
-                      <Tooltip content={<TooltipCustom />} cursor={false} />
-                      <Area
-                        type="monotone"
-                        dataKey="ca"
-                        name="CA"
-                        stroke="var(--primary)"
-                        strokeWidth={2.5}
-                        fill="url(#gradCA)"
-                        dot={false}
-                        activeDot={{ r: 4, stroke: "white", strokeWidth: 2 }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="margeB"
-                        name="Marge brute"
-                        stroke="var(--success)"
-                        strokeWidth={2.5}
-                        fill="url(#gradMarge)"
-                        dot={false}
-                        activeDot={{ r: 4, stroke: "white", strokeWidth: 2 }}
-                      />
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <XAxis dataKey="date" tick={{ fontSize: 11, fill: "var(--foreground-muted)" }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 10, fill: "var(--foreground-muted)" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${(v/1_000_000).toFixed(1)}M`} width={42} />
+                      <Tooltip content={<ChartTooltip />} cursor={false} />
+                      <Area type="monotone" dataKey="ca" name="CA" stroke="var(--primary)" strokeWidth={2.5} fill="url(#gradCA)" dot={false} activeDot={{ r: 4, stroke: "white", strokeWidth: 2 }} />
+                      <Area type="monotone" dataKey="margeB" name="Marge brute" stroke="var(--success)" strokeWidth={2.5} fill="url(#gradMarge)" dot={false} activeDot={{ r: 4, stroke: "white", strokeWidth: 2 }} />
                     </AreaChart>
                   </ResponsiveContainer>
                 )}
@@ -381,15 +242,11 @@ export function DashboardAnalytics() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-[--destructive]/8 rounded-xl p-3">
-                    <p className="text-xl font-bold text-[--destructive]">
-                      {stockStats?.nbAlertes ?? "—"}
-                    </p>
+                    <p className="text-xl font-bold text-[--destructive]">{stockStats?.nbAlertes ?? "—"}</p>
                     <p className="text-xs text-[--foreground-muted] mt-0.5">Alertes actives</p>
                   </div>
                   <div className="bg-[--muted] rounded-xl p-3">
-                    <p className="text-xl font-bold text-[--foreground]">
-                      {stockStats ? stockStats.totalMvt.toLocaleString("fr-FR") : "—"}
-                    </p>
+                    <p className="text-xl font-bold text-[--foreground]">{stockStats ? stockStats.totalMvt.toLocaleString("fr-FR") : "—"}</p>
                     <p className="text-xs text-[--foreground-muted] mt-0.5">Mouvements</p>
                   </div>
                 </div>
@@ -399,32 +256,22 @@ export function DashboardAnalytics() {
 
           {/* Marges catégorie + Produits à risque */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Marges par catégorie — Bar chart horizontal */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Marges par catégorie</CardTitle>
               </CardHeader>
               <CardContent>
                 {margesCategorie.length === 0 ? (
-                  <div className="h-[220px] flex items-center justify-center text-[--foreground-muted] text-sm">
-                    Aucune donnée
-                  </div>
+                  <div className="h-[220px] flex items-center justify-center text-[--foreground-muted] text-sm">Aucune donnée</div>
                 ) : (
                   <div className="space-y-3">
                     {margesCategorie.map((cat) => (
                       <div key={cat.id}>
                         <div className="flex items-center justify-between text-sm mb-1">
-                          <span className="font-medium text-[--foreground] truncate max-w-[160px]">
-                            {cat.nom}
-                          </span>
+                          <span className="font-medium text-[--foreground] truncate max-w-[160px]">{cat.nom}</span>
                           <div className="flex items-center gap-3 shrink-0">
-                            <span className="text-xs text-[--foreground-muted]">
-                              {formatMGA(cat.ca, { compact: true })}
-                            </span>
-                            <Badge
-                              variant={cat.tauxMarge >= 20 ? "success" : cat.tauxMarge >= 10 ? "warning" : "destructive"}
-                              className="text-xs"
-                            >
+                            <span className="text-xs text-[--foreground-muted]">{formatMGA(cat.ca, { compact: true })}</span>
+                            <Badge variant={cat.tauxMarge >= 20 ? "success" : cat.tauxMarge >= 10 ? "warning" : "destructive"} className="text-xs">
                               {cat.tauxMarge.toFixed(1)}%
                             </Badge>
                           </div>
@@ -432,10 +279,7 @@ export function DashboardAnalytics() {
                         <div className="h-2 bg-[--border] rounded-full overflow-hidden">
                           <div
                             className="h-full rounded-full bg-[--primary] transition-all duration-500"
-                            style={{
-                              width: `${Math.min(100, cat.tauxMarge * 2)}%`,
-                              opacity: 0.7 + (cat.tauxMarge / 100) * 0.3,
-                            }}
+                            style={{ width: `${Math.min(100, cat.tauxMarge * 2)}%`, opacity: 0.7 + (cat.tauxMarge / 100) * 0.3 }}
                           />
                         </div>
                       </div>
@@ -445,7 +289,6 @@ export function DashboardAnalytics() {
               </CardContent>
             </Card>
 
-            {/* Top produits à risque */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -461,34 +304,22 @@ export function DashboardAnalytics() {
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {produitsRisque.map((p) => {
-                      const isRupture = p.stockBase === 0;
-                      return (
-                        <div
-                          key={p.id}
-                          className="flex items-center gap-3 py-2 border-b border-[--border] last:border-0"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-[--foreground] truncate">{p.nom}</p>
-                            <p className="text-xs text-[--foreground-muted]">
-                              Stock : {p.stockBase} · Seuil : {p.seuilAlerte}
-                            </p>
-                          </div>
-                          <Badge
-                            variant={isRupture ? "destructive" : "warning"}
-                            className="shrink-0 text-xs"
-                          >
-                            {isRupture ? "Rupture" : "Bas"}
-                          </Badge>
+                    {produitsRisque.map((p) => (
+                      <div key={p.id} className="flex items-center gap-3 py-2 border-b border-[--border] last:border-0">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[--foreground] truncate">{p.nom}</p>
+                          <p className="text-xs text-[--foreground-muted]">Stock : {p.stockBase} · Seuil : {p.seuilAlerte}</p>
                         </div>
-                      );
-                    })}
+                        <Badge variant={p.stockBase === 0 ? "destructive" : "warning"} className="shrink-0 text-xs">
+                          {p.stockBase === 0 ? "Rupture" : "Bas"}
+                        </Badge>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
-
         </>
       )}
     </div>
