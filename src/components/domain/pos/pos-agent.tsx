@@ -251,7 +251,10 @@ export function POSAgent() {
               {/* Badge article */}
               <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0 relative">
                 <ShoppingCart className="w-4.5 h-4.5 text-white" />
-                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white text-[--pos-primary] rounded-full text-[10px] font-extrabold flex items-center justify-center">
+                <span
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-extrabold flex items-center justify-center"
+                  style={{ backgroundColor: "#ffffff", color: "#FF4D00" }}
+                >
                   {nbArticles > 9 ? "9+" : nbArticles}
                 </span>
               </div>

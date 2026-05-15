@@ -215,7 +215,7 @@ export function POSPanier({ onClose, totalTTC, nbArticles }: Props) {
           <Separator className="bg-[--pos-border]" />
           <div className="flex justify-between text-base font-bold text-[--pos-text]">
             <span>TOTAL TTC</span>
-            <span className="text-[--pos-primary] text-mga text-lg">{formatMGA(totalTTC)}</span>
+            <span className="text-mga text-lg" style={{ color: "#FF4D00" }}>{formatMGA(totalTTC)}</span>
           </div>
         </div>
 
@@ -306,9 +306,12 @@ function PanierHeader({
         )}
       </div>
       {nbArticles > 0 && (
-        <Badge className="bg-[--pos-primary]/20 text-[--pos-primary] ring-0 text-xs">
+        <span
+          className="px-2 py-0.5 rounded-full text-xs font-semibold"
+          style={{ backgroundColor: "rgba(255,77,0,0.15)", color: "#FF4D00" }}
+        >
           {nbArticles} article{nbArticles > 1 ? "s" : ""}
-        </Badge>
+        </span>
       )}
       {onVider && nbArticles > 0 && (
         <button

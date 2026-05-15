@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { ShoppingCart, User, Package, Menu, X, Search } from "lucide-react";
 import { LocaleSwitcher } from "@/components/locale-switcher";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useShopCart } from "@/store/shop-cart.store";
 
 const NAV_LINKS = [
   { href: "/shop", label: "Catalogue" },
@@ -18,6 +18,13 @@ const NAV_LINKS = [
 
 export function ShopHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const lignes = useShopCart((s) => s.lignes);
+  const nbArticles = lignes.reduce((s, l) => s + l.qte, 0);
+
+  // Rehydrate persisted cart after mount
+  useEffect(() => {
+    useShopCart.persist.rehydrate();
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 bg-[--card]/95 backdrop-blur-md border-b border-[--border]">
@@ -62,15 +69,22 @@ export function ShopHeader() {
 
             <LocaleSwitcher />
 
-            {/* Panier */}
-            <Button variant="ghost" size="icon" className="relative" asChild>
-              <Link href="/panier">
-                <ShoppingCart className="w-4 h-4" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[--primary] text-white text-[10px] font-bold flex items-center justify-center">
-                  3
+            {/* Panier — badge en dehors du bouton pour éviter le clipping */}
+            <div className="relative">
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/panier">
+                  <ShoppingCart className="w-4 h-4" />
+                </Link>
+              </Button>
+              {nbArticles > 0 && (
+                <span
+                  className="pointer-events-none absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center z-10 shadow-sm"
+                  style={{ backgroundColor: "#FF4D00", color: "#ffffff" }}
+                >
+                  {nbArticles > 9 ? "9+" : nbArticles}
                 </span>
-              </Link>
-            </Button>
+              )}
+            </div>
 
             {/* Compte */}
             <Button variant="outline" size="sm" asChild className="hidden sm:flex">
