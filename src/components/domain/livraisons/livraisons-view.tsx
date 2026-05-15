@@ -119,7 +119,7 @@ export function LivraisonsView() {
             <div className="px-4 py-3 bg-[--background-subtle] border-b border-[--border]">
               <h2 className="text-sm font-semibold text-[--foreground]">File des livraisons</h2>
             </div>
-            <div className="divide-y divide-[--border] max-h-[600px] overflow-y-auto">
+            <div className="divide-y divide-[--border] max-h-[45vh] md:max-h-[600px] overflow-y-auto">
               {LIVRAISONS_DEMO.map((l, i) => {
                 const conf = STATUT_CONF[l.statut];
                 const active = selection.id === l.id;

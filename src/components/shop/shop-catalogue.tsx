@@ -179,8 +179,11 @@ export function ShopCatalogue() {
         </div>
       </div>
 
-      {/* ── Catégories ── */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-6 no-scrollbar">
+      {/* ── Catégories — scroll horizontal avec fade droite ── */}
+      <div className="relative mb-6">
+        <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-12 z-10"
+          style={{ background: "linear-gradient(to right, transparent, var(--background))" }} />
+      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
         {CATEGORIES.map((c) => (
           <button
             key={String(c.id)}
@@ -196,6 +199,7 @@ export function ShopCatalogue() {
             {c.label}
           </button>
         ))}
+      </div>
       </div>
 
       {/* ── Contenu ── */}

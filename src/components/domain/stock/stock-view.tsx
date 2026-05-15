@@ -183,7 +183,7 @@ export function StockView() {
         <button
           onClick={() => setAlerteOnly(!alerteOnly)}
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all",
+            "flex items-center gap-1.5 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all",
             alerteOnly
               ? "bg-[--destructive]/10 border-[--destructive]/30 text-[--destructive]"
               : "border-[--border] text-[--foreground-muted] hover:border-[--border-strong] hover:text-[--foreground]"
@@ -263,7 +263,7 @@ export function StockView() {
                             <div>
                               <p className="font-semibold text-[--foreground]">{p.nom}</p>
                               {p.nomMG && <p className="text-[11px] text-[--foreground-muted] italic">{p.nomMG}</p>}
-                              <p className="text-[10px] font-mono text-[--foreground-subtle]">{p.code}</p>
+                              <p className="text-xs font-mono text-[--foreground-subtle]">{p.code}</p>
                             </div>
                           </div>
                         </td>

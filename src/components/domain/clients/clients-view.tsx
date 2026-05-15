@@ -234,7 +234,7 @@ export function ClientsView() {
                         <td className="text-center px-4 py-3">
                           <Badge
                             variant={c.palier === "gros" ? "default" : c.palier === "semi_gros" ? "warning" : "outline"}
-                            className="text-[10px]"
+                            className="text-xs"
                           >
                             {PALIER_LABEL[c.palier]}
                           </Badge>
@@ -266,11 +266,11 @@ export function ClientsView() {
                         </td>
                         <td className="text-center px-4 py-3">
                           {statut === "depassement" ? (
-                            <Badge variant="destructive" className="text-[10px]">Dépassement</Badge>
+                            <Badge variant="destructive" className="text-xs">Dépassement</Badge>
                           ) : statut === "inactif" ? (
-                            <Badge variant="outline" className="text-[10px]">Inactif</Badge>
+                            <Badge variant="outline" className="text-xs">Inactif</Badge>
                           ) : (
-                            <Badge variant="success" className="text-[10px]">Actif</Badge>
+                            <Badge variant="success" className="text-xs">Actif</Badge>
                           )}
                         </td>
                       </motion.tr>
@@ -298,7 +298,7 @@ export function ClientsView() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 280, damping: 30 }}
-              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-[--background] border-l border-[--border] z-50 overflow-y-auto"
+              className="fixed right-0 top-0 bottom-0 w-full sm:max-w-md bg-[--background] border-l border-[--border] z-50 overflow-y-auto"
             >
               <div className="p-6 space-y-5">
                 <div className="flex items-start justify-between">

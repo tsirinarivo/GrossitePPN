@@ -65,9 +65,10 @@ export function PanierPage() {
         <Badge className="text-sm">{lignes.length} article{lignes.length > 1 ? "s" : ""}</Badge>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Sur mobile : récap en premier, lignes dessous */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Lignes */}
-        <div className="lg:col-span-2 space-y-3">
+        <div className="lg:col-span-2 space-y-3 order-2 lg:order-1">
           <AnimatePresence>
             {lignes.map((l) => (
               <motion.div
@@ -94,16 +95,16 @@ export function PanierPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => modifierQte(l.produitId, -1)}
-                    className="w-8 h-8 rounded-lg border border-[--border] flex items-center justify-center hover:bg-[--accent] transition-colors"
+                    className="w-10 h-10 rounded-xl border border-[--border] flex items-center justify-center hover:bg-[--accent] transition-colors"
                   >
-                    <Minus className="w-3.5 h-3.5" />
+                    <Minus className="w-4 h-4" />
                   </button>
-                  <span className="text-sm font-bold w-6 text-center">{l.qte}</span>
+                  <span className="text-sm font-bold w-7 text-center">{l.qte}</span>
                   <button
                     onClick={() => modifierQte(l.produitId, 1)}
-                    className="w-8 h-8 rounded-lg border border-[--border] flex items-center justify-center hover:bg-[--accent] transition-colors"
+                    className="w-10 h-10 rounded-xl border border-[--border] flex items-center justify-center hover:bg-[--accent] transition-colors"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="w-4 h-4" />
                   </button>
                 </div>
 
@@ -118,7 +119,7 @@ export function PanierPage() {
                 {/* Supprimer */}
                 <button
                   onClick={() => supprimer(l.produitId)}
-                  className="text-[--foreground-subtle] hover:text-[--destructive] transition-colors p-1"
+                  className="text-[--foreground-subtle] hover:text-[--destructive] transition-colors p-2.5"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -137,9 +138,9 @@ export function PanierPage() {
           </div>
         </div>
 
-        {/* Récapitulatif */}
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-[--card-border] bg-[--card] p-6 space-y-4">
+        {/* Récapitulatif — affiché en premier sur mobile */}
+        <div className="space-y-4 order-1 lg:order-2">
+          <div className="rounded-2xl border border-[--card-border] bg-[--card] p-4 sm:p-6 space-y-4">
             <h3 className="font-semibold text-[--foreground]">Récapitulatif</h3>
 
             <div className="space-y-2 text-sm">

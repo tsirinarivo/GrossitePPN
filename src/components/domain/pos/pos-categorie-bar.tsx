@@ -19,7 +19,12 @@ export function POSCategorieBar({
   onSelect: (id: string | null) => void;
 }) {
   return (
-    <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto shrink-0 border-b border-[--pos-border] bg-[--pos-surface] no-scrollbar">
+    <div className="relative shrink-0 border-b border-[--pos-border] bg-[--pos-surface]">
+      {/* Fade droite pour indiquer le scroll */}
+      <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 z-10"
+        style={{ background: "linear-gradient(to right, transparent, var(--pos-surface))" }}
+      />
+    <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto no-scrollbar">
       <button
         onClick={() => onSelect(null)}
         className={cn(
@@ -48,6 +53,7 @@ export function POSCategorieBar({
           <span>{cat.label}</span>
         </button>
       ))}
+    </div>
     </div>
   );
 }

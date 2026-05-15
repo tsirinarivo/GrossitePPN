@@ -81,10 +81,10 @@ export function CheckoutPage() {
       <div className="flex items-center gap-0 mb-8">
         {ETAPES.map((e, i) => (
           <div key={e} className="flex items-center flex-1 last:flex-none">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2">
               <div
                 className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all",
+                  "w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all shrink-0",
                   i < etape
                     ? "bg-[--success] text-white"
                     : i === etape
@@ -96,7 +96,7 @@ export function CheckoutPage() {
               </div>
               <span
                 className={cn(
-                  "text-sm font-medium hidden sm:block",
+                  "text-xs sm:text-sm font-medium text-center",
                   i === etape ? "text-[--foreground]" : "text-[--foreground-muted]"
                 )}
               >
@@ -104,7 +104,7 @@ export function CheckoutPage() {
               </span>
             </div>
             {i < ETAPES.length - 1 && (
-              <div className={cn("flex-1 h-0.5 mx-3", i < etape ? "bg-[--success]" : "bg-[--border]")} />
+              <div className={cn("flex-1 h-0.5 mx-2 sm:mx-3 mb-5 sm:mb-0", i < etape ? "bg-[--success]" : "bg-[--border]")} />
             )}
           </div>
         ))}

@@ -96,12 +96,12 @@ const ProduitCard = memo(function ProduitCard({ produit }: { produit: ProduitPOS
         )}
         {/* Badge stock bas */}
         {stockBas && (
-          <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-[--pos-danger]/90 text-white text-[10px] font-semibold rounded-full">
+          <div className="absolute top-2 right-2 px-1.5 py-0.5 bg-[--pos-danger]/90 text-white text-xs font-semibold rounded-full">
             Bas
           </div>
         )}
         {/* Code */}
-        <div className="absolute bottom-1 left-2 text-[9px] text-[--pos-text-muted] font-mono">
+        <div className="absolute bottom-1 left-2 text-[10px] text-[--pos-text-muted] font-mono">
           {produit.code}
         </div>
       </div>
@@ -166,7 +166,7 @@ const ProduitCard = memo(function ProduitCard({ produit }: { produit: ProduitPOS
             disabled={!prixActuel || produit.stockDisponible <= 0}
             variant="pos"
             size="icon"
-            className="rounded-lg h-9 w-9 shrink-0 shadow-none"
+            className="rounded-xl h-11 w-11 shrink-0 shadow-none"
           >
             <Plus className="w-4 h-4" />
           </Button>

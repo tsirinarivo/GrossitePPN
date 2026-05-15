@@ -282,7 +282,7 @@ export function FinancesView() {
           </div>
 
           {/* ── KPI Cards ─────────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <KpiCard label="Chiffre d'affaires HT" value={kpi.caHT} icon={TrendingUp}
               color="#3b82f6" sub={`${kpi.nbCommandes} commandes`} />
             <KpiCard label="Coût des ventes (COGS)" value={kpi.cogs} icon={ShoppingCart}

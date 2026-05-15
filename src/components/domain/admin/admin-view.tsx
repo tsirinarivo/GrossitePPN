@@ -169,11 +169,12 @@ export function AdminView() {
       </div>
 
       <div className="grid lg:grid-cols-4 gap-6">
-        <nav className="space-y-1">
+        {/* Navigation sections — horizontal sur mobile, vertical sur desktop */}
+        <nav className="flex overflow-x-auto gap-1 pb-1 no-scrollbar lg:flex-col lg:overflow-visible lg:gap-0 lg:space-y-1 lg:pb-0">
           {sections.map((s) => (
             <button key={s.id} onClick={() => setSection(s.id)}
               className={cn(
-                "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                "flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0 lg:w-full",
                 section === s.id ? "bg-[--primary]/10 text-[--primary]" : "text-[--foreground-muted] hover:bg-[--accent] hover:text-[--foreground]"
               )}
             >

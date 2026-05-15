@@ -45,7 +45,7 @@ export function DashboardShell({
         initial={false}
         animate={{ x: mobileNavOpen ? 0 : "-100%" }}
         transition={{ duration: 0.2, ease: "easeInOut" }}
-        className="fixed lg:hidden inset-y-0 left-0 z-50"
+        className="fixed lg:hidden inset-y-0 left-0 z-50 overflow-y-auto"
       >
         <DashboardNav
           role={role}
@@ -56,28 +56,28 @@ export function DashboardShell({
       </motion.div>
 
       {/* ── Contenu principal ── */}
-      <main className="flex-1 overflow-auto min-w-0 pt-12 lg:pt-0">
+      <main className="flex-1 overflow-auto min-w-0 pt-14 lg:pt-0">
         {children}
       </main>
 
       {/* ── Topbar mobile ── */}
       <div
-        className="fixed top-0 left-0 right-0 z-30 lg:hidden h-12 flex items-center gap-3 px-4"
+        className="fixed top-0 left-0 right-0 z-30 lg:hidden h-14 flex items-center gap-3 px-4"
         style={{ backgroundColor: "#111118", borderBottom: "1px solid #1E1E2E" }}
       >
         <button
           onClick={() => setMobileNavOpen(true)}
-          className="p-1.5 rounded-lg text-brand-muted hover:text-white hover:bg-white/5 transition-colors"
+          className="p-2 rounded-lg text-brand-muted hover:text-white hover:bg-white/5 transition-colors"
           aria-label="Ouvrir le menu"
         >
           <Menu className="w-5 h-5" />
         </button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1">
           <div
-            className="w-6 h-6 rounded-lg flex items-center justify-center"
+            className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
             style={{ background: "linear-gradient(135deg, #FF4D00 0%, #FFB800 100%)" }}
           >
-            <Package className="w-3.5 h-3.5 text-white" />
+            <Package className="w-4 h-4 text-white" />
           </div>
           <span className="text-sm font-bold text-white">GrossistePPN</span>
         </div>

@@ -115,7 +115,7 @@ export function POSAgent() {
   }));
 
   return (
-    <div className="flex h-[calc(100vh-3rem)] lg:h-screen bg-[--pos-bg] text-[--pos-text] overflow-hidden relative">
+    <div className="flex h-[calc(100vh-3.5rem)] lg:h-screen bg-[--pos-bg] text-[--pos-text] overflow-hidden relative">
       {/* ── Colonne gauche : catalogue ── */}
       <div
         className={cn(
@@ -124,7 +124,7 @@ export function POSAgent() {
         )}
       >
         {/* Header */}
-        <div className="h-12 sm:h-14 flex items-center gap-1.5 sm:gap-3 px-2 sm:px-4 border-b border-[--pos-border] bg-[--pos-surface] shrink-0">
+        <div className="h-14 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 border-b border-[--pos-border] bg-[--pos-surface] shrink-0">
           {/* Connexion indicator — icône seule sur mobile */}
           <div
             className={cn(
@@ -151,11 +151,11 @@ export function POSAgent() {
               value={recherche}
               onChange={(e) => setRecherche(e.target.value)}
               placeholder="Rechercher..."
-              className="pl-8 sm:pl-9 bg-[--pos-surface-hover] border-[--pos-border] text-[--pos-text] placeholder:text-[--pos-text-muted] h-8 sm:h-9 text-sm"
+              className="pl-8 sm:pl-9 bg-[--pos-surface-hover] border-[--pos-border] text-[--pos-text] placeholder:text-[--pos-text-muted] h-10 text-sm"
             />
           </div>
 
-          <Button variant="pos-ghost" size="icon" title="Scanner code-barres" className="shrink-0 h-8 w-8 sm:h-9 sm:w-9">
+          <Button variant="pos-ghost" size="icon" title="Scanner code-barres" className="shrink-0 h-10 w-10">
             <ScanLine className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
 
@@ -168,7 +168,7 @@ export function POSAgent() {
           <Button
             variant="pos-ghost"
             size="icon"
-            className="shrink-0 h-8 w-8 sm:h-9 sm:w-auto sm:px-3 sm:gap-2"
+            className="shrink-0 h-10 w-10 sm:w-auto sm:px-3 sm:gap-2"
             onClick={() => setMesCommandesOuvert(true)}
             title="Mes commandes envoyées"
           >
@@ -180,7 +180,7 @@ export function POSAgent() {
           <Button
             variant="pos"
             size="icon"
-            className="relative md:hidden shrink-0 h-8 w-8 sm:h-9 sm:w-9"
+            className="relative md:hidden shrink-0 h-10 w-10"
             onClick={() => setPanierOuvert(true)}
           >
             <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />

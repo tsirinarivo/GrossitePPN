@@ -358,32 +358,32 @@ function LignePanierItem({
         </div>
 
         {/* Contrôle quantité */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={() => onModifier(-1)}
-            className="w-7 h-7 rounded-lg bg-[--pos-surface-hover] hover:bg-[--pos-border] flex items-center justify-center text-[--pos-text-muted] hover:text-[--pos-text] transition-colors"
+            className="w-9 h-9 rounded-lg bg-[--pos-surface-hover] hover:bg-[--pos-border] flex items-center justify-center text-[--pos-text-muted] hover:text-[--pos-text] transition-colors"
           >
-            <Minus className="w-3 h-3" />
+            <Minus className="w-3.5 h-3.5" />
           </button>
           <span className="text-sm font-bold text-[--pos-text] min-w-[2ch] text-center">
             {ligne.quantite}
           </span>
           <button
             onClick={() => onModifier(1)}
-            className="w-7 h-7 rounded-lg bg-[--pos-surface-hover] hover:bg-[--pos-border] flex items-center justify-center text-[--pos-text-muted] hover:text-[--pos-text] transition-colors"
+            className="w-9 h-9 rounded-lg bg-[--pos-surface-hover] hover:bg-[--pos-border] flex items-center justify-center text-[--pos-text-muted] hover:text-[--pos-text] transition-colors"
           >
-            <Plus className="w-3 h-3" />
+            <Plus className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Total */}
-        <div className="text-right shrink-0 min-w-[75px] sm:min-w-[90px]">
+        {/* Total + supprimer */}
+        <div className="text-right shrink-0 min-w-[72px]">
           <p className="text-sm font-bold text-[--pos-text] text-mga">
             {formatMGA(ligne.totalTTC)}
           </p>
           <button
             onClick={onSupprimer}
-            className="text-[--pos-text-muted] hover:text-[--pos-danger] transition-colors opacity-0 group-hover:opacity-100"
+            className="text-[--pos-text-muted] hover:text-[--pos-danger] transition-colors mt-0.5 opacity-60 sm:opacity-0 group-hover:opacity-100"
           >
             <Trash2 className="w-3.5 h-3.5 inline" />
           </button>

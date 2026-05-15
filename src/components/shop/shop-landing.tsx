@@ -127,7 +127,7 @@ export function ShopLanding() {
       ══════════════════════════════════════ */}
       <section
         ref={heroRef}
-        className="relative min-h-[90vh] flex items-center overflow-hidden bg-[--pos-bg]"
+        className="relative min-h-[75vh] sm:min-h-[90vh] flex items-center overflow-hidden bg-[--pos-bg]"
       >
         {/* Fond animé — grain + gradient */}
         <div
@@ -169,7 +169,7 @@ export function ShopLanding() {
 
             {/* Titre */}
             <motion.h1
-              className="text-display-xl text-white leading-[1] mb-6"
+              className="text-4xl sm:text-5xl md:text-display-xl text-white leading-[1.1] mb-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
@@ -223,7 +223,7 @@ export function ShopLanding() {
 
             {/* Stats hero */}
             <motion.div
-              className="flex flex-wrap gap-8 mt-12 pt-8 border-t border-white/10"
+              className="flex flex-wrap gap-4 sm:gap-8 mt-10 sm:mt-12 pt-8 border-t border-white/10"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.5 }}

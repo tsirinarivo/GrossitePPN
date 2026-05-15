@@ -100,7 +100,7 @@ export function HistoriqueView() {
     <div className="flex flex-col h-full min-h-0 bg-[--background]">
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-[--border] bg-[--card] shrink-0">
+      <div className="flex items-center gap-3 px-4 md:px-6 py-4 border-b border-[--border] bg-[--card] shrink-0">
         <History className="w-5 h-5 text-[--primary]" />
         <h1 className="text-lg font-bold flex-1">Historique des ventes</h1>
         <button
@@ -121,7 +121,7 @@ export function HistoriqueView() {
               <button
                 key={p}
                 onClick={() => setPeriode(p)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   periode === p
                     ? "bg-[--primary] text-white"
                     : "bg-[--card] border border-[--border] text-[--foreground-subtle] hover:border-[--primary]/50"
@@ -133,7 +133,7 @@ export function HistoriqueView() {
           </div>
 
           {/* KPIs */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               { label: "Total encaissé", value: formatMGA(stats.totalEncaisse), icon: TrendingUp, color: "#22c55e" },
               { label: "Commandes encaissées", value: String(stats.nbEncaissees), icon: CheckCircle2, color: "#3b82f6" },
@@ -216,7 +216,7 @@ export function HistoriqueView() {
                           <td className="px-4 py-3 text-center">
                             {badge && (
                               <span
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold"
                                 style={{ backgroundColor: badge.color + "20", color: badge.color }}
                               >
                                 <badge.icon className="w-3 h-3" />
@@ -230,7 +230,7 @@ export function HistoriqueView() {
                                 onClick={() => handleReimp(cmd)}
                                 disabled={reimprId === cmd.id}
                                 title="Réimprimer le ticket"
-                                className="p-1.5 rounded-lg hover:bg-[--muted] text-[--foreground-subtle] disabled:opacity-40"
+                                className="p-2.5 rounded-lg hover:bg-[--muted] text-[--foreground-subtle] disabled:opacity-40"
                               >
                                 {reimprId === cmd.id
                                   ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
