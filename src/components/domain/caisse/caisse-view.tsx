@@ -280,11 +280,11 @@ export function CaisseView() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-3rem)] lg:h-screen bg-[--background] overflow-hidden relative">
+    <div className="flex h-[calc(100vh-3.5rem)] lg:h-screen bg-[--background] overflow-hidden relative">
       {/* Mobile overlay backdrop */}
       {fileOuverte && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/70 z-40 lg:hidden"
           onClick={() => setFileOuverte(false)}
         />
       )}
@@ -292,9 +292,12 @@ export function CaisseView() {
       {/* ── File d'attente ── */}
       <div className={cn(
         "flex flex-col border-r border-[--border] bg-[--card] shrink-0",
-        "w-80 xl:w-96",
+        // Mobile: pleine largeur pour couvrir tout l'écran, sm+: 320px
+        "w-full sm:w-80 xl:w-96",
         // Mobile: hidden drawer sliding in from left
-        "fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto h-full",
+        "fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto",
+        // hauteur fixe pour mobile (top: 0 à bottom: 0)
+        "h-full",
         "transition-transform duration-200 ease-in-out",
         fileOuverte ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
@@ -404,18 +407,19 @@ export function CaisseView() {
       {/* ── Détail commande / facturation ── */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* Mobile queue toggle bar */}
-        <div className="lg:hidden flex items-center gap-3 px-4 h-12 border-b border-[--border] bg-[--card] shrink-0">
-          <button
-            onClick={() => setFileOuverte(true)}
-            className="flex items-center gap-2 text-sm font-medium text-[--foreground-muted] hover:text-[--foreground] transition-colors"
-          >
-            <Menu className="w-4 h-4" />
-            File d&apos;attente
-          </button>
-          <Badge variant="destructive" className="text-xs">
+        <button
+          onClick={() => setFileOuverte(true)}
+          className="lg:hidden flex items-center gap-3 px-4 h-14 border-b border-[--border] bg-[--card] shrink-0 w-full text-left hover:bg-[--accent] transition-colors"
+        >
+          <Menu className="w-5 h-5 text-[--foreground-muted] shrink-0" />
+          <span className="text-sm font-semibold text-[--foreground] flex-1">
+            {commandeSelectee ? commandeSelectee.numero : "File d'attente"}
+          </span>
+          <Badge variant="destructive" className="text-xs shrink-0">
             {fileCommandes.length}
           </Badge>
-        </div>
+          <ChevronRight className="w-4 h-4 text-[--foreground-muted] shrink-0" />
+        </button>
       <div className="flex-1 min-h-0 flex flex-col p-4 md:p-6">
         {commandeSelectee ? (
           <div className="max-w-2xl w-full mx-auto flex flex-col flex-1 min-h-0 gap-6 animate-fade-in">
