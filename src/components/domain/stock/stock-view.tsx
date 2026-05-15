@@ -1,21 +1,22 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Package,
   Plus,
   Search,
   AlertTriangle,
-  TrendingDown,
   ArrowUpRight,
-  ArrowDownRight,
   BarChart2,
   Filter,
   Download,
   Loader2,
   Warehouse,
+  X,
+  Check,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
@@ -23,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
 
 type ProduitStock = {
   id: string;
@@ -66,6 +68,13 @@ export function StockView() {
   const [erreur, setErreur] = useState(false);
   const [depots, setDepots] = useState<Depot[]>([]);
   const [depotId, setDepotId] = useState<string | null>(null);
+
+  // Drawer stock par dépôt
+  const [drawerProduit, setDrawerProduit] = useState<ProduitStock | null>(null);
+  const [stocksDepot, setStocksDepot] = useState<{ depotId: string; depotNom: string; estPrincipal: boolean; quantiteBase: number }[]>([]);
+  const [stocksEdites, setStocksEdites] = useState<Record<string, string>>({});
+  const [stocksLoading, setStocksLoading] = useState(false);
+  const [savingDepot, startSaving] = useTransition();
 
   // Fetch depots list once
   useEffect(() => {
@@ -141,6 +150,49 @@ export function StockView() {
       couleur: "text-[--foreground-muted]",
     },
   ];
+
+  function ouvrirDrawer(p: ProduitStock) {
+    setDrawerProduit(p);
+    setStocksEdites({});
+    setStocksLoading(true);
+    fetch(`/api/stock/${p.id}/depots`)
+      .then((r) => r.json())
+      .then((d) => {
+        setStocksDepot(d.stocks ?? []);
+        const init: Record<string, string> = {};
+        for (const s of d.stocks ?? []) init[s.depotId] = String(s.quantiteBase);
+        setStocksEdites(init);
+      })
+      .catch(() => toast.error("Impossible de charger les stocks"))
+      .finally(() => setStocksLoading(false));
+  }
+
+  function sauvegarderDepot(depotId: string) {
+    if (!drawerProduit) return;
+    const qte = parseFloat(stocksEdites[depotId] ?? "0");
+    if (isNaN(qte) || qte < 0) { toast.error("Quantité invalide"); return; }
+    startSaving(async () => {
+      const res = await fetch(`/api/stock/${drawerProduit.id}/depots`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ depotId, quantiteBase: qte }),
+      });
+      if (res.ok) {
+        toast.success("Stock mis à jour");
+        setStocksDepot((prev) =>
+          prev.map((s) => s.depotId === depotId ? { ...s, quantiteBase: qte } : s)
+        );
+        // Rafraîchir la liste principale
+        const url = depotId ? `/api/stock?depotId=${depotId}` : "/api/stock";
+        fetch(url).then(r => r.json()).then(data => {
+          setProduitsDB(data.produits ?? []);
+          setStats(data.stats ?? stats);
+        });
+      } else {
+        toast.error("Erreur lors de la sauvegarde");
+      }
+    });
+  }
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
@@ -362,11 +414,21 @@ export function StockView() {
                         </td>
 
                         <td className="px-4 py-3">
-                          <Button variant="ghost" size="icon-sm" asChild>
-                            <Link href={`/stock/produits/${p.id}`}>
-                              <ArrowUpRight className="w-3.5 h-3.5" />
-                            </Link>
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title="Stock par dépôt"
+                              onClick={() => ouvrirDrawer(p)}
+                            >
+                              <Warehouse className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon-sm" asChild>
+                              <Link href={`/stock/produits/${p.id}`}>
+                                <ArrowUpRight className="w-3.5 h-3.5" />
+                              </Link>
+                            </Button>
+                          </div>
                         </td>
                       </motion.tr>
                     );
@@ -377,6 +439,113 @@ export function StockView() {
           </div>
         </CardContent>
       </Card>
+      {/* ── Drawer stock par dépôt ── */}
+      <AnimatePresence>
+        {drawerProduit && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => setDrawerProduit(null)}
+            />
+            {/* Panel */}
+            <motion.div
+              initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed inset-y-0 right-0 z-50 w-full sm:w-[420px] bg-[--card] border-l border-[--border] flex flex-col shadow-2xl"
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between gap-3 p-5 border-b border-[--border] shrink-0">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Warehouse className="w-4 h-4 text-[--primary] shrink-0" />
+                    <h2 className="font-bold text-[--foreground] truncate">{drawerProduit.nom}</h2>
+                  </div>
+                  <p className="text-xs text-[--foreground-muted] mt-1 font-mono">{drawerProduit.code} · {drawerProduit.uniteBase}</p>
+                </div>
+                <Button variant="ghost" size="icon-sm" onClick={() => setDrawerProduit(null)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* Corps */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-3">
+                {stocksLoading ? (
+                  <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-[--foreground-muted]" /></div>
+                ) : stocksDepot.length === 0 ? (
+                  <div className="text-center py-10 text-[--foreground-muted]">
+                    <Warehouse className="w-8 h-8 opacity-20 mx-auto mb-2" />
+                    <p className="text-sm">Aucun dépôt actif trouvé</p>
+                    <p className="text-xs mt-1">Créez des dépôts dans Admin → Dépôts</p>
+                  </div>
+                ) : (
+                  stocksDepot.map((s) => (
+                    <div key={s.depotId} className="rounded-xl border border-[--border] bg-[--accent]/20 p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Warehouse className="w-4 h-4 text-[--primary] shrink-0" />
+                        <span className="font-semibold text-sm text-[--foreground]">{s.depotNom}</span>
+                        {s.estPrincipal && <Badge variant="default" className="text-[10px]">Principal</Badge>}
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <label className="text-xs text-[--foreground-muted] mb-1 block">
+                            Quantité ({drawerProduit.uniteBase})
+                          </label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={stocksEdites[s.depotId] ?? "0"}
+                            onChange={(e) => setStocksEdites((prev) => ({ ...prev, [s.depotId]: e.target.value }))}
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="shrink-0 mt-5">
+                          <Button
+                            size="sm"
+                            onClick={() => sauvegarderDepot(s.depotId)}
+                            disabled={savingDepot || stocksEdites[s.depotId] === String(s.quantiteBase)}
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            Enregistrer
+                          </Button>
+                        </div>
+                      </div>
+
+                      {s.quantiteBase !== parseFloat(stocksEdites[s.depotId] ?? String(s.quantiteBase)) && (
+                        <p className="text-xs text-[--foreground-muted]">
+                          Stock actuel : <span className="font-medium">{s.quantiteBase} {drawerProduit.uniteBase}</span>
+                          {" → "}
+                          <span className="font-semibold text-[--primary]">
+                            {stocksEdites[s.depotId]} {drawerProduit.uniteBase}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Footer total */}
+              {stocksDepot.length > 0 && (
+                <div className="border-t border-[--border] p-4 bg-[--accent]/30 shrink-0">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-[--foreground-muted]">Total tous dépôts</span>
+                    <span className="font-bold text-[--foreground]">
+                      {stocksDepot.reduce((s, d) => s + d.quantiteBase, 0).toLocaleString("fr-FR")} {drawerProduit.uniteBase}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-[--foreground-muted] mt-1">
+                    <span>Valeur stock</span>
+                    <span>{formatMGA(stocksDepot.reduce((s, d) => s + d.quantiteBase, 0) * drawerProduit.prixAchat, { compact: true })}</span>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
