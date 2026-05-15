@@ -22,9 +22,8 @@ Script raccourci depuis la machine locale : `./deploy-vps.sh user@grossiste.dago
 
 ## Règle après chaque commit/push
 
-Après chaque `git push`, afficher systématiquement ce bloc à l'utilisateur :
+Après chaque `git push`, afficher OBLIGATOIREMENT ce bloc exact — une seule ligne, prête à copier-coller :
 
 ```
-Pour déployer sur le VPS :
 cd /opt/grossiteppn && git pull origin claude/wholesale-management-pwa-khts0 && pnpm build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public && pm2 restart grossiteppn
 ```
