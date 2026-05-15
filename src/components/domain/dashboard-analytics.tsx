@@ -1,84 +1,106 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   AreaChart,
   Area,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
 } from "recharts";
-import { motion } from "framer-motion";
 import {
   TrendingUp,
   ShoppingBag,
-  Users,
   Package,
-  ArrowUpRight,
-  ArrowDownRight,
-  Zap,
-  Globe,
-  Monitor,
+  Loader2,
+  AlertTriangle,
+  BarChart2,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-// ── Données synthétiques ──────────────────────────────
+// ── Types ─────────────────────────────────────────────
 
-const CA_7JOURS = [
-  { jour: "Lun", pos: 3200000, web: 1800000 },
-  { jour: "Mar", pos: 4100000, web: 2200000 },
-  { jour: "Mer", pos: 2800000, web: 3100000 },
-  { jour: "Jeu", pos: 5200000, web: 1900000 },
-  { jour: "Ven", pos: 6100000, web: 4200000 },
-  { jour: "Sam", pos: 7800000, web: 5100000 },
-  { jour: "Dim", pos: 4500000, web: 2800000 },
+type Periode = "jour" | "7jours" | "mois" | "annee";
+
+interface FinancesData {
+  kpi: {
+    caHT: number;
+    caTTC: number;
+    tva: number;
+    remises: number;
+    cogs: number;
+    margeB: number;
+    chargesOp: number;
+    margeN: number;
+    nbCommandes: number;
+  };
+  margesCategorie: Array<{
+    id: string;
+    nom: string;
+    ca: number;
+    cogs: number;
+    margeB: number;
+    tauxMarge: number;
+  }>;
+  evolution: Array<{ date: string; ca: number; cogs: number; margeB: number }>;
+  chargesParCat: Record<string, number>;
+  charges: unknown[];
+}
+
+interface StockData {
+  produits: Array<{
+    id: string;
+    nom: string;
+    code: string;
+    stockBase: number;
+    seuilAlerte: number;
+    alerteRupture: boolean;
+    valeurStock: number;
+    prixAchat: number;
+    categorie: string;
+  }>;
+  stats: {
+    valeurTotale: number;
+    nbAlertes: number;
+    totalMvt: number;
+    totalEntrees: number;
+    totalSorties: number;
+  };
+}
+
+// ── Helpers ───────────────────────────────────────────
+
+function formatDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+  } catch {
+    return dateStr;
+  }
+}
+
+const PERIODES: { key: Periode; label: string }[] = [
+  { key: "jour", label: "Aujourd'hui" },
+  { key: "7jours", label: "7 jours" },
+  { key: "mois", label: "Ce mois" },
+  { key: "annee", label: "Cette année" },
 ];
 
-const TOP_PRODUITS = [
-  { nom: "Riz Makalioka", ventes: 185, ca: 8900000, unite: "sacs 50kg" },
-  { nom: "Huile Tiko 1L", ventes: 312, ca: 3744000, unite: "cartons" },
-  { nom: "Sucre Blanc", ventes: 94, ca: 2068000, unite: "sacs 50kg" },
-  { nom: "Savon Madar", ventes: 248, ca: 1240000, unite: "cartons" },
-  { nom: "Lait Gloria", ventes: 67, ca: 1206000, unite: "cartons" },
-];
+// ── Tooltip custom ─────────────────────────────────────
 
-const HEATMAP_HEURES = Array.from({ length: 12 }, (_, h) => ({
-  heure: `${8 + h}h`,
-  lun: Math.floor(Math.random() * 10),
-  mar: Math.floor(Math.random() * 10),
-  mer: Math.floor(Math.random() * 10),
-  jeu: Math.floor(Math.random() * 10),
-  ven: Math.floor(Math.random() * 15),
-  sam: Math.floor(Math.random() * 20),
-}));
-
-const VENTILATION_CANAL = [
-  { name: "POS Agent", value: 62, couleur: "oklch(0.60 0.19 47)" },
-  { name: "E-commerce", value: 38, couleur: "oklch(0.54 0.22 270)" },
-];
-
-const TOP_AGENTS = [
-  { nom: "Hery R.", commandes: 48, ca: 12400000 },
-  { nom: "Nivo M.", commandes: 41, ca: 9800000 },
-  { nom: "Faly T.", commandes: 35, ca: 8200000 },
-];
-
-// ── Composant tooltip custom ──────────────────────────
-
-function TooltipCustom({ active, payload, label }: {
+function TooltipCustom({
+  active,
+  payload,
+  label,
+}: {
   active?: boolean;
-  payload?: Array<{ name: string; value: number; fill: string }>;
+  payload?: Array<{ name: string; value: number; color: string }>;
   label?: string;
 }) {
   if (!active || !payload?.length) return null;
@@ -87,9 +109,9 @@ function TooltipCustom({ active, payload, label }: {
       <p className="text-xs font-semibold text-[--foreground-muted] mb-2">{label}</p>
       {payload.map((p) => (
         <div key={p.name} className="flex items-center gap-2 text-sm">
-          <div className="w-2 h-2 rounded-full" style={{ background: p.fill }} />
+          <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
           <span className="text-[--foreground-muted]">{p.name}</span>
-          <span className="font-bold text-[--foreground] ml-auto text-mga">
+          <span className="font-bold text-[--foreground] ml-auto">
             {formatMGA(p.value, { compact: true })}
           </span>
         </div>
@@ -98,335 +120,377 @@ function TooltipCustom({ active, payload, label }: {
   );
 }
 
-// ── Dashboard principal ───────────────────────────────
+// ── KPI Card ──────────────────────────────────────────
 
-const KPI = [
-  {
-    label: "CA semaine",
-    valeur: 33_700_000,
-    evolution: +18.4,
-    icon: TrendingUp,
-    couleur: "text-[--primary]",
-    bg: "bg-[--primary]/8",
-    format: true,
-  },
-  {
-    label: "Commandes",
-    valeur: 247,
-    unite: "cmd",
-    evolution: +12.1,
-    icon: ShoppingBag,
-    couleur: "text-[--color-vanille-600]",
-    bg: "bg-[--color-vanille-50] dark:bg-[--color-vanille-950]",
-  },
-  {
-    label: "Clients actifs",
-    valeur: 94,
-    unite: "clients",
-    evolution: +6.8,
-    icon: Users,
-    couleur: "text-[--color-indigo-600]",
-    bg: "bg-[--color-indigo-50] dark:bg-[--color-indigo-950]",
-  },
-  {
-    label: "Taux web",
-    valeur: 38,
-    unite: "%",
-    evolution: +4.2,
-    icon: Globe,
-    couleur: "text-[--success]",
-    bg: "bg-[--success]/8",
-  },
-];
+function KpiCard({
+  label,
+  value,
+  sub,
+  icon: Icon,
+  iconClass,
+  bgClass,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  icon: React.ElementType;
+  iconClass: string;
+  bgClass: string;
+}) {
+  return (
+    <Card className="overflow-hidden">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-[--foreground-muted] mb-1">{label}</p>
+            <p className="text-2xl font-bold tracking-tight text-[--foreground]">{value}</p>
+            {sub && <p className="text-xs text-[--foreground-muted] mt-1">{sub}</p>}
+          </div>
+          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", bgClass)}>
+            <Icon className={cn("w-5 h-5", iconClass)} />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Main component ─────────────────────────────────────
 
 export function DashboardAnalytics() {
-  const totalSemaine = useMemo(
-    () => CA_7JOURS.reduce((s, d) => s + d.pos + d.web, 0),
-    []
-  );
+  const [periode, setPeriode] = useState<Periode>("mois");
+  const [finances, setFinances] = useState<FinancesData | null>(null);
+  const [stock, setStock] = useState<StockData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [finRes, stockRes] = await Promise.all([
+        fetch(`/api/finances?periode=${periode}`, { cache: "no-store" }),
+        fetch("/api/stock", { cache: "no-store" }),
+      ]);
+      if (!finRes.ok || !stockRes.ok) throw new Error("Erreur de chargement");
+      const [finData, stockData] = await Promise.all([finRes.json(), stockRes.json()]);
+      setFinances(finData);
+      setStock(stockData);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur inconnue");
+      setFinances(null);
+      setStock(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [periode]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Derived data
+  const kpi = finances?.kpi;
+  const evolutionData = (finances?.evolution ?? []).map((d) => ({
+    ...d,
+    date: formatDate(d.date),
+  }));
+  const margesCategorie = finances?.margesCategorie ?? [];
+  const stockStats = stock?.stats;
+  const produitsRisque = (stock?.produits ?? [])
+    .filter((p) => p.alerteRupture)
+    .slice(0, 8);
+  const tauxMargeB =
+    kpi && kpi.caHT > 0 ? ((kpi.margeB / kpi.caHT) * 100).toFixed(1) : null;
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-[1400px]">
+    <div className="p-4 md:p-6 space-y-6 max-w-[1400px]">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-display-sm text-[--foreground]">Tableau de bord</h1>
-            <Badge variant="live">
-              <Zap className="w-3 h-3" />
-              Temps réel
-            </Badge>
-          </div>
-          <p className="text-[--foreground-muted]">
-            Semaine du 6 au 12 mai 2026 · Antananarivo
+          <h1 className="text-display-sm text-[--foreground]">Rapports & Analytiques</h1>
+          <p className="text-[--foreground-muted] text-sm mt-0.5">
+            Données financières et stock en temps réel
           </p>
+        </div>
+
+        {/* Period selector */}
+        <div className="flex items-center gap-1 bg-[--muted] rounded-xl p-1">
+          {PERIODES.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => setPeriode(p.key)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-sm font-medium transition-all",
+                periode === p.key
+                  ? "bg-[--card] text-[--foreground] shadow-sm"
+                  : "text-[--foreground-muted] hover:text-[--foreground]"
+              )}
+            >
+              {p.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {KPI.map((k, i) => (
-          <motion.div
-            key={k.label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.07 }}
-          >
-            <Card className="overflow-hidden">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-[--foreground-muted] mb-1">{k.label}</p>
-                    <p className="text-2xl font-bold tracking-tight text-[--foreground] text-mga">
-                      {k.format
-                        ? formatMGA(k.valeur, { compact: true })
-                        : `${k.valeur.toLocaleString("fr-FR")}${k.unite ? ` ${k.unite}` : ""}`}
-                    </p>
-                    <div
-                      className={cn(
-                        "flex items-center gap-0.5 text-xs font-medium mt-1.5",
-                        k.evolution > 0 ? "text-[--success]" : "text-[--destructive]"
-                      )}
-                    >
-                      {k.evolution > 0 ? (
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                      ) : (
-                        <ArrowDownRight className="w-3.5 h-3.5" />
-                      )}
-                      {Math.abs(k.evolution)}% vs sem. précédente
-                    </div>
+      {/* Loading / Error states */}
+      {loading && (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-[--primary]" />
+        </div>
+      )}
+
+      {error && !loading && (
+        <Card>
+          <CardContent className="flex items-center gap-3 p-6 text-[--destructive]">
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <p className="text-sm">{error} — Les données n'ont pas pu être chargées.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!loading && (
+        <>
+          {/* KPI cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard
+              label="CA TTC"
+              value={kpi ? formatMGA(kpi.caTTC, { compact: true }) : "—"}
+              icon={TrendingUp}
+              iconClass="text-[--primary]"
+              bgClass="bg-[--primary]/10"
+            />
+            <KpiCard
+              label="Marge brute"
+              value={kpi ? formatMGA(kpi.margeB, { compact: true }) : "—"}
+              sub={tauxMargeB ? `Taux : ${tauxMargeB}%` : undefined}
+              icon={BarChart2}
+              iconClass="text-[--success]"
+              bgClass="bg-[--success]/10"
+            />
+            <KpiCard
+              label="Marge nette"
+              value={kpi ? formatMGA(kpi.margeN, { compact: true }) : "—"}
+              icon={Layers}
+              iconClass="text-[--color-indigo-600]"
+              bgClass="bg-[--color-indigo-50] dark:bg-[--color-indigo-950]"
+            />
+            <KpiCard
+              label="Nb commandes"
+              value={kpi ? kpi.nbCommandes.toLocaleString("fr-FR") : "—"}
+              icon={ShoppingBag}
+              iconClass="text-[--color-vanille-600]"
+              bgClass="bg-[--color-vanille-50] dark:bg-[--color-vanille-950]"
+            />
+          </div>
+
+          {/* Charts row */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            {/* Evolution CA + Marge — Area chart */}
+            <Card className="xl:col-span-2">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Évolution CA & Marge brute</CardTitle>
+                <div className="flex items-center gap-4 text-xs text-[--foreground-muted]">
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block w-3 h-0.5 rounded bg-[--primary]" />
+                    CA
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="inline-block w-3 h-0.5 rounded bg-[--success]" />
+                    Marge brute
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {evolutionData.length === 0 ? (
+                  <div className="h-[220px] flex items-center justify-center text-[--foreground-muted] text-sm">
+                    Aucune donnée pour cette période
                   </div>
-                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", k.bg)}>
-                    <k.icon className={cn("w-5 h-5", k.couleur)} />
+                ) : (
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={evolutionData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="gradCA" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                        </linearGradient>
+                        <linearGradient id="gradMarge" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--success)" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="var(--success)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="var(--border)"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 11, fill: "var(--foreground-muted)" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 10, fill: "var(--foreground-muted)" }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v: number) => `${(v / 1_000_000).toFixed(1)}M`}
+                        width={42}
+                      />
+                      <Tooltip content={<TooltipCustom />} cursor={false} />
+                      <Area
+                        type="monotone"
+                        dataKey="ca"
+                        name="CA"
+                        stroke="var(--primary)"
+                        strokeWidth={2.5}
+                        fill="url(#gradCA)"
+                        dot={false}
+                        activeDot={{ r: 4, stroke: "white", strokeWidth: 2 }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="margeB"
+                        name="Marge brute"
+                        stroke="var(--success)"
+                        strokeWidth={2.5}
+                        fill="url(#gradMarge)"
+                        dot={false}
+                        activeDot={{ r: 4, stroke: "white", strokeWidth: 2 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Valeur du stock */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Package className="w-4 h-4 text-[--primary]" />
+                  Valeur du stock
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <p className="text-3xl font-bold text-[--foreground]">
+                    {stockStats ? formatMGA(stockStats.valeurTotale, { compact: true }) : "—"}
+                  </p>
+                  <p className="text-xs text-[--foreground-muted] mt-1">Valeur totale en stock</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-[--destructive]/8 rounded-xl p-3">
+                    <p className="text-xl font-bold text-[--destructive]">
+                      {stockStats?.nbAlertes ?? "—"}
+                    </p>
+                    <p className="text-xs text-[--foreground-muted] mt-0.5">Alertes actives</p>
+                  </div>
+                  <div className="bg-[--muted] rounded-xl p-3">
+                    <p className="text-xl font-bold text-[--foreground]">
+                      {stockStats ? stockStats.totalMvt.toLocaleString("fr-FR") : "—"}
+                    </p>
+                    <p className="text-xs text-[--foreground-muted] mt-0.5">Mouvements</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
-        ))}
-      </div>
+          </div>
 
-      {/* Graphiques principaux */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* CA 7 jours — Area chart */}
-        <Card className="xl:col-span-2">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Chiffre d'affaires — 7 derniers jours</CardTitle>
-              <div className="flex items-center gap-3 text-xs text-[--foreground-muted]">
-                <span className="flex items-center gap-1.5">
-                  <Monitor className="w-3 h-3 text-[--color-ocre-500]" />
-                  POS
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <Globe className="w-3 h-3 text-[--color-indigo-500]" />
-                  Web
-                </span>
-              </div>
-            </div>
-            <p className="text-sm font-semibold text-[--foreground] text-mga">
-              Total : {formatMGA(totalSemaine)}
-            </p>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={CA_7JOURS} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradPos" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="oklch(0.60 0.19 47)" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="oklch(0.60 0.19 47)" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gradWeb" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="oklch(0.54 0.22 270)" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="oklch(0.54 0.22 270)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="oklch(0.9 0.01 55)"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="jour"
-                  tick={{ fontSize: 12, fill: "oklch(0.55 0.01 40)" }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: "oklch(0.55 0.01 40)" }}
-                  axisLine={false}
-                  tickLine={false}
-                  tickFormatter={(v: number) => `${(v / 1_000_000).toFixed(1)}M`}
-                />
-                <Tooltip content={<TooltipCustom />} cursor={false} />
-                <Area
-                  type="monotone"
-                  dataKey="pos"
-                  name="POS Agent"
-                  stroke="oklch(0.60 0.19 47)"
-                  strokeWidth={2.5}
-                  fill="url(#gradPos)"
-                  dot={false}
-                  activeDot={{ r: 5, fill: "oklch(0.60 0.19 47)", stroke: "white", strokeWidth: 2 }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="web"
-                  name="E-commerce"
-                  stroke="oklch(0.54 0.22 270)"
-                  strokeWidth={2.5}
-                  fill="url(#gradWeb)"
-                  dot={false}
-                  activeDot={{ r: 5, fill: "oklch(0.54 0.22 270)", stroke: "white", strokeWidth: 2 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Ventilation POS vs Web — Pie */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Ventilation par canal</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Pie
-                  data={VENTILATION_CANAL}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={80}
-                  paddingAngle={4}
-                  dataKey="value"
-                  startAngle={90}
-                  endAngle={-270}
-                >
-                  {VENTILATION_CANAL.map((entry, i) => (
-                    <Cell key={i} fill={entry.couleur} stroke="transparent" />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(v) => [`${v}%`, ""]}
-                  contentStyle={{
-                    background: "var(--card)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "12px",
-                    fontSize: "12px",
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="space-y-2 mt-2">
-              {VENTILATION_CANAL.map((c) => (
-                <div key={c.name} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-sm" style={{ background: c.couleur }} />
-                    <span className="text-[--foreground-muted]">{c.name}</span>
+          {/* Marges catégorie + Produits à risque */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Marges par catégorie — Bar chart horizontal */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base">Marges par catégorie</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {margesCategorie.length === 0 ? (
+                  <div className="h-[220px] flex items-center justify-center text-[--foreground-muted] text-sm">
+                    Aucune donnée
                   </div>
-                  <span className="font-bold text-[--foreground]">{c.value}%</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Ligne 2 : Top produits + Agents + Heatmap */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Top produits */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Top produits — semaine</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {TOP_PRODUITS.map((p, i) => {
-                const pct = (p.ca / TOP_PRODUITS[0]!.ca) * 100;
-                return (
-                  <div key={p.nom}>
-                    <div className="flex items-center justify-between text-sm mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="w-5 text-center text-[--foreground-muted] font-mono text-xs">
-                          #{i + 1}
-                        </span>
-                        <span className="font-medium text-[--foreground]">{p.nom}</span>
+                ) : (
+                  <div className="space-y-3">
+                    {margesCategorie.map((cat) => (
+                      <div key={cat.id}>
+                        <div className="flex items-center justify-between text-sm mb-1">
+                          <span className="font-medium text-[--foreground] truncate max-w-[160px]">
+                            {cat.nom}
+                          </span>
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="text-xs text-[--foreground-muted]">
+                              {formatMGA(cat.ca, { compact: true })}
+                            </span>
+                            <Badge
+                              variant={cat.tauxMarge >= 20 ? "success" : cat.tauxMarge >= 10 ? "warning" : "destructive"}
+                              className="text-xs"
+                            >
+                              {cat.tauxMarge.toFixed(1)}%
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="h-2 bg-[--border] rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-[--primary] transition-all duration-500"
+                            style={{
+                              width: `${Math.min(100, cat.tauxMarge * 2)}%`,
+                              opacity: 0.7 + (cat.tauxMarge / 100) * 0.3,
+                            }}
+                          />
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className="font-bold text-mga text-[--foreground]">
-                          {formatMGA(p.ca, { compact: true })}
-                        </span>
-                        <span className="text-[--foreground-muted] text-xs ml-1.5">
-                          ({p.ventes} {p.unite})
-                        </span>
-                      </div>
-                    </div>
-                    <div className="h-1.5 bg-[--border] rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.6, delay: i * 0.1, ease: "easeOut" }}
-                        className="h-full rounded-full"
-                        style={{
-                          background: `oklch(${0.60 - i * 0.05} ${0.19 - i * 0.02} ${47 + i * 15})`,
-                        }}
-                      />
-                    </div>
+                    ))}
                   </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
 
-        {/* Top agents */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Agents — semaine</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {TOP_AGENTS.map((a, i) => (
-                <div key={a.nom} className="flex items-center gap-3">
-                  <div className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
-                    i === 0 ? "bg-[--warning]/20 text-[--warning-foreground]"
-                      : i === 1 ? "bg-[--foreground-subtle]/20 text-[--foreground-muted]"
-                        : "bg-[--primary]/10 text-[--primary]"
-                  )}>
-                    #{i + 1}
+            {/* Top produits à risque */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-[--destructive]" />
+                  Produits à risque
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {produitsRisque.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
+                    <Package className="w-8 h-8 text-[--success] opacity-60" />
+                    <p className="text-sm text-[--foreground-muted]">Aucune alerte de rupture</p>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-[--foreground]">{a.nom}</p>
-                    <p className="text-xs text-[--foreground-muted]">{a.commandes} commandes</p>
+                ) : (
+                  <div className="space-y-2">
+                    {produitsRisque.map((p) => {
+                      const isRupture = p.stockBase === 0;
+                      return (
+                        <div
+                          key={p.id}
+                          className="flex items-center gap-3 py-2 border-b border-[--border] last:border-0"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[--foreground] truncate">{p.nom}</p>
+                            <p className="text-xs text-[--foreground-muted]">
+                              Stock : {p.stockBase} · Seuil : {p.seuilAlerte}
+                            </p>
+                          </div>
+                          <Badge
+                            variant={isRupture ? "destructive" : "warning"}
+                            className="shrink-0 text-xs"
+                          >
+                            {isRupture ? "Rupture" : "Bas"}
+                          </Badge>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <p className="text-sm font-bold text-mga shrink-0">{formatMGA(a.ca, { compact: true })}</p>
-                </div>
-              ))}
-            </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
-            {/* Bar chart simplifié */}
-            <div className="mt-4">
-              <ResponsiveContainer width="100%" height={100}>
-                <BarChart data={TOP_AGENTS} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-                  <Bar
-                    dataKey="ca"
-                    radius={[6, 6, 0, 0]}
-                    fill="oklch(0.60 0.19 47)"
-                  />
-                  <XAxis
-                    dataKey="nom"
-                    tick={{ fontSize: 10, fill: "oklch(0.55 0.01 40)" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        </>
+      )}
     </div>
   );
 }
