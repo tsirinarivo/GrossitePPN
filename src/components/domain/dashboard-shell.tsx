@@ -16,15 +16,15 @@ export function DashboardShell({
 
   return (
     <div className="flex h-screen bg-[--background] overflow-hidden">
-      {/* Mobile overlay backdrop */}
+      {/* Overlay mobile */}
       {mobileNavOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
           onClick={() => setMobileNavOpen(false)}
         />
       )}
 
-      {/* Sidebar — fixed drawer on mobile, normal flow on lg+ */}
+      {/* Sidebar */}
       <div
         className={cn(
           "fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto",
@@ -40,20 +40,32 @@ export function DashboardShell({
         {children}
       </main>
 
-      {/* Mobile top bar — fixed, shown only below lg */}
-      <div className="fixed top-0 left-0 right-0 z-30 lg:hidden h-12 flex items-center gap-3 px-4 bg-[--card] border-b border-[--border]">
+      {/* Topbar mobile — reprend les couleurs sidebar */}
+      <div
+        className="fixed top-0 left-0 right-0 z-30 lg:hidden h-12 flex items-center gap-3 px-4"
+        style={{
+          backgroundColor: "var(--sidebar)",
+          borderBottom: "1px solid var(--sidebar-border)",
+        }}
+      >
         <button
           onClick={() => setMobileNavOpen(true)}
-          className="p-1.5 rounded-lg text-[--foreground-muted] hover:bg-[--accent] transition-colors"
+          className="p-1.5 rounded-lg transition-colors"
+          style={{ color: "var(--sidebar-muted)" }}
           aria-label="Ouvrir le menu"
         >
           <Menu className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-[--primary] flex items-center justify-center">
+          <div
+            className="w-6 h-6 rounded-md flex items-center justify-center"
+            style={{ backgroundColor: "var(--sidebar-primary)" }}
+          >
             <Package className="w-3.5 h-3.5 text-white" />
           </div>
-          <span className="text-sm font-semibold text-[--foreground]">GrossistePPN</span>
+          <span className="text-sm font-semibold" style={{ color: "var(--sidebar-fg)" }}>
+            GrossistePPN
+          </span>
         </div>
       </div>
     </div>
