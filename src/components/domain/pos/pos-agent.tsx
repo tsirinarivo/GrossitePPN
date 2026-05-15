@@ -206,7 +206,7 @@ export function POSAgent() {
         />
 
         {/* Grille produits — padding-bottom pour laisser place à la barre sticky */}
-        <div className={cn("flex-1 overflow-y-auto p-4", !panierOuvert && nbArticles > 0 && "pb-24 md:pb-4")}>
+        <div className={cn("flex-1 overflow-y-auto p-4", !panierOuvert && "pb-24 md:pb-4")}>
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
               {Array.from({ length: 12 }).map((_, i) => (
@@ -226,46 +226,49 @@ export function POSAgent() {
           )}
         </div>
 
-        {/* ── Barre sticky panier — mobile uniquement ── */}
+        {/* ── Barre sticky panier — mobile uniquement, toujours visible ── */}
         <div
           className={cn(
             "absolute bottom-0 left-0 right-0 z-30 md:hidden",
             "transition-all duration-300 ease-out",
-            nbArticles > 0 && !panierOuvert
-              ? "translate-y-0 opacity-100"
-              : "translate-y-full opacity-0 pointer-events-none"
+            panierOuvert ? "translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
           )}
         >
-          {/* Fond flou */}
           <div className="px-3 pb-3 pt-2"
             style={{ background: "linear-gradient(to top, var(--pos-bg) 70%, transparent)" }}
           >
             <button
               onClick={() => setPanierOuvert(true)}
-              className="w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 shadow-2xl"
+              className="w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 shadow-2xl transition-all duration-200"
               style={{
-                background: "linear-gradient(135deg, var(--pos-primary) 0%, #FF6D30 100%)",
-                boxShadow: "0 8px 32px rgba(255, 77, 0, 0.45)",
+                background: nbArticles > 0
+                  ? "linear-gradient(135deg, var(--pos-primary) 0%, #FF6D30 100%)"
+                  : "linear-gradient(135deg, #2a2a2a 0%, #333 100%)",
+                boxShadow: nbArticles > 0
+                  ? "0 8px 32px rgba(255, 77, 0, 0.45)"
+                  : "0 4px 16px rgba(0, 0, 0, 0.4)",
               }}
             >
               {/* Badge article */}
               <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0 relative">
                 <ShoppingCart className="w-4.5 h-4.5 text-white" />
-                <span
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-extrabold flex items-center justify-center"
-                  style={{ backgroundColor: "#ffffff", color: "#FF4D00" }}
-                >
-                  {nbArticles > 9 ? "9+" : nbArticles}
-                </span>
+                {nbArticles > 0 && (
+                  <span
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full text-[10px] font-extrabold flex items-center justify-center"
+                    style={{ backgroundColor: "#ffffff", color: "#FF4D00" }}
+                  >
+                    {nbArticles > 9 ? "9+" : nbArticles}
+                  </span>
+                )}
               </div>
 
               {/* Infos */}
               <div className="flex-1 text-left min-w-0">
                 <p className="text-white font-semibold text-sm leading-tight">
-                  {nbArticles} article{nbArticles > 1 ? "s" : ""}
+                  {nbArticles > 0 ? `${nbArticles} article${nbArticles > 1 ? "s" : ""}` : "Panier vide"}
                 </p>
-                <p className="text-white/80 text-xs font-medium text-mga leading-tight">
-                  {formatMGA(totalTTC)}
+                <p className="text-white/70 text-xs font-medium text-mga leading-tight">
+                  {nbArticles > 0 ? formatMGA(totalTTC) : "Ajoutez des produits"}
                 </p>
               </div>
 
