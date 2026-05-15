@@ -7,3 +7,4 @@ export * from "./ecommerce";
 export * from "./livraisons";
 export * from "./achats";
 export * from "./xprint";
+export * from "./finances";

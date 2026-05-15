@@ -9,6 +9,7 @@ import {
   Users,
   Truck,
   BarChart3,
+  DollarSign,
   Settings,
   Store,
   ChevronRight,
@@ -32,7 +33,8 @@ import { FullscreenToggle } from "@/components/ui/fullscreen-toggle";
 const ALL_NAV_ITEMS = [
   { href: "/pos/agent",  label: "Point de vente", icon: ShoppingCart, badge: null, couleur: "text-[--color-ocre-600]" },
   { href: "/pos/caisse",  label: "Caisse",           icon: Receipt,  badge: null, couleur: "text-[--color-vanille-600]" },
-  { href: "/historique",  label: "Historique ventes",icon: History,  badge: null, couleur: null },
+  { href: "/historique",  label: "Historique ventes", icon: History,     badge: null, couleur: null },
+  { href: "/finances",    label: "Finances",          icon: DollarSign,  badge: null, couleur: null },
   { href: "/stock",      label: "Stock",           icon: Package,      badge: null, couleur: "text-[--color-indigo-600]" },
   { href: "/clients",    label: "Clients",         icon: Users,        badge: null, couleur: null },
   { href: "/livraisons", label: "Livraisons",      icon: Truck,        badge: null, couleur: null },
