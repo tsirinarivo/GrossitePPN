@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { Search, ScanLine, ShoppingCart, Wifi, WifiOff, ClipboardList, Package } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, ScanLine, ShoppingCart, Wifi, WifiOff, ClipboardList, Package, ChevronRight, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatMGA } from "@/lib/money";
 import { usePOSStore, usePOSTotaux } from "@/store/pos.store";
 import type { ProduitPOS } from "@/store/pos.store";
 import { useAppStore } from "@/store/app.store";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { POSProduitGrid } from "./pos-produit-grid";
 import { POSPanier } from "./pos-panier";
 import { POSClientBar } from "./pos-client-bar";
@@ -202,8 +202,8 @@ export function POSAgent() {
           onSelect={setCategorieActive}
         />
 
-        {/* Grille produits */}
-        <div className="flex-1 overflow-y-auto p-4">
+        {/* Grille produits — padding-bottom pour laisser place à la barre sticky */}
+        <div className={cn("flex-1 overflow-y-auto p-4", !panierOuvert && nbArticles > 0 && "pb-24 md:pb-4")}>
           {loading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
               {Array.from({ length: 12 }).map((_, i) => (
@@ -221,6 +221,56 @@ export function POSAgent() {
           ) : (
             <POSProduitGrid produits={produitsFiltres} />
           )}
+        </div>
+
+        {/* ── Barre sticky panier — mobile uniquement ── */}
+        <div
+          className={cn(
+            "absolute bottom-0 left-0 right-0 z-30 md:hidden",
+            "transition-all duration-300 ease-out",
+            nbArticles > 0 && !panierOuvert
+              ? "translate-y-0 opacity-100"
+              : "translate-y-full opacity-0 pointer-events-none"
+          )}
+        >
+          {/* Fond flou */}
+          <div className="px-3 pb-3 pt-2"
+            style={{ background: "linear-gradient(to top, var(--pos-bg) 70%, transparent)" }}
+          >
+            <button
+              onClick={() => setPanierOuvert(true)}
+              className="w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 shadow-2xl"
+              style={{
+                background: "linear-gradient(135deg, var(--pos-primary) 0%, #FF6D30 100%)",
+                boxShadow: "0 8px 32px rgba(255, 77, 0, 0.45)",
+              }}
+            >
+              {/* Badge article */}
+              <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0 relative">
+                <ShoppingCart className="w-4.5 h-4.5 text-white" />
+                <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-white text-[--pos-primary] rounded-full text-[10px] font-extrabold flex items-center justify-center">
+                  {nbArticles > 9 ? "9+" : nbArticles}
+                </span>
+              </div>
+
+              {/* Infos */}
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-white font-semibold text-sm leading-tight">
+                  {nbArticles} article{nbArticles > 1 ? "s" : ""}
+                </p>
+                <p className="text-white/80 text-xs font-medium text-mga leading-tight">
+                  {formatMGA(totalTTC)}
+                </p>
+              </div>
+
+              {/* CTA */}
+              <div className="flex items-center gap-1 text-white font-semibold text-sm shrink-0">
+                <Send className="w-4 h-4" />
+                <span>Voir le panier</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </button>
+          </div>
         </div>
       </div>
 
