@@ -16,6 +16,7 @@ import {
   ShoppingBag,
   CreditCard,
   Loader2,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
@@ -23,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
 
 type Palier = "gros" | "semi_gros" | "detail";
 
@@ -67,12 +69,25 @@ function getStatut(c: ClientDB): "actif" | "inactif" | "depassement" {
   return "actif";
 }
 
+function exportCSV(clients: ClientDB[]) {
+  const headers = ["Code", "Raison sociale", "Palier", "Telephone", "Email", "Adresse", "Total achats", "Nb commandes", "Encours", "Points fidelite"];
+  const rows = clients.map(c => [c.code, c.raisonSociale, c.palier, c.telephone ?? "", c.email ?? "", c.adresse ?? "", c.totalAchats, c.nbCommandes, c.encoursCourant, c.pointsFidelite]);
+  const csv = [headers, ...rows].map(r => r.join(";")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = `clients-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
 export function ClientsView() {
   const [recherche, setRecherche] = useState("");
   const [palierFiltre, setPalierFiltre] = useState<Palier | "tous">("tous");
   const [selection, setSelection] = useState<ClientDB | null>(null);
   const [clientsDB, setClientsDB] = useState<ClientDB[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editClient, setEditClient] = useState<ClientDB | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     fetch("/api/clients")
@@ -80,7 +95,7 @@ export function ClientsView() {
       .then((data: ClientDB[]) => setClientsDB(data ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [reloadKey]);
 
   const clients = useMemo(() => {
     const q = recherche.toLowerCase();
@@ -114,11 +129,11 @@ export function ClientsView() {
           <p className="text-[--foreground-muted] mt-1">Gestion relations & encours</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => exportCSV(clients)}>
             <Download className="w-4 h-4" />
             Exporter
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={() => { setEditClient(null); setShowForm(true); }}>
             <Plus className="w-4 h-4" />
             Nouveau client
           </Button>
@@ -188,7 +203,7 @@ export function ClientsView() {
                   {clientsDB.length === 0 ? "Aucun client enregistré" : "Aucun client correspond aux filtres"}
                 </p>
                 {clientsDB.length === 0 && (
-                  <Button size="sm">
+                  <Button size="sm" onClick={() => { setEditClient(null); setShowForm(true); }}>
                     <Plus className="w-4 h-4" />
                     Ajouter le premier client
                   </Button>
@@ -204,6 +219,7 @@ export function ClientsView() {
                     <th className="text-right px-4 py-3 font-medium text-[--foreground-muted] hidden md:table-cell">Fidélité</th>
                     <th className="text-right px-4 py-3 font-medium text-[--foreground-muted] hidden lg:table-cell">CA total</th>
                     <th className="text-center px-4 py-3 font-medium text-[--foreground-muted]">Statut</th>
+                    <th className="px-4 py-3" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[--border]">
@@ -273,6 +289,20 @@ export function ClientsView() {
                             <Badge variant="success" className="text-xs">Actif</Badge>
                           )}
                         </td>
+                        <td className="px-4 py-3">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Modifier"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditClient(c);
+                              setShowForm(true);
+                            }}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                        </td>
                       </motion.tr>
                     );
                   })}
@@ -283,6 +313,7 @@ export function ClientsView() {
         </CardContent>
       </Card>
 
+      {/* Drawer détail client */}
       <AnimatePresence>
         {selection && (
           <>
@@ -387,7 +418,18 @@ export function ClientsView() {
                 )}
 
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1">Modifier</Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      setEditClient(selection);
+                      setSelection(null);
+                      setShowForm(true);
+                    }}
+                  >
+                    Modifier
+                  </Button>
                   <Button size="sm" className="flex-1">Nouvelle commande</Button>
                 </div>
               </div>
@@ -395,6 +437,259 @@ export function ClientsView() {
           </>
         )}
       </AnimatePresence>
+
+      {/* Drawer formulaire client */}
+      <AnimatePresence>
+        {showForm && (
+          <ClientFormDrawer
+            editClient={editClient}
+            onClose={() => setShowForm(false)}
+            onSuccess={() => {
+              setShowForm(false);
+              setReloadKey((k) => k + 1);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+// ── ClientFormDrawer ──────────────────────────────────────────────────────────
+
+interface ClientFormDrawerProps {
+  editClient: ClientDB | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function ClientFormDrawer({ editClient, onClose, onSuccess }: ClientFormDrawerProps) {
+  const isEdit = editClient !== null;
+
+  const [raisonSociale, setRaisonSociale] = useState(editClient?.raisonSociale ?? "");
+  const [code, setCode] = useState(editClient?.code ?? "");
+  const [telephone, setTelephone] = useState(editClient?.telephone ?? "");
+  const [email, setEmail] = useState(editClient?.email ?? "");
+  const [adresse, setAdresse] = useState(editClient?.adresse ?? "");
+  const [nif, setNif] = useState("");
+  const [palier, setPalier] = useState<Palier>(editClient?.palier ?? "detail");
+  const [creditAutorise, setCreditAutorise] = useState(editClient?.creditAutorise ?? false);
+  const [plafondCredit, setPlafondCredit] = useState(editClient?.plafondCredit ?? 0);
+  const [notes, setNotes] = useState(editClient?.notes ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!raisonSociale.trim() || !code.trim()) {
+      toast.error("Raison sociale et code sont requis");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const body = {
+        raisonSociale: raisonSociale.trim(),
+        code: code.trim(),
+        telephone: telephone.trim() || null,
+        email: email.trim() || null,
+        adresse: adresse.trim() || null,
+        nif: nif.trim() || null,
+        palier,
+        creditAutorise,
+        plafondCredit: creditAutorise ? Number(plafondCredit) : 0,
+        notes: notes.trim() || null,
+      };
+
+      const url = isEdit ? `/api/clients/${editClient.id}` : "/api/clients";
+      const method = isEdit ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Erreur lors de la sauvegarde");
+        return;
+      }
+
+      toast.success(isEdit ? "Client modifié avec succès" : "Client créé avec succès");
+      onSuccess();
+    } catch {
+      toast.error("Erreur réseau");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+      />
+      <motion.aside
+        initial={{ x: "100%" }}
+        animate={{ x: 0 }}
+        exit={{ x: "100%" }}
+        transition={{ type: "spring", stiffness: 280, damping: 30 }}
+        className="fixed right-0 top-0 bottom-0 w-full sm:w-[420px] bg-[--background] border-l border-[--border] shadow-xl z-50 flex flex-col"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[--border] shrink-0">
+          <h2 className="font-bold text-[--foreground]">
+            {isEdit ? "Modifier le client" : "Nouveau client"}
+          </h2>
+          <Button variant="ghost" size="icon-sm" onClick={onClose}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
+          <div className="p-6 space-y-4">
+            {/* Raison sociale */}
+            <div>
+              <label className="block text-sm font-medium text-[--foreground] mb-1.5">
+                Raison sociale <span className="text-[--destructive]">*</span>
+              </label>
+              <Input
+                value={raisonSociale}
+                onChange={(e) => setRaisonSociale(e.target.value)}
+                placeholder="Ex: SARL Dupont"
+                required
+              />
+            </div>
+
+            {/* Code */}
+            <div>
+              <label className="block text-sm font-medium text-[--foreground] mb-1.5">
+                Code client <span className="text-[--destructive]">*</span>
+              </label>
+              <Input
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="Ex: CLI001"
+                required
+              />
+            </div>
+
+            {/* Téléphone */}
+            <div>
+              <label className="block text-sm font-medium text-[--foreground] mb-1.5">Téléphone</label>
+              <Input
+                value={telephone}
+                onChange={(e) => setTelephone(e.target.value)}
+                placeholder="Ex: +261 34 00 000 00"
+                type="tel"
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-[--foreground] mb-1.5">Email</label>
+              <Input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="client@exemple.com"
+                type="email"
+              />
+            </div>
+
+            {/* Adresse */}
+            <div>
+              <label className="block text-sm font-medium text-[--foreground] mb-1.5">Adresse</label>
+              <Input
+                value={adresse}
+                onChange={(e) => setAdresse(e.target.value)}
+                placeholder="Adresse complète"
+              />
+            </div>
+
+            {/* NIF */}
+            <div>
+              <label className="block text-sm font-medium text-[--foreground] mb-1.5">NIF</label>
+              <Input
+                value={nif}
+                onChange={(e) => setNif(e.target.value)}
+                placeholder="Numéro d'identification fiscale"
+              />
+            </div>
+
+            {/* Palier */}
+            <div>
+              <label className="block text-sm font-medium text-[--foreground] mb-1.5">Palier</label>
+              <select
+                value={palier}
+                onChange={(e) => setPalier(e.target.value as Palier)}
+                className="w-full h-10 rounded-md border border-[--border] bg-[--background] px-3 text-sm text-[--foreground] focus:outline-none focus:ring-2 focus:ring-[--primary]/30"
+              >
+                <option value="gros">Gros</option>
+                <option value="semi_gros">Semi-gros</option>
+                <option value="detail">Détail</option>
+              </select>
+            </div>
+
+            {/* Crédit autorisé */}
+            <div className="flex items-center gap-3">
+              <input
+                id="creditAutorise"
+                type="checkbox"
+                checked={creditAutorise}
+                onChange={(e) => setCreditAutorise(e.target.checked)}
+                className="w-4 h-4 rounded border-[--border] accent-[--primary]"
+              />
+              <label htmlFor="creditAutorise" className="text-sm font-medium text-[--foreground] cursor-pointer">
+                Crédit autorisé
+              </label>
+            </div>
+
+            {/* Plafond crédit */}
+            {creditAutorise && (
+              <div>
+                <label className="block text-sm font-medium text-[--foreground] mb-1.5">Plafond crédit (Ar)</label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={plafondCredit}
+                  onChange={(e) => setPlafondCredit(Number(e.target.value))}
+                  placeholder="0"
+                />
+              </div>
+            )}
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-[--foreground] mb-1.5">Notes</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Remarques internes..."
+                rows={3}
+                className="w-full rounded-md border border-[--border] bg-[--background] px-3 py-2 text-sm text-[--foreground] resize-none focus:outline-none focus:ring-2 focus:ring-[--primary]/30"
+              />
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 pb-6 shrink-0">
+            <div className="flex gap-2">
+              <Button type="button" variant="outline" className="flex-1" onClick={onClose} disabled={saving}>
+                Annuler
+              </Button>
+              <Button type="submit" className="flex-1" disabled={saving}>
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isEdit ? "Enregistrer" : "Créer le client"}
+              </Button>
+            </div>
+          </div>
+        </form>
+      </motion.aside>
+    </>
   );
 }

@@ -152,6 +152,30 @@ export function StockView() {
     },
   ];
 
+  function exportCSV() {
+    const headers = ["Code", "Produit", "Categorie", "Unite", "Stock", "Seuil alerte", "Prix achat", "Prix vente", "Valeur stock", "Alertes"];
+    const rows = produits.map(p => [
+      p.code,
+      p.nom,
+      p.categorie,
+      p.uniteBase,
+      p.stockBase,
+      p.seuilAlerte,
+      p.prixAchat,
+      p.prixVente,
+      p.valeurStock,
+      p.alerteRupture ? "Rupture" : "OK",
+    ]);
+    const csv = [headers, ...rows].map(r => r.join(";")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `stock-${depotId ?? "tous"}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function ouvrirDrawer(p: ProduitStock) {
     setDrawerProduit(p);
     setStocksEdites({});
@@ -208,7 +232,7 @@ export function StockView() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={exportCSV} disabled={loading || produits.length === 0}>
             <Download className="w-4 h-4" />
             Exporter
           </Button>

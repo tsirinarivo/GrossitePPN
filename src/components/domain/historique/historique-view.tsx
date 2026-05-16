@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   RefreshCw, History, CheckCircle2, XCircle, Clock,
-  TrendingUp, ShoppingBag, Loader2, Printer, ChevronDown,
+  TrendingUp, ShoppingBag, Loader2, Printer, ChevronDown, Download,
 } from "lucide-react";
 import { formatMGA } from "@/lib/money";
 import { toast } from "sonner";
@@ -36,6 +36,27 @@ function fmt(iso: string | null): string {
   const d = new Date(iso);
   return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) +
     " · " + d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+}
+
+function exportCSV(commandes: Commande[]) {
+  const headers = ["Numero", "Date", "Client", "Statut", "Total HT", "Total TTC", "Mode paiement"];
+  const rows = commandes.map(c => [
+    c.numero,
+    c.soumiseAt ? new Date(c.soumiseAt).toLocaleString("fr-FR") : "",
+    c.client,
+    BADGE[c.statut]?.label ?? c.statut,
+    "",
+    c.totalTTC,
+    "—",
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(";")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `historique-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export function HistoriqueView() {
@@ -103,6 +124,14 @@ export function HistoriqueView() {
       <div className="flex items-center gap-3 px-4 md:px-6 py-4 border-b border-[--border] bg-[--card] shrink-0">
         <History className="w-5 h-5 text-[--primary]" />
         <h1 className="text-lg font-bold flex-1">Historique des ventes</h1>
+        <button
+          onClick={() => exportCSV(commandes)}
+          disabled={loading || commandes.length === 0}
+          title="Exporter CSV"
+          className="p-2 rounded-lg hover:bg-[--muted] text-[--foreground-subtle] disabled:opacity-40"
+        >
+          <Download className="w-4 h-4" />
+        </button>
         <button
           onClick={() => charger(periode)}
           disabled={loading}
