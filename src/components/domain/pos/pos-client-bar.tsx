@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { User, CreditCard, Star, X, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { usePOSStore } from "@/store/pos.store";
 import type { ClientPOS } from "@/store/pos.store";
 import { formatMGA } from "@/lib/money";
@@ -62,8 +62,12 @@ export function POSClientBar() {
   const [clients, setClients] = useState<ClientPOS[]>([]);
   const [recherche, setRecherche] = useState("");
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const [mounted, setMounted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     fetch("/api/clients")
@@ -103,6 +107,20 @@ export function POSClientBar() {
       c.raisonSociale.toLowerCase().includes(q) ||
       c.code.toLowerCase().includes(q)
   );
+
+  const openDropdown = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: "fixed",
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      });
+    }
+    setDropdownOpen(true);
+  };
 
   const handleSelect = (c: ClientPOS) => {
     setClient(c);
@@ -167,18 +185,18 @@ export function POSClientBar() {
           <input
             ref={inputRef}
             value={recherche}
-            onChange={(e) => { setRecherche(e.target.value); setDropdownOpen(true); }}
-            onFocus={() => setDropdownOpen(true)}
+            onChange={(e) => { setRecherche(e.target.value); openDropdown(); }}
+            onFocus={() => openDropdown()}
             placeholder="Rechercher un client…"
             className="w-full pl-9 pr-4 h-9 rounded-xl text-sm border border-[--pos-border] focus:outline-none focus:border-[--pos-primary] transition-colors text-[--pos-text] placeholder:text-[--pos-text-muted]"
             style={{ backgroundColor: "#1a1a1a" }}
           />
 
-          {/* Dropdown résultats */}
-          {dropdownOpen && clientsFiltres.length > 0 && (
+          {/* Dropdown via portal — échappe overflow-hidden du container POS */}
+          {mounted && dropdownOpen && clientsFiltres.length > 0 && createPortal(
             <div
-              className="absolute top-full left-0 right-0 mt-1 z-50 border border-[--pos-border] rounded-xl shadow-2xl overflow-hidden max-h-56 overflow-y-auto"
-              style={{ backgroundColor: "#1c1c1e" }}
+              className="border border-[--pos-border] rounded-xl shadow-2xl overflow-hidden max-h-56 overflow-y-auto"
+              style={{ ...dropdownStyle, backgroundColor: "#111118" }}
             >
               {clientsFiltres.map((c) => (
                 <button
@@ -186,7 +204,7 @@ export function POSClientBar() {
                   onMouseDown={(e) => { e.preventDefault(); handleSelect(c); }}
                   className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
                   style={{ backgroundColor: "transparent" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2a2a")}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#1E1E2E")}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                 >
                   <div className="w-7 h-7 rounded-full bg-[--pos-primary]/20 flex items-center justify-center shrink-0">
@@ -205,7 +223,8 @@ export function POSClientBar() {
                   </Badge>
                 </button>
               ))}
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       )}
