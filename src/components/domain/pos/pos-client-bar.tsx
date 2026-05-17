@@ -170,22 +170,24 @@ export function POSClientBar() {
             onChange={(e) => { setRecherche(e.target.value); setDropdownOpen(true); }}
             onFocus={() => setDropdownOpen(true)}
             placeholder="Rechercher un client…"
-            className={cn(
-              "w-full pl-9 pr-4 h-9 rounded-xl text-sm",
-              "bg-[--pos-surface-hover] border border-[--pos-border]",
-              "text-[--pos-text] placeholder:text-[--pos-text-muted]",
-              "focus:outline-none focus:border-[--pos-primary] transition-colors"
-            )}
+            className="w-full pl-9 pr-4 h-9 rounded-xl text-sm border border-[--pos-border] focus:outline-none focus:border-[--pos-primary] transition-colors text-[--pos-text] placeholder:text-[--pos-text-muted]"
+            style={{ backgroundColor: "#1a1a1a" }}
           />
 
           {/* Dropdown résultats */}
           {dropdownOpen && clientsFiltres.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-[--pos-surface] border border-[--pos-border] rounded-xl shadow-2xl overflow-hidden max-h-56 overflow-y-auto">
+            <div
+              className="absolute top-full left-0 right-0 mt-1 z-50 border border-[--pos-border] rounded-xl shadow-2xl overflow-hidden max-h-56 overflow-y-auto"
+              style={{ backgroundColor: "#1c1c1e" }}
+            >
               {clientsFiltres.map((c) => (
                 <button
                   key={c.id}
                   onMouseDown={(e) => { e.preventDefault(); handleSelect(c); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-[--pos-surface-hover] transition-colors text-left"
+                  className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
+                  style={{ backgroundColor: "transparent" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#2a2a2a")}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                 >
                   <div className="w-7 h-7 rounded-full bg-[--pos-primary]/20 flex items-center justify-center shrink-0">
                     <User className="w-3.5 h-3.5" style={{ color: "#FF4D00" }} />
