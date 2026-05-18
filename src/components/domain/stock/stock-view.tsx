@@ -17,6 +17,8 @@ import {
   X,
   Check,
   ChevronRight,
+  ArrowLeftRight,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
@@ -76,6 +78,17 @@ export function StockView() {
   const [stocksEdites, setStocksEdites] = useState<Record<string, string>>({});
   const [stocksLoading, setStocksLoading] = useState(false);
   const [savingDepotId, setSavingDepotId] = useState<string | null>(null);
+
+  // Modal transfert
+  const [showTransfert, setShowTransfert] = useState(false);
+  const [trf, setTrf] = useState({ produitId: "", sourceDepotId: "", destinationDepotId: "", quantiteBase: "", notes: "" });
+  const [savingTransfert, setSavingTransfert] = useState(false);
+
+  // Modal inventaire
+  const [showInventaire, setShowInventaire] = useState(false);
+  const [invDepotId, setInvDepotId] = useState("");
+  const [invLignes, setInvLignes] = useState<{ produitId: string; nom: string; stockActuel: number; quantiteComptee: string }[]>([]);
+  const [savingInv, setSavingInv] = useState(false);
 
   // Fetch depots list once
   useEffect(() => {
@@ -192,6 +205,65 @@ export function StockView() {
       .finally(() => setStocksLoading(false));
   }
 
+  async function lancerTransfert() {
+    if (!trf.produitId || !trf.sourceDepotId || !trf.destinationDepotId || !trf.quantiteBase) {
+      toast.error("Remplissez tous les champs obligatoires");
+      return;
+    }
+    const qte = parseFloat(trf.quantiteBase);
+    if (isNaN(qte) || qte <= 0) { toast.error("Quantité invalide"); return; }
+    setSavingTransfert(true);
+    try {
+      const res = await fetch("/api/stock/transferts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...trf, quantiteBase: qte }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Transfert enregistré (${data.reference})`);
+        setShowTransfert(false);
+        setTrf({ produitId: "", sourceDepotId: "", destinationDepotId: "", quantiteBase: "", notes: "" });
+        setReloadKey((k) => k + 1);
+      } else {
+        toast.error(data.error ?? "Erreur transfert");
+      }
+    } catch { toast.error("Erreur réseau"); }
+    finally { setSavingTransfert(false); }
+  }
+
+  function ouvrirInventaire() {
+    if (depots.length === 0) { toast.error("Aucun dépôt disponible"); return; }
+    const premierDepot = depots[0]!;
+    setInvDepotId(premierDepot.id);
+    setInvLignes(produitsDB.map((p) => ({ produitId: p.id, nom: p.nom, stockActuel: p.stockBase, quantiteComptee: String(p.stockBase) })));
+    setShowInventaire(true);
+  }
+
+  async function validerInventaire() {
+    const lignes = invLignes
+      .map((l) => ({ produitId: l.produitId, quantiteComptee: parseFloat(l.quantiteComptee) }))
+      .filter((l) => !isNaN(l.quantiteComptee));
+    if (lignes.length === 0) { toast.error("Aucune ligne valide"); return; }
+    setSavingInv(true);
+    try {
+      const res = await fetch("/api/stock/inventaire", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ depotId: invDepotId, lignes }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(`Inventaire ${data.reference} — ${data.ecarts} écart(s) corrigé(s)`);
+        setShowInventaire(false);
+        setReloadKey((k) => k + 1);
+      } else {
+        toast.error(data.error ?? "Erreur inventaire");
+      }
+    } catch { toast.error("Erreur réseau"); }
+    finally { setSavingInv(false); }
+  }
+
   async function sauvegarderDepot(cibleDepotId: string) {
     if (!drawerProduit || savingDepotId) return;
     const qte = parseFloat(stocksEdites[cibleDepotId] ?? "0");
@@ -235,6 +307,14 @@ export function StockView() {
           <Button variant="outline" size="sm" onClick={exportCSV} disabled={loading || produits.length === 0}>
             <Download className="w-4 h-4" />
             Exporter
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowTransfert(true)} disabled={depots.length < 2}>
+            <ArrowLeftRight className="w-4 h-4" />
+            Transfert
+          </Button>
+          <Button variant="outline" size="sm" onClick={ouvrirInventaire} disabled={loading || produitsDB.length === 0}>
+            <ClipboardList className="w-4 h-4" />
+            Inventaire
           </Button>
           <Button size="sm" asChild>
             <Link href="/stock/produits/nouveau">
@@ -569,6 +649,196 @@ export function StockView() {
                   </div>
                 </div>
               )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Modal Transfert ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showTransfert && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowTransfert(false)}
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div className="bg-[--card] border border-[--border] rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-bold text-lg text-[--foreground] flex items-center gap-2">
+                    <ArrowLeftRight className="w-5 h-5 text-[--primary]" />
+                    Transfert entre dépôts
+                  </h2>
+                  <Button variant="ghost" size="icon-sm" onClick={() => setShowTransfert(false)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs text-[--foreground-muted] font-medium mb-1 block">Produit *</label>
+                    <select
+                      className="w-full rounded-lg border border-[--border] bg-[--background] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[--primary]"
+                      value={trf.produitId}
+                      onChange={(e) => setTrf((t) => ({ ...t, produitId: e.target.value }))}
+                    >
+                      <option value="">Sélectionner un produit…</option>
+                      {produitsDB.map((p) => (
+                        <option key={p.id} value={p.id}>{p.nom} ({p.code})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-[--foreground-muted] font-medium mb-1 block">Source *</label>
+                      <select
+                        className="w-full rounded-lg border border-[--border] bg-[--background] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[--primary]"
+                        value={trf.sourceDepotId}
+                        onChange={(e) => setTrf((t) => ({ ...t, sourceDepotId: e.target.value }))}
+                      >
+                        <option value="">Choisir…</option>
+                        {depots.map((d) => (
+                          <option key={d.id} value={d.id}>{d.nom}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-[--foreground-muted] font-medium mb-1 block">Destination *</label>
+                      <select
+                        className="w-full rounded-lg border border-[--border] bg-[--background] px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[--primary]"
+                        value={trf.destinationDepotId}
+                        onChange={(e) => setTrf((t) => ({ ...t, destinationDepotId: e.target.value }))}
+                      >
+                        <option value="">Choisir…</option>
+                        {depots.filter((d) => d.id !== trf.sourceDepotId).map((d) => (
+                          <option key={d.id} value={d.id}>{d.nom}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-[--foreground-muted] font-medium mb-1 block">Quantité (unité de base) *</label>
+                    <Input
+                      type="number" min="0" step="0.01"
+                      placeholder="Ex: 50"
+                      value={trf.quantiteBase}
+                      onChange={(e) => setTrf((t) => ({ ...t, quantiteBase: e.target.value }))}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-[--foreground-muted] font-medium mb-1 block">Notes</label>
+                    <Input
+                      placeholder="Motif du transfert…"
+                      value={trf.notes}
+                      onChange={(e) => setTrf((t) => ({ ...t, notes: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setShowTransfert(false)}>Annuler</Button>
+                  <Button onClick={lancerTransfert} disabled={savingTransfert}>
+                    {savingTransfert ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    Confirmer le transfert
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Modal Inventaire ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {showInventaire && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+              onClick={() => !savingInv && setShowInventaire(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            >
+              <div className="bg-[--card] border border-[--border] rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh]">
+                <div className="flex items-center justify-between p-5 border-b border-[--border] shrink-0">
+                  <h2 className="font-bold text-lg text-[--foreground] flex items-center gap-2">
+                    <ClipboardList className="w-5 h-5 text-[--primary]" />
+                    Inventaire physique
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <select
+                      className="rounded-lg border border-[--border] bg-[--background] px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[--primary]"
+                      value={invDepotId}
+                      onChange={(e) => setInvDepotId(e.target.value)}
+                    >
+                      {depots.map((d) => (
+                        <option key={d.id} value={d.id}>{d.nom}</option>
+                      ))}
+                    </select>
+                    <Button variant="ghost" size="icon-sm" onClick={() => setShowInventaire(false)}>
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-[--muted] z-10">
+                      <tr>
+                        <th className="text-left px-4 py-2 text-[--foreground-muted] font-medium">Produit</th>
+                        <th className="text-right px-4 py-2 text-[--foreground-muted] font-medium">Stock système</th>
+                        <th className="text-right px-4 py-2 text-[--foreground-muted] font-medium">Quantité comptée</th>
+                        <th className="text-right px-4 py-2 text-[--foreground-muted] font-medium">Écart</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[--border]">
+                      {invLignes.map((ligne, idx) => {
+                        const compte = parseFloat(ligne.quantiteComptee);
+                        const ecart = isNaN(compte) ? null : compte - ligne.stockActuel;
+                        return (
+                          <tr key={ligne.produitId} className="hover:bg-[--accent]/50">
+                            <td className="px-4 py-2 font-medium text-[--foreground]">{ligne.nom}</td>
+                            <td className="text-right px-4 py-2 text-[--foreground-muted]">
+                              {ligne.stockActuel.toLocaleString("fr-FR")}
+                            </td>
+                            <td className="text-right px-2 py-1.5">
+                              <Input
+                                type="number" min="0" step="0.01"
+                                value={ligne.quantiteComptee}
+                                onChange={(e) => setInvLignes((prev) => prev.map((l, i) => i === idx ? { ...l, quantiteComptee: e.target.value } : l))}
+                                className="w-28 text-right ml-auto h-8 text-sm"
+                              />
+                            </td>
+                            <td className={cn(
+                              "text-right px-4 py-2 font-medium text-sm",
+                              ecart === null ? "text-[--foreground-muted]" : ecart > 0 ? "text-[--success]" : ecart < 0 ? "text-[--destructive]" : "text-[--foreground-muted]"
+                            )}>
+                              {ecart === null ? "—" : ecart === 0 ? "OK" : `${ecart > 0 ? "+" : ""}${ecart.toLocaleString("fr-FR")}`}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex justify-end gap-2 p-4 border-t border-[--border] shrink-0">
+                  <Button variant="outline" onClick={() => setShowInventaire(false)} disabled={savingInv}>Annuler</Button>
+                  <Button onClick={validerInventaire} disabled={savingInv}>
+                    {savingInv ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    Valider l&apos;inventaire
+                  </Button>
+                </div>
+              </div>
             </motion.div>
           </>
         )}

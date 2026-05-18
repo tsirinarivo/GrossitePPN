@@ -143,11 +143,21 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
+function getTierFidelite(points: number): "bronze" | "argent" | "or" | "platine" {
+  if (points >= 200_000) return "platine";
+  if (points >= 50_000) return "or";
+  if (points >= 10_000) return "argent";
+  return "bronze";
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const { id } = await params;
+  const body = await req.json().catch(() => ({}));
+  const modePaiement: string = body?.modePaiement ?? "especes";
+
   try {
     // Atomic state transition — prevents double-validation and race conditions
     const [updated] = await db
@@ -163,6 +173,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         id: schema.commandes.id,
         numero: schema.commandes.numero,
         depotId: schema.commandes.depotId,
+        clientId: schema.commandes.clientId,
+        totalHT: schema.commandes.totalHT,
+        totalTVA: schema.commandes.totalTVA,
+        totalTTC: schema.commandes.totalTTC,
+        assujettieTV: schema.commandes.assujettieTV,
       });
 
     if (!updated) {
@@ -175,7 +190,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: "Commande déjà traitée" }, { status: 409 });
     }
 
-    // Déduire le stock pour chaque ligne (si la commande est liée à un dépôt)
+    // ── 1. Déduction de stock ──────────────────────────────────────────────
     if (updated.depotId) {
       const depotId = updated.depotId;
       const lignes = await db
@@ -227,9 +242,92 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
 
+    // ── 2. Création facture + paiement ─────────────────────────────────────
+    const now = new Date();
+    const datePart = now.toISOString().slice(0, 10).replace(/-/g, "");
+    const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+    const factureNumero = `FAC-${datePart}-${rand}`;
+    const factureId = crypto.randomUUID();
+
+    await db.insert(schema.factures).values({
+      id: factureId,
+      numero: factureNumero,
+      commandeId: id,
+      clientId: updated.clientId ?? null,
+      caissierID: session.user.id,
+      totalHT: updated.totalHT,
+      totalTVA: updated.totalTVA,
+      totalTTC: updated.totalTTC,
+      totalRegle: updated.totalTTC,
+      soldeRestant: 0,
+      modePaiement: modePaiement as Parameters<typeof db.insert>[0] extends never ? never : "especes",
+      statut: "payee",
+    });
+
+    await db.insert(schema.paiements).values({
+      id: crypto.randomUUID(),
+      factureId,
+      mode: modePaiement as "especes",
+      montant: updated.totalTTC,
+      confirme: true,
+    });
+
+    // ── 3. Mise à jour stats + encours client ──────────────────────────────
+    if (updated.clientId) {
+      const [client] = await db
+        .select({
+          totalAchats: schema.clients.totalAchats,
+          nbCommandes: schema.clients.nbCommandes,
+          pointsFidelite: schema.clients.pointsFidelite,
+          encoursCourant: schema.clients.encoursCourant,
+          creditAutorise: schema.clients.creditAutorise,
+        })
+        .from(schema.clients)
+        .where(eq(schema.clients.id, updated.clientId))
+        .limit(1);
+
+      if (client) {
+        const nouveauTotal = client.totalAchats + updated.totalTTC;
+        const nouveauNb = client.nbCommandes + 1;
+        const nouveauPanier = Math.round(nouveauTotal / nouveauNb);
+
+        // Encours: incrémenter si paiement à crédit, décrémenter sinon (si mode = "credit_client")
+        const deltaEncours = modePaiement === "credit_client" ? updated.totalTTC : 0;
+        const nouvelEncours = Math.max(0, client.encoursCourant + deltaEncours);
+
+        // Points fidélité: 1 point par 1 000 MGA
+        const pointsGagnes = Math.floor(updated.totalTTC / 1000);
+        const nouveauxPoints = client.pointsFidelite + pointsGagnes;
+        const nouveauTier = getTierFidelite(nouveauxPoints);
+
+        await db.update(schema.clients).set({
+          totalAchats: nouveauTotal,
+          nbCommandes: nouveauNb,
+          panierMoyen: nouveauPanier,
+          dernierAchat: now,
+          encoursCourant: nouvelEncours,
+          pointsFidelite: nouveauxPoints,
+          statutFidelite: nouveauTier,
+          updatedAt: now,
+        }).where(eq(schema.clients.id, updated.clientId));
+
+        if (pointsGagnes > 0) {
+          await db.insert(schema.transactionsFidelite).values({
+            id: crypto.randomUUID(),
+            clientId: updated.clientId,
+            type: "gain",
+            points: pointsGagnes,
+            soldeApres: nouveauxPoints,
+            reference: updated.numero,
+            notes: `Vente ${updated.numero}`,
+          });
+        }
+      }
+    }
+
     broadcastAnnulation({ commandeId: id, numero: updated.numero });
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, factureNumero });
   } catch (e) {
     console.error("[api/caisse/commandes/[id] PATCH]", e);
     return NextResponse.json({ error: String(e) }, { status: 500 });

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { User, CreditCard, Star, X, Search, UserPlus, Loader2 } from "lucide-react";
+import { User, CreditCard, Star, X, Search, UserPlus, Loader2, AlertTriangle } from "lucide-react";
 import { usePOSStore } from "@/store/pos.store";
 import type { ClientPOS } from "@/store/pos.store";
 import { formatMGA } from "@/lib/money";
@@ -168,17 +168,23 @@ export function POSClientBar() {
                   {PALIER_LABELS[client.palier]}
                 </Badge>
               </div>
-              <div className="hidden sm:flex items-center gap-3 text-[11px] text-[--pos-text-muted]">
-                {client.creditAutorise && (
-                  <span className="flex items-center gap-1">
-                    <CreditCard className="w-3 h-3" />
-                    Encours: {formatMGA(client.encoursCourant)} / {formatMGA(client.plafondCredit)}
-                  </span>
-                )}
+              <div className="hidden sm:flex items-center gap-3 text-[11px] text-[--pos-text-muted] flex-wrap">
+                {client.creditAutorise && (() => {
+                  const pct = client.plafondCredit > 0 ? Math.round((client.encoursCourant / client.plafondCredit) * 100) : 0;
+                  const sature = pct >= 90;
+                  const alerte = pct >= 75;
+                  return (
+                    <span className={`flex items-center gap-1 ${sature ? "text-red-400" : alerte ? "text-yellow-400" : ""}`}>
+                      {sature ? <AlertTriangle className="w-3 h-3" /> : <CreditCard className="w-3 h-3" />}
+                      Crédit: {formatMGA(client.plafondCredit - client.encoursCourant)} dispo
+                      {sature && " — LIMITÉ"}
+                    </span>
+                  );
+                })()}
                 {client.pointsFidelite > 0 && (
                   <span className="flex items-center gap-1">
                     <Star className="w-3 h-3" />
-                    {client.pointsFidelite} pts
+                    {client.pointsFidelite.toLocaleString("fr-FR")} pts fidélité
                   </span>
                 )}
               </div>
