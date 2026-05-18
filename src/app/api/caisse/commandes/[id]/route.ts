@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, notInArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { broadcastMiseAJour, broadcastAnnulation } from "@/lib/sse/broadcast";
@@ -149,21 +149,85 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params;
   try {
-    const [commande] = await db
-      .select({ id: schema.commandes.id, statut: schema.commandes.statut, numero: schema.commandes.numero })
-      .from(schema.commandes)
-      .where(eq(schema.commandes.id, id))
-      .limit(1);
-
-    if (!commande) return NextResponse.json({ error: "Commande introuvable" }, { status: 404 });
-
-    await db
+    // Atomic state transition — prevents double-validation and race conditions
+    const [updated] = await db
       .update(schema.commandes)
       .set({ statut: "validee", valideeAt: new Date() })
-      .where(eq(schema.commandes.id, id));
+      .where(
+        and(
+          eq(schema.commandes.id, id),
+          notInArray(schema.commandes.statut, ["validee", "annulee"])
+        )
+      )
+      .returning({
+        id: schema.commandes.id,
+        numero: schema.commandes.numero,
+        depotId: schema.commandes.depotId,
+      });
 
-    // Retire la commande de la file SSE pour tous les postes caisse connectés
-    broadcastAnnulation({ commandeId: id, numero: commande.numero });
+    if (!updated) {
+      const [existing] = await db
+        .select({ statut: schema.commandes.statut })
+        .from(schema.commandes)
+        .where(eq(schema.commandes.id, id))
+        .limit(1);
+      if (!existing) return NextResponse.json({ error: "Commande introuvable" }, { status: 404 });
+      return NextResponse.json({ error: "Commande déjà traitée" }, { status: 409 });
+    }
+
+    // Déduire le stock pour chaque ligne (si la commande est liée à un dépôt)
+    if (updated.depotId) {
+      const depotId = updated.depotId;
+      const lignes = await db
+        .select({
+          produitId: schema.lignesCommande.produitId,
+          quantiteBase: schema.lignesCommande.quantiteBase,
+        })
+        .from(schema.lignesCommande)
+        .where(eq(schema.lignesCommande.commandeId, id));
+
+      for (const ligne of lignes) {
+        const [stockRow] = await db
+          .select({ quantiteBase: schema.stocks.quantiteBase })
+          .from(schema.stocks)
+          .where(
+            and(
+              eq(schema.stocks.produitId, ligne.produitId),
+              eq(schema.stocks.depotId, depotId)
+            )
+          )
+          .limit(1);
+
+        const avant = stockRow?.quantiteBase ?? 0;
+        const apres = Math.max(0, avant - ligne.quantiteBase);
+
+        if (stockRow) {
+          await db
+            .update(schema.stocks)
+            .set({ quantiteBase: apres, updatedAt: new Date() })
+            .where(
+              and(
+                eq(schema.stocks.produitId, ligne.produitId),
+                eq(schema.stocks.depotId, depotId)
+              )
+            );
+        }
+
+        await db.insert(schema.mouvementsStock).values({
+          id: crypto.randomUUID(),
+          produitId: ligne.produitId,
+          depotId,
+          type: "vente",
+          quantiteBase: ligne.quantiteBase,
+          quantiteAvant: avant,
+          quantiteApres: apres,
+          reference: updated.numero,
+          userId: session.user.id,
+        });
+      }
+    }
+
+    broadcastAnnulation({ commandeId: id, numero: updated.numero });
 
     return NextResponse.json({ ok: true });
   } catch (e) {

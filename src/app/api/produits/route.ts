@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -116,6 +118,9 @@ const nouveauProduitSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
   try {
     const body = await req.json().catch(() => null);
     const parsed = nouveauProduitSchema.safeParse(body);
