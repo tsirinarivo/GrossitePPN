@@ -17,8 +17,11 @@ const MOIS_LABELS: Record<string, string> = {
 
 // Statuts considérés comme générant une TVA collectée
 const STATUTS_VALIDES = [
-  "validee", "preparee", "en_livraison", "livree",
-] as const;
+  "validee",
+  "preparee",
+  "en_livraison",
+  "livree",
+] satisfies Array<typeof schema.commandes.statut.enumValues[number]>;
 
 function periodeBornes(annee: number, trimestre?: number): { debut: Date; fin: Date } {
   if (trimestre) {
@@ -89,7 +92,7 @@ export async function GET(req: NextRequest) {
       .from(schema.commandes)
       .where(
         and(
-          inArray(schema.commandes.statut, STATUTS_VALIDES as unknown as string[]),
+          inArray(schema.commandes.statut, STATUTS_VALIDES),
           gte(schema.commandes.createdAt, debut),
           lte(schema.commandes.createdAt, fin)
         )

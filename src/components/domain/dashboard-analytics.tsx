@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { TrendingUp, ShoppingBag, Package, Loader2, AlertTriangle, BarChart2, Layers } from "lucide-react";
+import { TrendingUp, ShoppingBag, Package, Loader2, AlertTriangle, BarChart2, Layers, FileText, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
@@ -115,6 +116,24 @@ export function DashboardAnalytics() {
         <div>
           <h1 className="text-display-sm text-[--foreground]">Rapports & Analytiques</h1>
           <p className="text-[--foreground-muted] text-sm mt-0.5">Données financières et stock en temps réel</p>
+          <div className="flex items-center gap-2 mt-2">
+            <Link
+              href="/rapports/tva"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+              style={{ backgroundColor: "#1E1E2E", color: "#A0AEC0", border: "1px solid #2E2E3E" }}
+            >
+              <Receipt className="w-3.5 h-3.5" />
+              Rapport TVA
+            </Link>
+            <Link
+              href="/rapports/marges"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+              style={{ backgroundColor: "#1E1E2E", color: "#A0AEC0", border: "1px solid #2E2E3E" }}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Marges produits
+            </Link>
+          </div>
         </div>
         <div className="flex items-center gap-1 bg-[--muted] rounded-xl p-1">
           {PERIODES.map((p) => (

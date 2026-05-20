@@ -5,6 +5,7 @@ import { Menu, Package } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardNav } from "./dashboard-nav";
 import { GlobalSearch } from "@/components/global-search";
+import { NotificationBell } from "@/components/notification-bell";
 
 export function DashboardShell({
   children,
@@ -82,6 +83,7 @@ export function DashboardShell({
           </div>
           <span className="text-sm font-bold text-white">GrossistePPN</span>
         </div>
+        <NotificationBell />
         <GlobalSearch />
       </div>
     </div>
