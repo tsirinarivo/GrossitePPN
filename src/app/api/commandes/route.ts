@@ -81,11 +81,12 @@ export async function GET(req: NextRequest) {
     .offset(offset);
 
   // Total count
-  const [{ total }] = await db
+  const totalRows = await db
     .select({ total: sql<number>`cast(count(*) as integer)` })
     .from(schema.commandes)
     .leftJoin(schema.clients, eq(schema.commandes.clientId, schema.clients.id))
     .where(where);
+  const total = totalRows[0]?.total ?? 0;
 
   // Counts per statut (for KPI bar)
   const countRows = await db

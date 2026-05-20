@@ -17,7 +17,7 @@ export type AppRole =
  */
 export const ROLE_SECTIONS: Record<AppRole, string[] | "*"> = {
   admin:                  "*",
-  gerant:                 ["/", "/pos", "/stock", "/clients", "/livraisons", "/achats", "/rapports", "/historique", "/finances"],
+  gerant:                 ["/", "/pos", "/stock", "/clients", "/livraisons", "/achats", "/rapports", "/historique", "/finances", "/commandes"],
   caissier:               ["/pos/caisse", "/historique"],
   agent:                  ["/pos/agent", "/clients"],
   magasinier:             ["/stock", "/achats"],

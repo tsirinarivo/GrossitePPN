@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   TrendingUp, TrendingDown, DollarSign, ShoppingCart, Minus,
   BarChart2, LineChart as LineChartIcon, Plus, Pencil, Trash2,
-  Loader2, RefreshCw, ChevronDown,
+  Loader2, RefreshCw, ChevronDown, ArrowRight,
 } from "lucide-react";
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line,
@@ -532,9 +533,17 @@ export function FinancesView() {
           {/* ── Charges opérationnelles ───────────────────────────────────── */}
           <div className="bg-[--card] border border-[--border] rounded-xl overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-[--border]">
-              <p className="text-xs font-medium text-[--foreground-subtle] flex-1">
-                Charges opérationnelles — {moisActuel}
-              </p>
+              <div className="flex-1 flex items-center gap-3">
+                <p className="text-xs font-medium text-[--foreground-subtle]">
+                  Charges opérationnelles — {moisActuel}
+                </p>
+                <Link
+                  href="/finances/charges"
+                  className="flex items-center gap-1 text-[11px] text-[--primary] hover:underline opacity-80 hover:opacity-100 transition-opacity"
+                >
+                  Gérer les charges <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
               <button onClick={() => setChargeModal({ open: true })}
                 className="flex items-center gap-1 px-3 py-1.5 bg-[--primary] text-white text-xs rounded-lg font-medium hover:opacity-90">
                 <Plus className="w-3.5 h-3.5" /> Ajouter
