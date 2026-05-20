@@ -312,6 +312,12 @@ export function StockView() {
             <ArrowLeftRight className="w-4 h-4" />
             Transfert
           </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/stock/analyse">
+              <BarChart2 className="w-4 h-4" />
+              Analyse
+            </Link>
+          </Button>
           <Button variant="outline" size="sm" onClick={ouvrirInventaire} disabled={loading || produitsDB.length === 0}>
             <ClipboardList className="w-4 h-4" />
             Inventaire
