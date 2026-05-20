@@ -15,6 +15,7 @@ import { LocaleSwitcher } from "@/components/locale-switcher";
 import { useSession, signOut } from "@/lib/auth/client";
 import { toast } from "sonner";
 import { canAccess, ROLE_LABELS, type AppRole } from "@/lib/permissions";
+import { useEffect, useState } from "react";
 
 const ALL_NAV_ITEMS = [
   { href: "/pos/agent",  label: "Point de vente",   icon: ShoppingCart, color: "#FF4D00" },
@@ -42,6 +43,23 @@ export function DashboardNav({ role, collapsed, onToggle, onClose }: Props) {
   const router = useRouter();
   const connexion = useAppStore((s) => s.connexion);
   const { data: session } = useSession();
+  const [nbAlertes, setNbAlertes] = useState(0);
+  const [nbCaisse, setNbCaisse] = useState(0);
+
+  useEffect(() => {
+    const fetchBadges = () => {
+      fetch("/api/stock/alertes-count").then((r) => r.json()).then((d) => setNbAlertes(d.nbAlertes ?? 0)).catch(() => {});
+      fetch("/api/caisse/commandes").then((r) => r.json()).then((d) => setNbCaisse(Array.isArray(d) ? d.length : 0)).catch(() => {});
+    };
+    fetchBadges();
+    const interval = setInterval(fetchBadges, 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const BADGES: Record<string, number> = {
+    "/stock": nbAlertes,
+    "/pos/caisse": nbCaisse,
+  };
 
   const navItems = ALL_NAV_ITEMS.filter((item) => canAccess(role, item.href));
 
@@ -146,12 +164,21 @@ export function DashboardNav({ role, collapsed, onToggle, onClose }: Props) {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -4 }}
                     transition={{ duration: 0.12 }}
-                    className="truncate text-sm"
+                    className="truncate text-sm flex-1"
                   >
                     {item.label}
                   </motion.span>
                 )}
               </AnimatePresence>
+              {/* Badge alerte */}
+              {(BADGES[item.href] ?? 0) > 0 && (
+                <span className={cn(
+                  "flex items-center justify-center rounded-full text-white font-bold leading-none shrink-0",
+                  collapsed ? "absolute top-1 right-1 w-4 h-4 text-[9px]" : "w-5 h-5 text-[10px] ml-auto"
+                )} style={{ backgroundColor: "#EF4444" }}>
+                  {BADGES[item.href]! > 99 ? "99+" : BADGES[item.href]}
+                </span>
+              )}
 
               {/* Tooltip en mode réduit */}
               {collapsed && (

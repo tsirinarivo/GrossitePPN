@@ -23,6 +23,9 @@ import {
   Menu,
   Ban,
   Trash2,
+  BarChart2,
+  X,
+  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -77,6 +80,26 @@ export function CaisseView() {
   const [modeImpression, setModeImpression] = useState<"ticket" | "pdf" | "aucune">("ticket");
   const [loadingConfirm, setLoadingConfirm] = useState(false);
   const [etape, setEtape] = useState<"detail" | "paiement">("detail");
+
+  // Rapport Z
+  const [showRapportZ, setShowRapportZ] = useState(false);
+  const [rapportZDate, setRapportZDate] = useState(new Date().toISOString().slice(0, 10));
+  const [rapportZ, setRapportZ] = useState<null | {
+    date: string; nbCommandes: number; totalHT: number; totalTVA: number;
+    totalTTC: number; totalRemise: number;
+    parMode: Record<string, { montant: number; count: number }>;
+    topProduits: { produitId: string; nom: string; qteBase: number; ca: number }[];
+    agentsActifs: { id: string; nom: string; nbCommandes: number; ca: number }[];
+  }>(null);
+  const [loadingRapport, setLoadingRapport] = useState(false);
+
+  const fetchRapportZ = async (date: string) => {
+    setLoadingRapport(true);
+    try {
+      const res = await fetch(`/api/caisse/rapport-z?date=${date}`);
+      if (res.ok) setRapportZ(await res.json());
+    } finally { setLoadingRapport(false); }
+  };
 
   // Load queue on mount
   useEffect(() => {
@@ -304,9 +327,14 @@ export function CaisseView() {
         <div className="h-14 flex items-center gap-3 px-4 border-b border-[--border]">
           <Receipt className="w-5 h-5 text-[--primary]" />
           <span className="font-semibold flex-1">File d'attente</span>
-          <Badge variant="destructive" className="text-xs">
-            {fileCommandes.length}
-          </Badge>
+          <Badge variant="destructive" className="text-xs">{fileCommandes.length}</Badge>
+          <button
+            onClick={() => { setShowRapportZ(true); fetchRapportZ(rapportZDate); }}
+            className="p-1.5 rounded-lg text-[--foreground-muted] hover:bg-[--accent] transition-colors"
+            title="Rapport Z — Clôture journée"
+          >
+            <BarChart2 className="w-4 h-4" />
+          </button>
           <button
             onClick={() => setFileOuverte(false)}
             className="lg:hidden p-1 rounded-lg text-[--foreground-muted] hover:bg-[--accent] transition-colors"
@@ -646,6 +674,111 @@ export function CaisseView() {
         )}
       </div>
       </div>
+
+      {/* ── Modal Rapport Z ───────────────────────────────────────────────── */}
+      {showRapportZ && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowRapportZ(false)} />
+          <div className="relative bg-[--card] border border-[--border] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center gap-3 p-5 border-b border-[--border] shrink-0">
+              <BarChart2 className="w-5 h-5 text-[--primary]" />
+              <h2 className="font-bold text-lg flex-1">Rapport Z — Clôture journée</h2>
+              <input
+                type="date"
+                value={rapportZDate}
+                onChange={(e) => { setRapportZDate(e.target.value); fetchRapportZ(e.target.value); }}
+                className="rounded-lg border border-[--border] bg-[--background] px-2 py-1 text-sm"
+              />
+              <button onClick={() => setShowRapportZ(false)} className="p-1.5 rounded-lg hover:bg-[--accent]">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {loadingRapport ? (
+                <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[--foreground-muted]" /></div>
+              ) : !rapportZ ? null : (
+                <>
+                  {/* KPIs */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { label: "Transactions", val: rapportZ.nbCommandes.toString(), icon: Receipt },
+                      { label: "CA TTC", val: formatMGA(rapportZ.totalTTC, { compact: true }), icon: TrendingUp },
+                      { label: "TVA collectée", val: formatMGA(rapportZ.totalTVA, { compact: true }), icon: FileText },
+                      { label: "Remises", val: formatMGA(rapportZ.totalRemise, { compact: true }), icon: AlertCircle },
+                    ].map((k) => (
+                      <div key={k.label} className="bg-[--accent] rounded-xl p-3">
+                        <p className="text-xs text-[--foreground-muted]">{k.label}</p>
+                        <p className="text-xl font-bold mt-1">{k.val}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Par mode de paiement */}
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2 text-[--foreground-muted]">Répartition par mode de paiement</h3>
+                    <div className="space-y-2">
+                      {Object.entries(rapportZ.parMode).length === 0 ? (
+                        <p className="text-sm text-[--foreground-muted]">Aucun paiement enregistré</p>
+                      ) : Object.entries(rapportZ.parMode).map(([mode, data]) => (
+                        <div key={mode} className="flex items-center justify-between py-2 px-3 rounded-lg bg-[--accent]/50">
+                          <div className="flex items-center gap-2">
+                            {mode === "especes" ? <Banknote className="w-4 h-4 text-[--success]" /> :
+                             mode === "mvola" || mode === "orange_money" || mode === "airtel_money" ? <Smartphone className="w-4 h-4 text-[--primary]" /> :
+                             <CreditCard className="w-4 h-4 text-[--foreground-muted]" />}
+                            <span className="text-sm capitalize">{mode.replace(/_/g, " ")}</span>
+                            <Badge variant="muted" className="text-[10px]">{data.count} tx</Badge>
+                          </div>
+                          <span className="font-semibold text-sm">{formatMGA(data.montant)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Top produits */}
+                  {rapportZ.topProduits.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold mb-2 text-[--foreground-muted]">Top produits vendus</h3>
+                      <div className="space-y-1">
+                        {rapportZ.topProduits.slice(0, 5).map((p, i) => (
+                          <div key={p.produitId} className="flex items-center gap-3 py-1.5 px-3 rounded-lg hover:bg-[--accent]/40">
+                            <span className="text-xs font-mono text-[--foreground-subtle] w-4">#{i + 1}</span>
+                            <span className="text-sm flex-1 truncate">{p.nom}</span>
+                            <span className="text-xs text-[--foreground-muted]">{p.qteBase.toLocaleString("fr-FR")}</span>
+                            <span className="text-sm font-medium">{formatMGA(p.ca, { compact: true })}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Agents */}
+                  {rapportZ.agentsActifs.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold mb-2 text-[--foreground-muted]">Performance agents</h3>
+                      <div className="space-y-1">
+                        {rapportZ.agentsActifs.map((a) => (
+                          <div key={a.id} className="flex items-center gap-3 py-1.5 px-3 rounded-lg hover:bg-[--accent]/40">
+                            <Monitor className="w-4 h-4 text-[--foreground-muted]" />
+                            <span className="text-sm flex-1">{a.nom}</span>
+                            <Badge variant="muted" className="text-[10px]">{a.nbCommandes} cmd</Badge>
+                            <span className="text-sm font-medium">{formatMGA(a.ca, { compact: true })}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="p-4 border-t border-[--border] shrink-0 flex justify-end">
+              <Button onClick={() => setShowRapportZ(false)}>Fermer</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

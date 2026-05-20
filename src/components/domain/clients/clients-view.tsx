@@ -17,7 +17,9 @@ import {
   CreditCard,
   Loader2,
   Pencil,
+  BarChart2,
 } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
 import { Button } from "@/components/ui/button";
@@ -132,6 +134,12 @@ export function ClientsView() {
           <Button variant="outline" size="sm" onClick={() => exportCSV(clients)}>
             <Download className="w-4 h-4" />
             Exporter
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/clients/encours">
+              <BarChart2 className="w-4 h-4" />
+              Encours
+            </Link>
           </Button>
           <Button size="sm" onClick={() => { setEditClient(null); setShowForm(true); }}>
             <Plus className="w-4 h-4" />

@@ -15,6 +15,7 @@ import {
   Plus,
   AlertTriangle,
   Loader2,
+  Printer,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
@@ -131,6 +132,47 @@ export function LivraisonsView() {
 
     return () => { cancelled = true; };
   }, [dateFiltre, reloadKey]);
+
+  function imprimerBL(l: Livraison) {
+    const date = new Date().toLocaleDateString("fr-FR");
+    const heure = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>BL ${l.numero}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:12px;margin:0;padding:20px;color:#000}
+  h1{font-size:18px;margin:0 0 4px}
+  .header{display:flex;justify-content:space-between;margin-bottom:20px}
+  .info-block{margin-bottom:12px}
+  .label{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.5px}
+  .value{font-weight:bold;margin-top:2px}
+  table{width:100%;border-collapse:collapse;margin-top:16px}
+  th{background:#f0f0f0;padding:8px;text-align:left;font-size:11px;border:1px solid #ddd}
+  td{padding:8px;border:1px solid #ddd;font-size:12px}
+  .footer{margin-top:32px;border-top:1px solid #ddd;padding-top:12px;display:flex;justify-content:space-between}
+  .signature-box{border:1px solid #999;width:180px;height:60px;padding:6px;font-size:10px;color:#999}
+  @media print{body{padding:0}.no-print{display:none}}
+</style></head><body>
+<div class="header">
+  <div><h1>BON DE LIVRAISON</h1><div style="font-size:11px;color:#666">${l.numero}</div></div>
+  <div style="text-align:right"><div class="label">Date</div><div class="value">${date} ${heure}</div></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+  <div class="info-block"><div class="label">Client</div><div class="value">${l.client}</div><div>${l.adresse}</div><div>${l.ville}</div></div>
+  <div class="info-block">
+    <div class="label">Chauffeur / Véhicule</div><div class="value">${l.chauffeur}</div><div>${l.vehicule}</div>
+    <div class="label" style="margin-top:8px">Montant</div><div class="value">${l.montant.toLocaleString("fr-FR")} MGA</div>
+  </div>
+</div>
+<table><thead><tr><th>#</th><th>Désignation</th><th>Quantité</th><th>Observations</th></tr></thead>
+<tbody>${[...Array(8)].map((_, i) => `<tr><td>${i + 1}</td><td></td><td></td><td></td></tr>`).join("")}</tbody></table>
+<div class="footer">
+  <div><div class="label">Signature client (BL reçu)</div><div class="signature-box">Nom &amp; signature</div></div>
+  <div style="text-align:right"><div class="label">Signature chauffeur</div><div class="signature-box">Nom &amp; signature</div></div>
+</div>
+<p class="no-print" style="margin-top:20px"><button onclick="window.print()">Imprimer</button></p>
+</body></html>`;
+    const w = window.open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 400); }
+  }
 
   async function patchLivraison(id: string, body: Record<string, unknown>) {
     try {
@@ -415,9 +457,16 @@ export function LivraisonsView() {
                       >
                         Marquer Livrée
                       </Button>
-                    ) : (
-                      <Button variant="outline" size="sm" className="flex-1">Bon de livraison</Button>
-                    )}
+                    ) : null}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => imprimerBL(selection)}
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      Bon de livraison
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
