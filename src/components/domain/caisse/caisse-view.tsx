@@ -68,7 +68,43 @@ type CommandeDetail = {
   assujettieTV: boolean;
 };
 
+const SESSION_KEY = "caisse_session_v1";
+type CaisseSession = { fondCaisse: number; debutISO: string };
+
 export function CaisseView() {
+  // Session caisse
+  const [session, setSession] = useState<CaisseSession | null>(null);
+  const [showOuverture, setShowOuverture] = useState(false);
+  const [fondInput, setFondInput] = useState("");
+  const [showCloture, setShowCloture] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(SESSION_KEY);
+    if (saved) {
+      try { setSession(JSON.parse(saved)); } catch { localStorage.removeItem(SESSION_KEY); }
+    } else {
+      setShowOuverture(true);
+    }
+  }, []);
+
+  function ouvrirSession() {
+    const fond = parseFloat(fondInput.replace(/\s/g, "").replace(",", ".")) || 0;
+    const s: CaisseSession = { fondCaisse: fond, debutISO: new Date().toISOString() };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+    setSession(s);
+    setShowOuverture(false);
+    toast.success(`Session ouverte — fond de caisse : ${fond.toLocaleString("fr-FR")} MGA`);
+  }
+
+  function cloturerSession() {
+    localStorage.removeItem(SESSION_KEY);
+    setSession(null);
+    setShowCloture(false);
+    setShowRapportZ(true);
+    fetchRapportZ(new Date().toISOString().slice(0, 10));
+    toast.success("Session clôturée — rapport Z généré");
+  }
+
   const [fileCommandes, setFileCommandes] = useState<CommandeFile[]>([]);
   const [loadingFile, setLoadingFile] = useState(true);
   const [commandeSelectee, setCommandeSelectee] = useState<CommandeFile | null>(null);
@@ -328,12 +364,25 @@ export function CaisseView() {
           <Receipt className="w-5 h-5 text-[--primary]" />
           <span className="font-semibold flex-1">File d'attente</span>
           <Badge variant="destructive" className="text-xs">{fileCommandes.length}</Badge>
+          {session && (
+            <span className="hidden sm:block text-[10px] font-mono px-2 py-1 rounded-lg border" style={{ borderColor: "#1E1E2E", color: "#888" }}>
+              Fond: {session.fondCaisse.toLocaleString("fr-FR")} MGA
+            </span>
+          )}
           <button
             onClick={() => { setShowRapportZ(true); fetchRapportZ(rapportZDate); }}
             className="p-1.5 rounded-lg text-[--foreground-muted] hover:bg-[--accent] transition-colors"
-            title="Rapport Z — Clôture journée"
+            title="Rapport Z"
           >
             <BarChart2 className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setShowCloture(true)}
+            className="p-1.5 rounded-lg transition-colors hover:bg-red-900/30"
+            title="Clôturer la session"
+            style={{ color: "#ef4444" }}
+          >
+            <X className="w-4 h-4" />
           </button>
           <button
             onClick={() => setFileOuverte(false)}
@@ -775,6 +824,63 @@ export function CaisseView() {
 
             <div className="p-4 border-t border-[--border] shrink-0 flex justify-end">
               <Button onClick={() => setShowRapportZ(false)}>Fermer</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Ouverture session ──────────────────────────────────────────── */}
+      {showOuverture && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative rounded-2xl border shadow-2xl w-full max-w-sm p-6 flex flex-col gap-5"
+            style={{ backgroundColor: "#111118", borderColor: "#1E1E2E" }}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, #FF4D00, #FFB800)" }}>
+                <Receipt className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="font-bold text-white">Ouverture de caisse</h2>
+                <p className="text-xs" style={{ color: "#666" }}>Saisissez le fond de caisse initial</p>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium mb-1.5 block" style={{ color: "#888" }}>Fond de caisse (MGA)</label>
+              <input
+                type="number"
+                value={fondInput}
+                onChange={(e) => setFondInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && ouvrirSession()}
+                placeholder="ex : 50000"
+                autoFocus
+                className="w-full bg-transparent border rounded-xl px-4 py-3 text-white text-lg font-bold outline-none focus:border-[#FF4D00] transition-colors"
+                style={{ borderColor: "#1E1E2E" }}
+              />
+            </div>
+            <Button onClick={ouvrirSession} className="w-full">
+              Ouvrir la session
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Confirmation clôture ───────────────────────────────────────── */}
+      {showCloture && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowCloture(false)} />
+          <div className="relative rounded-2xl border shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4"
+            style={{ backgroundColor: "#111118", borderColor: "#1E1E2E" }}>
+            <h2 className="font-bold text-white">Clôturer la session ?</h2>
+            {session && (
+              <div className="rounded-xl p-3 text-sm space-y-1" style={{ backgroundColor: "#0d0d14", color: "#888" }}>
+                <p>Ouverture : {new Date(session.debutISO).toLocaleString("fr-FR")}</p>
+                <p>Fond de caisse : {session.fondCaisse.toLocaleString("fr-FR")} MGA</p>
+              </div>
+            )}
+            <p className="text-sm" style={{ color: "#888" }}>Le rapport Z du jour sera automatiquement généré.</p>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setShowCloture(false)}>Annuler</Button>
+              <Button className="flex-1 bg-red-600 hover:bg-red-700" onClick={cloturerSession}>Clôturer</Button>
             </div>
           </div>
         </div>

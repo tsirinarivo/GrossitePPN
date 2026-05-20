@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import {
   CreditCard, AlertTriangle, TrendingDown, Users, ArrowLeft,
-  ChevronRight, Clock, Download,
+  ChevronRight, Clock, Download, MessageSquare, Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
@@ -48,6 +48,17 @@ export function EncoursCreditView() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [trancheFiltre, setTrancheFiltre] = useState<string>("tous");
+  const [copied, setCopied] = useState<string | null>(null);
+
+  function copierRelance(c: ClientEncours) {
+    const montant = formatMGA(c.encoursCourant);
+    const dispo = formatMGA(Math.max(0, c.creditDisponible));
+    const msg = `Bonjour ${c.raisonSociale},\n\nNous vous rappelons que votre encours actuel est de ${montant}${c.joursDepuis ? ` (dernier achat il y a ${c.joursDepuis} jours)` : ""}.\nCrédit disponible : ${dispo}.\n\nMerci de régulariser votre situation afin de continuer à bénéficier de nos services.\n\nCordialement,\nÉquipe GrossistePPN`;
+    navigator.clipboard.writeText(msg).then(() => {
+      setCopied(c.id);
+      setTimeout(() => setCopied(null), 2000);
+    });
+  }
 
   useEffect(() => {
     fetch("/api/clients/encours")
@@ -181,6 +192,7 @@ export function EncoursCreditView() {
                 <th className="text-center px-4 py-3 text-[--foreground-muted] font-medium hidden md:table-cell">Utilisation</th>
                 <th className="text-center px-4 py-3 text-[--foreground-muted] font-medium">Ancienneté</th>
                 <th className="text-right px-4 py-3 text-[--foreground-muted] font-medium hidden lg:table-cell">Agent</th>
+                <th className="px-4 py-3 text-[--foreground-muted] font-medium hidden sm:table-cell">Relance</th>
                 <th className="px-4 py-3 w-8" />
               </tr>
             </thead>
@@ -227,6 +239,23 @@ export function EncoursCreditView() {
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell text-[--foreground-muted] text-xs text-right">
                     {c.agentNom || "—"}
+                  </td>
+                  <td className="px-4 py-3 hidden sm:table-cell">
+                    <button
+                      onClick={() => copierRelance(c)}
+                      title="Copier message de relance"
+                      className={cn(
+                        "flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-all",
+                        copied === c.id
+                          ? "border-[--success] text-[--success] bg-[--success]/10"
+                          : "border-[--border] text-[--foreground-muted] hover:border-[--primary] hover:text-[--primary]"
+                      )}
+                    >
+                      {copied === c.id
+                        ? <><Check className="w-3 h-3" /> Copié</>
+                        : <><MessageSquare className="w-3 h-3" /> Relance</>
+                      }
+                    </button>
                   </td>
                   <td className="px-4 py-3">
                     <Link href={`/clients`} className="p-1.5 rounded-lg hover:bg-[--accent] transition-colors block">
