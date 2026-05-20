@@ -508,6 +508,17 @@ export function AchatsView() {
                     <p className="text-xs text-[--foreground-muted] bg-[--accent] rounded-lg p-3">{selectionBC.notes}</p>
                   )}
 
+                  {/* PDF */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`/api/achats/commandes/${selectionBC.id}/pdf`, "_blank")}
+                    className="w-full"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Imprimer / PDF
+                  </Button>
+
                   {/* Actions selon statut */}
                   <div className="flex flex-col gap-2">
                     {selectionBC.statut === "brouillon" && (
