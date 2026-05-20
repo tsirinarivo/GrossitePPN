@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { TrendingUp, ShoppingBag, Users, Package, ArrowUpRight, Zap, Clock, RefreshCw, AlertTriangle } from "lucide-react";
+import { TrendingUp, ShoppingBag, Users, Package, ArrowUpRight, Zap, Clock, RefreshCw, AlertTriangle, Receipt, Truck, BarChart2, ShoppingCart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -135,10 +135,10 @@ export function DashboardHome() {
         </div>
       )}
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats cards — horizontal scroll on mobile, grid on lg */}
+      <div className="flex gap-3 overflow-x-auto pb-1 -mx-6 px-6 lg:mx-0 lg:px-0 lg:grid lg:grid-cols-4 snap-x snap-mandatory">
         {cartes.map((carte) => (
-          <Link key={carte.label} href={carte.href} className="block">
+          <Link key={carte.label} href={carte.href} className="block shrink-0 w-[72vw] sm:w-auto lg:w-auto snap-start">
             <Card className={cn("overflow-hidden h-full hover:shadow-md transition-shadow", carte.alert && "border-[--destructive]/30")}>
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-2">
@@ -165,6 +165,23 @@ export function DashboardHome() {
                 </div>
               </CardContent>
             </Card>
+          </Link>
+        ))}
+      </div>
+
+      {/* Accès rapides mobile (visibles < lg uniquement) */}
+      <div className="grid grid-cols-4 gap-3 lg:hidden">
+        {[
+          { href: "/pos/agent",  label: "POS",        icon: ShoppingCart, color: "#FF4D00" },
+          { href: "/pos/caisse", label: "Caisse",      icon: Receipt,      color: "#8B5CF6" },
+          { href: "/livraisons", label: "Livraisons",  icon: Truck,        color: "#3B82F6" },
+          { href: "/rapports",   label: "Rapports",    icon: BarChart2,    color: "#22C55E" },
+        ].map((a) => (
+          <Link key={a.href} href={a.href} className="flex flex-col items-center gap-2 p-3 rounded-xl border border-[--border] bg-[--card] hover:border-[--primary]/50 transition-colors text-center">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: a.color + "20" }}>
+              <a.icon className="w-5 h-5" style={{ color: a.color }} />
+            </div>
+            <span className="text-[10px] font-medium text-[--foreground-muted]">{a.label}</span>
           </Link>
         ))}
       </div>
