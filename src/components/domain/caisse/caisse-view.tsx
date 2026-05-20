@@ -96,12 +96,36 @@ export function CaisseView() {
     toast.success(`Session ouverte — fond de caisse : ${fond.toLocaleString("fr-FR")} MGA`);
   }
 
-  function cloturerSession() {
+  async function cloturerSession() {
+    const sessionData = session;
     localStorage.removeItem(SESSION_KEY);
     setSession(null);
     setShowCloture(false);
     setShowRapportZ(true);
-    fetchRapportZ(new Date().toISOString().slice(0, 10));
+    const today = new Date().toISOString().slice(0, 10);
+    fetchRapportZ(today);
+
+    // Persist session to DB
+    if (sessionData) {
+      try {
+        await fetch("/api/caisse/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fondCaisse: sessionData.fondCaisse,
+            totalEncaisse: 0,
+            totalEspeces: 0,
+            totalMobileMoney: 0,
+            totalVirements: 0,
+            totalCheques: 0,
+            ouvertureAt: sessionData.debutISO,
+          }),
+        });
+      } catch {
+        // Non-blocking: don't fail clôture if DB save fails
+      }
+    }
+
     toast.success("Session clôturée — rapport Z généré");
   }
 
