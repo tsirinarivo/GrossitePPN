@@ -16,12 +16,12 @@ const MOIS_LABELS: Record<string, string> = {
 };
 
 // Statuts considérés comme générant une TVA collectée
-const STATUTS_VALIDES = [
+const STATUTS_VALIDES: Array<typeof schema.commandes.statut.enumValues[number]> = [
   "validee",
   "preparee",
   "en_livraison",
   "livree",
-] satisfies Array<typeof schema.commandes.statut.enumValues[number]>;
+];
 
 function periodeBornes(annee: number, trimestre?: number): { debut: Date; fin: Date } {
   if (trimestre) {

@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, Users, Wallet, Warehouse, Settings as SettingsIcon,
   ShieldCheck, Receipt, Smartphone, Check, Printer, Loader2,
-  Plus, X, Eye, EyeOff, Pencil,
+  Plus, X, Eye, EyeOff, Pencil, Tag,
 } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -252,6 +253,11 @@ export function AdminView() {
               <s.icon className="w-4 h-4" />{s.label}
             </button>
           ))}
+          <Link href="/admin/promotions"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0 lg:w-full text-[--foreground-muted] hover:bg-[--accent] hover:text-[--foreground]"
+          >
+            <Tag className="w-4 h-4" />Promotions
+          </Link>
         </nav>
 
         <div className="lg:col-span-3 space-y-4">
