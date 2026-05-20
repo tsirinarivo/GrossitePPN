@@ -1,15 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ArrowLeft, Save, Package, DollarSign, BarChart2, Settings, Plus, Trash2, GripVertical } from "lucide-react";
+import { ArrowLeft, Save, Package, DollarSign, BarChart2, Settings, Plus, Trash2, GripVertical, TrendingUp, Warehouse, History } from "lucide-react";
 import { Loader2 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { formatMGA } from "@/lib/money";
+
+type Analytics = {
+  ventesHebdo: { semaine: string; qteBase: number; ca: number; nbCommandes: number }[];
+  stocksDepots: { depotId: string; nomDepot: string; quantiteBase: number }[];
+  mouvements: {
+    id: string; type: string; quantiteBase: number; quantiteAvant: number;
+    quantiteApres: number; reference: string | null; notes: string | null;
+    createdAt: string; agentNom: string; nomDepot: string;
+  }[];
+  kpi30j: { qteTotale: number; caTotale: number; nbCommandes: number };
+};
 
 interface Categorie {
   id: string;
@@ -89,6 +102,18 @@ export function ProduitEditView({ id }: { id: string }) {
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState<Categorie[]>([]);
   const [unitesVente, setUnitesVente] = useState<UniteVente[]>([]);
+  const [activeTab, setActiveTab] = useState<"edit" | "analytics">("edit");
+  const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+
+  const loadAnalytics = useCallback(async () => {
+    if (analytics) return;
+    setLoadingAnalytics(true);
+    try {
+      const res = await fetch(`/api/produits/${id}/analytics`);
+      if (res.ok) setAnalytics(await res.json());
+    } finally { setLoadingAnalytics(false); }
+  }, [id, analytics]);
   const [form, setForm] = useState<FormState>({
     nom: "", nomMG: "", code: "", description: "", descriptionMG: "",
     categorieId: "", marque: "", uniteBase: "",
@@ -225,10 +250,12 @@ export function ProduitEditView({ id }: { id: string }) {
           <Badge variant={form.actif ? "default" : "secondary"}>
             {form.actif ? "Actif" : "Inactif"}
           </Badge>
-          <Button onClick={handleSave} disabled={saving} size="sm">
-            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-            Enregistrer
-          </Button>
+          {activeTab === "edit" && (
+            <Button onClick={handleSave} disabled={saving} size="sm">
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+              Enregistrer
+            </Button>
+          )}
         </div>
       </div>
 
@@ -244,6 +271,32 @@ export function ProduitEditView({ id }: { id: string }) {
         </div>
       </div>
 
+      {/* Tabs */}
+      <div className="flex border-b border-[--border] gap-1">
+        {([
+          { key: "edit",      label: "Édition",    icon: Settings },
+          { key: "analytics", label: "Analytique", icon: BarChart2 },
+        ] as const).map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => { setActiveTab(key); if (key === "analytics") loadAnalytics(); }}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors",
+              activeTab === key
+                ? "border-[--primary] text-[--primary]"
+                : "border-transparent text-[--foreground-muted] hover:text-[--foreground]"
+            )}
+          >
+            <Icon className="w-4 h-4" />{label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "analytics" && (
+        <ProduitAnalyticsPanel analytics={analytics} loading={loadingAnalytics} uniteBase={form.uniteBase} />
+      )}
+
+      {activeTab === "edit" && <>
       {/* Informations générales */}
       <Card>
         <CardHeader className="pb-3">
@@ -547,6 +600,174 @@ export function ProduitEditView({ id }: { id: string }) {
           Enregistrer les modifications
         </Button>
       </div>
+      </>}
+    </div>
+  );
+}
+
+const MOUVEMENT_COLORS: Record<string, string> = {
+  "entrée": "#22C55E", "vente": "#3B82F6", "transfert": "#8B5CF6",
+  "casse": "#EF4444", "inventaire": "#F59E0B", "réservation": "#6B7280",
+};
+
+function ProduitAnalyticsPanel({ analytics, loading, uniteBase }: { analytics: Analytics | null; loading: boolean; uniteBase: string }) {
+  if (loading) return (
+    <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-[--primary]" /></div>
+  );
+  if (!analytics) return (
+    <div className="py-16 text-center text-sm text-[--foreground-muted]">Aucune donnée analytique</div>
+  );
+
+  const { ventesHebdo, stocksDepots, mouvements, kpi30j } = analytics;
+  const chartData = ventesHebdo.map((v) => ({
+    label: v.semaine.replace(/^\d{4}-/, "S"),
+    qteBase: v.qteBase,
+    ca: v.ca,
+  }));
+  const stockTotal = stocksDepots.reduce((s, d) => s + d.quantiteBase, 0);
+
+  return (
+    <div className="space-y-6">
+      {/* KPIs 30 jours */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Qté vendue (30j)", value: `${kpi30j.qteTotale.toLocaleString("fr-FR")} ${uniteBase}`, icon: TrendingUp, color: "#22C55E" },
+          { label: "CA HT (30j)",      value: formatMGA(kpi30j.caTotale),                                    icon: BarChart2,  color: "#3B82F6" },
+          { label: "Commandes (30j)",   value: String(kpi30j.nbCommandes),                                    icon: History,   color: "#F59E0B" },
+        ].map((k) => (
+          <Card key={k.label}>
+            <CardContent className="p-4 flex gap-3 items-start">
+              <div className="p-2 rounded-lg" style={{ backgroundColor: k.color + "20" }}>
+                <k.icon className="w-4 h-4" style={{ color: k.color }} />
+              </div>
+              <div>
+                <p className="text-xs text-[--foreground-muted]">{k.label}</p>
+                <p className="text-lg font-bold">{k.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Graphique ventes hebdomadaires */}
+      {chartData.length > 0 ? (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <BarChart2 className="w-4 h-4 text-[--primary]" /> Ventes hebdomadaires (quantité)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={chartData} barSize={20}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1E1E2E" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#666" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#666" }} axisLine={false} tickLine={false} width={40} />
+                <Tooltip
+                  formatter={(v) => [`${Number(v).toLocaleString("fr-FR")} ${uniteBase}`, "Qté"]}
+                  contentStyle={{ backgroundColor: "#111118", border: "1px solid #1E1E2E", borderRadius: 8, fontSize: 12 }}
+                />
+                <Bar dataKey="qteBase" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card><CardContent className="py-8 text-center text-sm text-[--foreground-muted]">Aucune vente sur les 13 dernières semaines</CardContent></Card>
+      )}
+
+      {/* Stock par dépôt */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Warehouse className="w-4 h-4 text-[--primary]" /> Stock par dépôt
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {stocksDepots.length === 0 ? (
+            <p className="text-sm text-[--foreground-muted]">Aucun stock enregistré</p>
+          ) : stocksDepots.map((s) => {
+            const pct = stockTotal > 0 ? Math.round((s.quantiteBase / stockTotal) * 100) : 0;
+            return (
+              <div key={s.depotId} className="flex items-center gap-3">
+                <span className="text-sm flex-1 text-[--foreground]">{s.nomDepot}</span>
+                <div className="w-32 h-2 rounded-full bg-[--border]">
+                  <div className="h-full rounded-full bg-[--primary]" style={{ width: `${pct}%` }} />
+                </div>
+                <span className="text-sm font-mono w-24 text-right text-[--foreground]">
+                  {s.quantiteBase.toLocaleString("fr-FR")} {uniteBase}
+                </span>
+              </div>
+            );
+          })}
+          {stocksDepots.length > 0 && (
+            <div className="flex items-center gap-3 pt-1 border-t border-[--border]">
+              <span className="text-xs font-semibold text-[--foreground-muted] flex-1">Total</span>
+              <span className="text-sm font-bold w-24 text-right">{stockTotal.toLocaleString("fr-FR")} {uniteBase}</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Historique mouvements */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <History className="w-4 h-4 text-[--primary]" /> Derniers mouvements
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {mouvements.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-[--foreground-muted]">Aucun mouvement enregistré</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-[--border] bg-[--muted]/30 text-[--foreground-muted]">
+                    <th className="px-4 py-2 text-left">Date</th>
+                    <th className="px-4 py-2 text-left">Type</th>
+                    <th className="px-4 py-2 text-left">Dépôt</th>
+                    <th className="px-4 py-2 text-right">Qté</th>
+                    <th className="px-4 py-2 text-right">Avant → Après</th>
+                    <th className="px-4 py-2 text-left hidden sm:table-cell">Réf</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mouvements.map((m) => {
+                    const color = MOUVEMENT_COLORS[m.type] ?? "#6B7280";
+                    const signe = ["vente", "casse", "réservation"].includes(m.type) ? "-" : "+";
+                    return (
+                      <tr key={m.id} className="border-b border-[--border] hover:bg-[--muted]/20 transition-colors">
+                        <td className="px-4 py-2 text-[--foreground-muted]">
+                          {new Date(m.createdAt).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
+                          {" "}
+                          {new Date(m.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                        </td>
+                        <td className="px-4 py-2">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium capitalize"
+                            style={{ backgroundColor: color + "20", color }}>
+                            {m.type}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-[--foreground-muted]">{m.nomDepot}</td>
+                        <td className="px-4 py-2 text-right font-mono font-bold" style={{ color }}>
+                          {signe}{Math.abs(m.quantiteBase).toLocaleString("fr-FR")}
+                        </td>
+                        <td className="px-4 py-2 text-right font-mono text-[--foreground-muted]">
+                          {m.quantiteAvant.toLocaleString("fr-FR")} → {m.quantiteApres.toLocaleString("fr-FR")}
+                        </td>
+                        <td className="px-4 py-2 text-[--foreground-muted] hidden sm:table-cell">
+                          {m.reference ?? m.agentNom ?? "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
