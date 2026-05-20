@@ -58,6 +58,14 @@ export async function GET(req: NextRequest) {
       lignesMap.set(l.commandeId, arr);
     }
 
+    // Get facture IDs for validated orders
+    const commandeIds = commandes.map((c) => c.id);
+    const factureRows = commandeIds.length > 0
+      ? await db.select({ commandeId: schema.factures.commandeId, id: schema.factures.id })
+          .from(schema.factures).where(inArray(schema.factures.commandeId, commandeIds))
+      : [];
+    const factureMap = new Map(factureRows.map((f) => [f.commandeId, f.id]));
+
     const result = commandes.map((c) => {
       const ls = lignesMap.get(c.id) ?? [];
       return {
@@ -71,6 +79,7 @@ export async function GET(req: NextRequest) {
         montant: c.totalTTC,
         nbArticles: ls.length,
         statut: c.statut,
+        factureId: factureMap.get(c.id) ?? null,
         produits: ls.slice(0, 3).map(
           (l) => `${l.nomProduit} ×${l.quantite} ${l.nomUnite}`
         ),

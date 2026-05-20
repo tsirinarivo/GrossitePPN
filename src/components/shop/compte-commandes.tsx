@@ -36,6 +36,7 @@ type Commande = {
   montant: number;
   nbArticles: number;
   statut: string;
+  factureId: string | null;
   produits: string[];
 };
 
@@ -147,11 +148,15 @@ export function CompteCommandes() {
                           Recommander
                         </Button>
                       )}
-                      <Button size="sm" variant="ghost" className="ml-auto">
-                        <FileText className="w-3.5 h-3.5" />
-                        Facture PDF
-                        <ChevronRight className="w-3 h-3" />
-                      </Button>
+                      {cmd.factureId && (
+                        <Button size="sm" variant="ghost" className="ml-auto"
+                          onClick={() => window.open(`/api/factures/${cmd.factureId}/pdf`, "_blank")}
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          Facture PDF
+                          <ChevronRight className="w-3 h-3" />
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
