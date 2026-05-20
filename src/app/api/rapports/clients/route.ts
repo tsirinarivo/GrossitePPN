@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
     }).from(schema.commandes)
       .innerJoin(schema.clients, eq(schema.commandes.clientId, schema.clients.id))
       .where(and(
-        inArray(schema.commandes.statut, ["validee", "preparee", "en_livraison", "livree", "partiellement_livree"] as const),
+        inArray(schema.commandes.statut, ["validee", "preparee", "en_livraison", "livree"] as const),
         gte(schema.commandes.createdAt, debutPeriode)
       ))
       .groupBy(schema.commandes.clientId, schema.clients.raisonSociale, schema.clients.code, schema.clients.palier, schema.clients.zoneTournee)

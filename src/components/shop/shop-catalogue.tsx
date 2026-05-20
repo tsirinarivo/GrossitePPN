@@ -1,17 +1,21 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  SlidersHorizontal,
   LayoutGrid,
   List,
   ShoppingCart,
   Plus,
   Zap,
   X,
+  ChevronLeft,
+  ChevronRight,
+  Package,
+  Truck,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
@@ -25,22 +29,23 @@ import { useShopCart } from "@/store/shop-cart.store";
 
 // Données de démo complètes
 const CATALOGUE = [
-  { id: "1", slug: "riz-makalioka", nom: "Riz Makalioka", nomMG: "Vary Makalioka", cat: "riz", prix: 3200, unite: "kg", prixCarton: 145000, uniteCarton: "Sac 50kg", stock: "ok", emoji: "🌾", vedette: true },
-  { id: "2", slug: "riz-tsipala", nom: "Riz Tsipala", nomMG: "Vary Tsipala", cat: "riz", prix: 2800, unite: "kg", prixCarton: 125000, uniteCarton: "Sac 50kg", stock: "ok", emoji: "🌾", vedette: false },
-  { id: "3", slug: "riz-saonjo", nom: "Riz Saonjo", nomMG: "Vary Saonjo", cat: "riz", prix: 2600, unite: "kg", prixCarton: 115000, uniteCarton: "Sac 50kg", stock: "limite", emoji: "🌾", vedette: false },
-  { id: "4", slug: "huile-tiko-1l", nom: "Huile Tiko 1L", nomMG: "Menaka Tiko 1L", cat: "huile", prix: 12000, unite: "btl", prixCarton: 132000, uniteCarton: "Carton 12", stock: "ok", emoji: "🫙", vedette: true },
-  { id: "5", slug: "huile-tiko-5l", nom: "Huile Tiko 5L", nomMG: "Menaka Tiko 5L", cat: "huile", prix: 55000, unite: "btl", prixCarton: null, uniteCarton: null, stock: "ok", emoji: "🫙", vedette: false },
-  { id: "6", slug: "sucre-blanc", nom: "Sucre Blanc", nomMG: "Siramamy Fotsy", cat: "sucre", prix: 4800, unite: "kg", prixCarton: 220000, uniteCarton: "Sac 50kg", stock: "ok", emoji: "🍬", vedette: false },
-  { id: "7", slug: "sucre-roux", nom: "Sucre Roux", nomMG: "Siramamy Mena", cat: "sucre", prix: 5200, unite: "kg", prixCarton: 240000, uniteCarton: "Sac 50kg", stock: "limite", emoji: "🍬", vedette: false },
-  { id: "8", slug: "savon-madar", nom: "Savon Madar", nomMG: "Savony Madar", cat: "savon", prix: 800, unite: "pce", prixCarton: 70000, uniteCarton: "Carton 100", stock: "ok", emoji: "🧼", vedette: true },
-  { id: "9", slug: "savon-doux", nom: "Savon Doux", nomMG: "Savony Malemy", cat: "savon", prix: 1200, unite: "pce", prixCarton: 108000, uniteCarton: "Carton 100", stock: "ok", emoji: "🧼", vedette: false },
-  { id: "10", slug: "lait-gloria", nom: "Lait Gloria concentré", nomMG: "Ronono Gloria", cat: "lait", prix: 4500, unite: "bte", prixCarton: 200000, uniteCarton: "Carton 48", stock: "ok", emoji: "🥛", vedette: false },
-  { id: "11", slug: "lait-kiri", nom: "Lait Kiri", nomMG: "Ronono Kiri", cat: "lait", prix: 3800, unite: "bte", prixCarton: 175000, uniteCarton: "Carton 48", stock: "rupture", emoji: "🥛", vedette: false },
-  { id: "12", slug: "farine-mixa", nom: "Farine Mixa 1kg", nomMG: "Harina Mixa 1kg", cat: "farine", prix: 4200, unite: "pct", prixCarton: 96000, uniteCarton: "Carton 24", stock: "ok", emoji: "🌾", vedette: false },
-  { id: "13", slug: "sel-marin", nom: "Sel marin 1kg", nomMG: "Sira anaty 1kg", cat: "sel", prix: 700, unite: "pct", prixCarton: 30000, uniteCarton: "Sac 50kg", stock: "ok", emoji: "🧂", vedette: false },
-  { id: "14", slug: "haricot-blanc", nom: "Haricots blancs", nomMG: "Tsaramaso fotsy", cat: "legumes", prix: 5500, unite: "kg", prixCarton: 250000, uniteCarton: "Sac 50kg", stock: "ok", emoji: "🫘", vedette: false },
-  { id: "15", slug: "tomate-boite", nom: "Tomates concentrées 400g", nomMG: "Voatabia boaty", cat: "conserves", prix: 3500, unite: "bte", prixCarton: 156000, uniteCarton: "Carton 48", stock: "ok", emoji: "🥫", vedette: false },
-  { id: "16", slug: "sardines-boite", nom: "Sardines huile 250g", nomMG: "Trozona menaka", cat: "conserves", prix: 4800, unite: "bte", prixCarton: 216000, uniteCarton: "Carton 48", stock: "limite", emoji: "🐟", vedette: false },
+  { id: "1", slug: "riz-makalioka", nom: "Riz Makalioka", nomMG: "Vary Makalioka", cat: "riz", prix: 3200, unite: "kg", prixCarton: 145000, uniteCarton: "Sac 50kg", stock: "ok", qteMinCommande: 50, emoji: "🌾", vedette: true },
+  { id: "2", slug: "riz-tsipala", nom: "Riz Tsipala", nomMG: "Vary Tsipala", cat: "riz", prix: 2800, unite: "kg", prixCarton: 125000, uniteCarton: "Sac 50kg", stock: "ok", qteMinCommande: 1, emoji: "🌾", vedette: false },
+  { id: "3", slug: "riz-saonjo", nom: "Riz Saonjo", nomMG: "Vary Saonjo", cat: "riz", prix: 2600, unite: "kg", prixCarton: 115000, uniteCarton: "Sac 50kg", stock: "limite", qteMinCommande: 25, emoji: "🌾", vedette: false },
+  { id: "4", slug: "huile-tiko-1l", nom: "Huile Tiko 1L", nomMG: "Menaka Tiko 1L", cat: "huile", prix: 12000, unite: "btl", prixCarton: 132000, uniteCarton: "Carton 12", stock: "ok", qteMinCommande: 10, emoji: "🫙", vedette: true },
+  { id: "5", slug: "huile-tiko-5l", nom: "Huile Tiko 5L", nomMG: "Menaka Tiko 5L", cat: "huile", prix: 55000, unite: "btl", prixCarton: null, uniteCarton: null, stock: "ok", qteMinCommande: 1, emoji: "🫙", vedette: false },
+  { id: "6", slug: "sucre-blanc", nom: "Sucre Blanc", nomMG: "Siramamy Fotsy", cat: "sucre", prix: 4800, unite: "kg", prixCarton: 220000, uniteCarton: "Sac 50kg", stock: "ok", qteMinCommande: 1, emoji: "🍬", vedette: false },
+  { id: "7", slug: "sucre-roux", nom: "Sucre Roux", nomMG: "Siramamy Mena", cat: "sucre", prix: 5200, unite: "kg", prixCarton: 240000, uniteCarton: "Sac 50kg", stock: "limite", qteMinCommande: 1, emoji: "🍬", vedette: false },
+  { id: "8", slug: "savon-madar", nom: "Savon Madar", nomMG: "Savony Madar", cat: "savon", prix: 800, unite: "pce", prixCarton: 70000, uniteCarton: "Carton 100", stock: "ok", qteMinCommande: 1, emoji: "🧼", vedette: true },
+  { id: "9", slug: "savon-doux", nom: "Savon Doux", nomMG: "Savony Malemy", cat: "savon", prix: 1200, unite: "pce", prixCarton: 108000, uniteCarton: "Carton 100", stock: "ok", qteMinCommande: 1, emoji: "🧼", vedette: false },
+  { id: "10", slug: "lait-gloria", nom: "Lait Gloria concentré", nomMG: "Ronono Gloria", cat: "lait", prix: 4500, unite: "bte", prixCarton: 200000, uniteCarton: "Carton 48", stock: "ok", qteMinCommande: 1, emoji: "🥛", vedette: false },
+  { id: "11", slug: "lait-kiri", nom: "Lait Kiri", nomMG: "Ronono Kiri", cat: "lait", prix: 3800, unite: "bte", prixCarton: 175000, uniteCarton: "Carton 48", stock: "rupture", qteMinCommande: 1, emoji: "🥛", vedette: false },
+  { id: "12", slug: "farine-mixa", nom: "Farine Mixa 1kg", nomMG: "Harina Mixa 1kg", cat: "farine", prix: 4200, unite: "pct", prixCarton: 96000, uniteCarton: "Carton 24", stock: "ok", qteMinCommande: 1, emoji: "🌾", vedette: false },
+  { id: "13", slug: "sel-marin", nom: "Sel marin 1kg", nomMG: "Sira anaty 1kg", cat: "sel", prix: 700, unite: "pct", prixCarton: 30000, uniteCarton: "Sac 50kg", stock: "ok", qteMinCommande: 1, emoji: "🧂", vedette: false },
+  { id: "14", slug: "haricot-blanc", nom: "Haricots blancs", nomMG: "Tsaramaso fotsy", cat: "legumes", prix: 5500, unite: "kg", prixCarton: 250000, uniteCarton: "Sac 50kg", stock: "ok", qteMinCommande: 1, emoji: "🫘", vedette: false },
+  { id: "15", slug: "tomate-boite", nom: "Tomates concentrées 400g", nomMG: "Voatabia boaty", cat: "conserves", prix: 3500, unite: "bte", prixCarton: 156000, uniteCarton: "Carton 48", stock: "ok", qteMinCommande: 1, emoji: "🥫", vedette: false },
+  { id: "16", slug: "sardines-boite", nom: "Sardines huile 250g", nomMG: "Trozona menaka", cat: "conserves", prix: 4800, unite: "bte", prixCarton: 216000, uniteCarton: "Carton 48", stock: "limite", qteMinCommande: 1, emoji: "🐟", vedette: false },
+  { id: "17", slug: "savon-protex", nom: "Savon Protex", nomMG: "Savony Protex", cat: "savon", prix: 2500, unite: "pce", prixCarton: 220000, uniteCarton: "Carton 100", stock: "ok", qteMinCommande: 12, emoji: "🧼", vedette: true },
 ];
 
 const CATEGORIES = [
@@ -56,13 +61,154 @@ const CATEGORIES = [
   { id: "legumes", label: "Légumes secs", emoji: "🫘" },
 ];
 
+// ── Bannières promotionnelles ──────────────────────────
+const BANNIERES = [
+  {
+    id: 1,
+    titre: "Riz Makalioka",
+    sousTitre: "Commandez par palette — livraison offerte",
+    gradient: "from-orange-600 to-amber-500",
+    icon: Truck,
+    cta: "Voir les offres",
+    href: "/shop?cat=riz",
+  },
+  {
+    id: 2,
+    titre: "Huile Tiko",
+    sousTitre: "Remise 5% dès 10 cartons commandés",
+    gradient: "from-blue-600 to-cyan-500",
+    icon: Sparkles,
+    cta: "Voir les offres",
+    href: "/shop?cat=huile",
+  },
+  {
+    id: 3,
+    titre: "Nouveau : Savon Protex en gros",
+    sousTitre: "Disponible par carton de 100 pièces",
+    gradient: "from-green-600 to-emerald-500",
+    icon: Package,
+    cta: "Voir les offres",
+    href: "/shop?cat=savon",
+  },
+];
+
+function BanniereCarousel() {
+  const [actif, setActif] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const resetTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setActif((prev) => (prev + 1) % BANNIERES.length);
+    }, 4000);
+  };
+
+  useEffect(() => {
+    resetTimer();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const aller = (idx: number) => {
+    setActif(idx);
+    resetTimer();
+  };
+
+  const precedent = () => aller((actif - 1 + BANNIERES.length) % BANNIERES.length);
+  const suivant = () => aller((actif + 1) % BANNIERES.length);
+
+  const banniere = BANNIERES[actif]!;
+  const Icon = banniere.icon;
+
+  return (
+    <div className="relative mb-8 rounded-2xl overflow-hidden select-none">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={banniere.id}
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -40 }}
+          transition={{ duration: 0.35 }}
+          className={cn(
+            "bg-gradient-to-r p-6 sm:p-8 text-white",
+            banniere.gradient
+          )}
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                <Icon className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold leading-tight">
+                  {banniere.titre}
+                </h2>
+                <p className="text-sm text-white/80 mt-0.5">{banniere.sousTitre}</p>
+              </div>
+            </div>
+            <Button
+              asChild
+              size="sm"
+              className="bg-white text-gray-900 hover:bg-white/90 shrink-0 hidden sm:flex"
+            >
+              <Link href={banniere.href}>{banniere.cta}</Link>
+            </Button>
+          </div>
+
+          <Button
+            asChild
+            size="sm"
+            className="mt-4 bg-white text-gray-900 hover:bg-white/90 sm:hidden"
+          >
+            <Link href={banniere.href}>{banniere.cta}</Link>
+          </Button>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Contrôles flèches */}
+      <button
+        onClick={precedent}
+        className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white transition-all"
+        aria-label="Bannière précédente"
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+      <button
+        onClick={suivant}
+        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center text-white transition-all"
+        aria-label="Bannière suivante"
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
+
+      {/* Points indicateurs */}
+      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+        {BANNIERES.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => aller(i)}
+            className={cn(
+              "rounded-full transition-all duration-300",
+              i === actif
+                ? "w-5 h-1.5 bg-white"
+                : "w-1.5 h-1.5 bg-white/50 hover:bg-white/80"
+            )}
+            aria-label={`Bannière ${i + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 type ViewMode = "grid" | "list" | "quick";
 
 export function ShopCatalogue() {
   const [recherche, setRecherche] = useState("");
   const [catActive, setCatActive] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("grid");
-  const [filtresOuverts, setFiltresOuverts] = useState(false);
 
   const { lignes, ajouterArticle } = useShopCart();
 
@@ -132,6 +278,9 @@ export function ShopCatalogue() {
           </motion.div>
         )}
       </div>
+
+      {/* ── Bannières promotionnelles ── */}
+      <BanniereCarousel />
 
       {/* ── Barre de recherche + filtres ── */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -301,6 +450,30 @@ export function ShopCatalogue() {
   );
 }
 
+// ── Badge de stock ────────────────────────────────────
+
+function StockBadge({ stock }: { stock: string }) {
+  if (stock === "ok") {
+    return (
+      <Badge variant="success" className="text-[9px] px-1.5 py-0.5">
+        En stock
+      </Badge>
+    );
+  }
+  if (stock === "limite") {
+    return (
+      <Badge variant="warning" className="text-[9px] px-1.5 py-0.5">
+        Stock limité
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="destructive" className="text-[9px] px-1.5 py-0.5">
+      Rupture
+    </Badge>
+  );
+}
+
 // ── Carte grille ──────────────────────────────────────
 
 type Produit = (typeof CATALOGUE)[0];
@@ -324,11 +497,6 @@ function ProduitGridCard({
       <Link href={`/produit/${p.slug}`} className="block">
         <div className="h-28 bg-[--background-muted] flex items-center justify-center relative">
           <span className="text-4xl">{p.emoji}</span>
-          {p.stock === "limite" && (
-            <span className="absolute top-2 right-2 text-[9px] font-bold bg-[--warning]/90 text-[--warning-foreground] px-1.5 py-0.5 rounded-full">
-              Limité
-            </span>
-          )}
           {p.stock === "rupture" && (
             <div className="absolute inset-0 bg-[--background]/60 flex items-center justify-center">
               <span className="text-xs font-semibold text-[--foreground-muted]">
@@ -340,6 +508,16 @@ function ProduitGridCard({
       </Link>
 
       <div className="p-3 flex-1 flex flex-col gap-2">
+        {/* Stock badge */}
+        <div className="flex items-center justify-between gap-1">
+          <StockBadge stock={p.stock} />
+          {p.vedette && (
+            <span className="text-[9px] font-bold text-[--primary] bg-[--primary]/10 px-1.5 py-0.5 rounded-full">
+              Vedette
+            </span>
+          )}
+        </div>
+
         <Link href={`/produit/${p.slug}`}>
           <p className="text-sm font-semibold text-[--foreground] leading-tight group-hover:text-[--primary] transition-colors line-clamp-2">
             {p.nom}
@@ -351,12 +529,17 @@ function ProduitGridCard({
           <p className="text-base font-bold text-mga">
             {formatMGA(p.prix)}
             <span className="text-[11px] font-normal text-[--foreground-muted] ml-1">
-              /{p.unite}
+              /{p.unite} <span className="text-[--foreground-subtle]">HT</span>
             </span>
           </p>
           {p.prixCarton && (
             <p className="text-[10px] text-[--foreground-subtle]">
               {p.uniteCarton} → {formatMGA(p.prixCarton)}
+            </p>
+          )}
+          {p.qteMinCommande > 1 && (
+            <p className="text-[10px] text-[--foreground-subtle] mt-0.5">
+              Min : {p.qteMinCommande} unités
             </p>
           )}
         </div>
@@ -402,11 +585,20 @@ function ProduitListItem({
           {p.nom}
         </Link>
         <p className="text-[11px] text-[--foreground-muted] italic">{p.nomMG}</p>
+        {p.qteMinCommande > 1 && (
+          <p className="text-[10px] text-[--foreground-subtle] mt-0.5">
+            Min : {p.qteMinCommande} unités
+          </p>
+        )}
       </div>
 
       <div className="text-right shrink-0">
         <p className="text-sm font-bold text-mga">
-          {formatMGA(p.prix)}<span className="text-[11px] font-normal text-[--foreground-muted]">/{p.unite}</span>
+          {formatMGA(p.prix)}
+          <span className="text-[11px] font-normal text-[--foreground-muted]">
+            /{p.unite}{" "}
+            <span className="text-[--foreground-subtle]">HT</span>
+          </span>
         </p>
         {p.prixCarton && (
           <p className="text-[10px] text-[--foreground-subtle]">
@@ -416,18 +608,7 @@ function ProduitListItem({
       </div>
 
       <div className="shrink-0">
-        <Badge
-          variant={
-            p.stock === "ok"
-              ? "success"
-              : p.stock === "limite"
-                ? "warning"
-                : "destructive"
-          }
-          className="text-[10px]"
-        >
-          {p.stock === "ok" ? "En stock" : p.stock === "limite" ? "Limité" : "Rupture"}
-        </Badge>
+        <StockBadge stock={p.stock} />
       </div>
 
       <button
@@ -480,7 +661,7 @@ function QuickOrderTable({
                 Produit
               </th>
               <th className="text-right px-4 py-3 font-medium text-[--foreground-muted]">
-                Prix/unité
+                Prix/unité HT
               </th>
               <th className="text-right px-4 py-3 font-medium text-[--foreground-muted]">
                 Prix/carton
@@ -512,6 +693,11 @@ function QuickOrderTable({
                         <p className="text-[10px] text-[--foreground-muted] italic">
                           {p.nomMG}
                         </p>
+                        {p.qteMinCommande > 1 && (
+                          <p className="text-[10px] text-[--foreground-subtle]">
+                            Min : {p.qteMinCommande} unités
+                          </p>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -555,7 +741,7 @@ function QuickOrderTable({
             <tfoot className="bg-[--background-subtle]">
               <tr>
                 <td colSpan={4} className="px-4 py-3 font-bold text-right text-[--foreground]">
-                  Total estimé
+                  Total estimé HT
                 </td>
                 <td className="px-4 py-3 font-bold text-right text-[--primary] text-mga text-base">
                   {formatMGA(total)}

@@ -1,18 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft,
   ShoppingCart,
   Plus,
   Minus,
   Star,
-  Package,
   Info,
   CheckCircle2,
   ChevronRight,
+  Heart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
@@ -21,6 +20,27 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+
+// Catalogue local (source de vérité pour les suggestions similaires)
+const CATALOGUE_ALL = [
+  { id: "1", slug: "riz-makalioka", nom: "Riz Makalioka", nomMG: "Vary Makalioka", cat: "riz", prix: 3200, unite: "kg", emoji: "🌾" },
+  { id: "2", slug: "riz-tsipala", nom: "Riz Tsipala", nomMG: "Vary Tsipala", cat: "riz", prix: 2800, unite: "kg", emoji: "🌾" },
+  { id: "3", slug: "riz-saonjo", nom: "Riz Saonjo", nomMG: "Vary Saonjo", cat: "riz", prix: 2600, unite: "kg", emoji: "🌾" },
+  { id: "4", slug: "huile-tiko-1l", nom: "Huile Tiko 1L", nomMG: "Menaka Tiko 1L", cat: "huile", prix: 12000, unite: "btl", emoji: "🫙" },
+  { id: "5", slug: "huile-tiko-5l", nom: "Huile Tiko 5L", nomMG: "Menaka Tiko 5L", cat: "huile", prix: 55000, unite: "btl", emoji: "🫙" },
+  { id: "6", slug: "sucre-blanc", nom: "Sucre Blanc", nomMG: "Siramamy Fotsy", cat: "sucre", prix: 4800, unite: "kg", emoji: "🍬" },
+  { id: "7", slug: "sucre-roux", nom: "Sucre Roux", nomMG: "Siramamy Mena", cat: "sucre", prix: 5200, unite: "kg", emoji: "🍬" },
+  { id: "8", slug: "savon-madar", nom: "Savon Madar", nomMG: "Savony Madar", cat: "savon", prix: 800, unite: "pce", emoji: "🧼" },
+  { id: "9", slug: "savon-doux", nom: "Savon Doux", nomMG: "Savony Malemy", cat: "savon", prix: 1200, unite: "pce", emoji: "🧼" },
+  { id: "10", slug: "lait-gloria", nom: "Lait Gloria concentré", nomMG: "Ronono Gloria", cat: "lait", prix: 4500, unite: "bte", emoji: "🥛" },
+  { id: "11", slug: "lait-kiri", nom: "Lait Kiri", nomMG: "Ronono Kiri", cat: "lait", prix: 3800, unite: "bte", emoji: "🥛" },
+  { id: "12", slug: "farine-mixa", nom: "Farine Mixa 1kg", nomMG: "Harina Mixa 1kg", cat: "farine", prix: 4200, unite: "pct", emoji: "🌾" },
+  { id: "13", slug: "sel-marin", nom: "Sel marin 1kg", nomMG: "Sira anaty 1kg", cat: "sel", prix: 700, unite: "pct", emoji: "🧂" },
+  { id: "14", slug: "haricot-blanc", nom: "Haricots blancs", nomMG: "Tsaramaso fotsy", cat: "legumes", prix: 5500, unite: "kg", emoji: "🫘" },
+  { id: "15", slug: "tomate-boite", nom: "Tomates concentrées 400g", nomMG: "Voatabia boaty", cat: "conserves", prix: 3500, unite: "bte", emoji: "🥫" },
+  { id: "16", slug: "sardines-boite", nom: "Sardines huile 250g", nomMG: "Trozona menaka", cat: "conserves", prix: 4800, unite: "bte", emoji: "🐟" },
+  { id: "17", slug: "savon-protex", nom: "Savon Protex", nomMG: "Savony Protex", cat: "savon", prix: 2500, unite: "pce", emoji: "🧼" },
+];
 
 // Données de démo de la fiche Riz Makalioka
 const PRODUIT_DEMO = {
@@ -54,6 +74,23 @@ export function FicheProduit({ slug }: { slug: string }) {
   const p = PRODUIT_DEMO; // en prod: fetch par slug
   const [uniteId, setUniteId] = useState(p.uniteesVente[0]!.id);
   const [quantite, setQuantite] = useState(1);
+
+  // Suggestions produits similaires : même catégorie, exclu le produit courant, max 4, mélangés
+  const produitsSimilaires = useMemo(() => {
+    // Déduire la catégorie du slug courant (simplification de démo)
+    const entree = CATALOGUE_ALL.find((x) => x.slug === slug);
+    const cat = entree?.cat ?? "riz";
+    const similaires = CATALOGUE_ALL.filter(
+      (x) => x.cat === cat && x.slug !== slug
+    );
+    // Mélange pseudo-aléatoire reproductible (Fisher-Yates avec seed fixe par slug)
+    const copy = [...similaires];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(((i * 7 + slug.length * 3) % (i + 1)));
+      [copy[i], copy[j]] = [copy[j]!, copy[i]!];
+    }
+    return copy.slice(0, 4);
+  }, [slug]);
 
   const unite = p.uniteesVente.find((u) => u.id === uniteId) ?? p.uniteesVente[0]!;
   const prix = p.palier === "gros"
@@ -267,28 +304,41 @@ export function FicheProduit({ slug }: { slug: string }) {
         <p className="text-[--foreground-muted] leading-relaxed">{p.description}</p>
       </div>
 
-      {/* Produits connexes */}
-      <div className="mt-10 space-y-4">
-        <Separator />
-        <h2 className="text-lg font-semibold text-[--foreground]">Vous pourriez aussi aimer</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {p.related.map((r) => (
-            <Link key={r.slug} href={`/produit/${r.slug}`}>
-              <Card className="hover:shadow-md hover:-translate-y-0.5 transition-all">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <span className="text-2xl">{r.emoji}</span>
-                  <div>
-                    <p className="text-sm font-semibold text-[--foreground]">{r.nom}</p>
-                    <p className="text-xs text-[--primary] font-medium text-mga">
-                      {formatMGA(r.prix)}/kg
+      {/* Suggestions produits similaires */}
+      {produitsSimilaires.length > 0 && (
+        <div className="mt-10 space-y-4">
+          <Separator />
+          <h2 className="text-lg font-semibold text-[--foreground] flex items-center gap-2">
+            <Heart className="w-5 h-5 text-[--primary]" />
+            Vous aimerez aussi
+          </h2>
+          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+            {produitsSimilaires.map((r) => (
+              <Link key={r.slug} href={`/produit/${r.slug}`} className="shrink-0">
+                <Card className="w-40 hover:shadow-md hover:-translate-y-0.5 transition-all border-[--card-border]">
+                  <CardContent className="p-3 flex flex-col items-center gap-2 text-center">
+                    <div className="w-12 h-12 rounded-xl bg-[--background-muted] flex items-center justify-center">
+                      <span className="text-2xl">{r.emoji}</span>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-[--foreground] leading-tight line-clamp-2">
+                        {r.nom}
+                      </p>
+                      <p className="text-[10px] text-[--foreground-muted] italic line-clamp-1 mt-0.5">
+                        {r.nomMG}
+                      </p>
+                    </div>
+                    <p className="text-xs font-bold text-mga text-[--primary]">
+                      {formatMGA(r.prix)}
+                      <span className="text-[--foreground-muted] font-normal">/{r.unite}</span>
                     </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
