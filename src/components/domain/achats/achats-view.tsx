@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ShoppingBag, Plus, Search, Package, Truck, CheckCircle2,
   Clock, AlertCircle, FileText, Building2, X, ChevronRight,
-  Send, RefreshCw, Loader2, Trash2, Edit3, ReceiptText,
+  Send, RefreshCw, Loader2, Trash2, Edit3, ReceiptText, BarChart2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
@@ -72,6 +72,14 @@ interface Fournisseur {
   actif: boolean;
 }
 
+type FournisseurStats = {
+  bons: { id: string; numero: string; statut: string; totalTTC: number; dateCommande: string | null; dateLivraisonPrevue: string | null; dateReceptionEffective: string | null }[];
+  delaiMoyen: number | null;
+  parStatut: Record<string, { totalTTC: number; nbBons: number }>;
+  totalAchats12m: number;
+  nbBonsTotal: number;
+};
+
 interface ProduitSimple {
   id: string;
   code: string;
@@ -104,6 +112,21 @@ export function AchatsView() {
   const [showNouveauFournisseur, setShowNouveauFournisseur] = useState(false);
   const [showReception, setShowReception] = useState(false);
   const [fournisseurEdit, setFournisseurEdit] = useState<Fournisseur | null>(null);
+
+  // Fournisseur detail drawer
+  const [fournisseurDetail, setFournisseurDetail] = useState<Fournisseur | null>(null);
+  const [fournisseurStats, setFournisseurStats] = useState<FournisseurStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+
+  async function ouvrirFournisseurDetail(f: Fournisseur) {
+    setFournisseurDetail(f);
+    setFournisseurStats(null);
+    setLoadingStats(true);
+    try {
+      const res = await fetch(`/api/achats/fournisseurs/${f.id}/stats`);
+      if (res.ok) setFournisseurStats(await res.json());
+    } finally { setLoadingStats(false); }
+  }
 
   const charger = useCallback(async () => {
     setLoading(true);
@@ -367,6 +390,9 @@ export function AchatsView() {
                         <p className="text-xs text-green-500 font-medium">Soldé</p>
                       )}
                     </div>
+                    <Button variant="outline" size="sm" onClick={() => ouvrirFournisseurDetail(f)} title="Fiche fournisseur">
+                      <BarChart2 className="w-4 h-4" />
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => setFournisseurEdit(f)}>
                       <Edit3 className="w-4 h-4" />
                     </Button>
@@ -580,6 +606,106 @@ export function AchatsView() {
               setSelectionBC(await res.json());
             }}
           />
+        )}
+      </AnimatePresence>
+
+      {/* ── Drawer fournisseur detail ── */}
+      <AnimatePresence>
+        {fournisseurDetail && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
+              onClick={() => setFournisseurDetail(null)}
+            />
+            <motion.aside
+              initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed right-0 inset-y-0 z-50 w-full max-w-md flex flex-col shadow-2xl overflow-hidden"
+              style={{ backgroundColor: "#111118", borderLeft: "1px solid #1E1E2E" }}
+            >
+              <div className="flex items-center gap-3 p-4 border-b shrink-0" style={{ borderColor: "#1E1E2E" }}>
+                <div className="w-9 h-9 rounded-full bg-[--primary]/10 text-[--primary] flex items-center justify-center font-bold text-sm shrink-0">
+                  {fournisseurDetail.nomCourt?.slice(0, 2).toUpperCase() ?? fournisseurDetail.nom.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-white truncate">{fournisseurDetail.nom}</p>
+                  <p className="text-xs" style={{ color: "#666" }}>{fournisseurDetail.ville ?? ""} · J+{fournisseurDetail.conditionsPaiement}</p>
+                </div>
+                <button onClick={() => setFournisseurDetail(null)} className="p-1.5 rounded-lg hover:bg-white/10" style={{ color: "#666" }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-5">
+                {loadingStats ? (
+                  <div className="flex items-center justify-center py-12"><Loader2 className="w-5 h-5 animate-spin" style={{ color: "#FF4D00" }} /></div>
+                ) : fournisseurStats ? (
+                  <>
+                    {/* KPIs */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: "Total achats", value: formatMGA(fournisseurStats.totalAchats12m, { compact: true }), color: "#3B82F6" },
+                        { label: "Bons de commande", value: String(fournisseurStats.nbBonsTotal), color: "#8B5CF6" },
+                        { label: "Délai moyen", value: fournisseurStats.delaiMoyen !== null ? `${fournisseurStats.delaiMoyen}j` : "—", color: "#F59E0B" },
+                        { label: "Dette en cours", value: formatMGA(fournisseurDetail.detteEnCours, { compact: true }), color: fournisseurDetail.detteEnCours > 0 ? "#EF4444" : "#22C55E" },
+                      ].map((k) => (
+                        <div key={k.label} className="rounded-xl p-3" style={{ backgroundColor: "#0d0d14", border: "1px solid #1E1E2E" }}>
+                          <p className="text-[10px] mb-1" style={{ color: "#666" }}>{k.label}</p>
+                          <p className="text-lg font-bold" style={{ color: k.color }}>{k.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Coordonnées */}
+                    {(fournisseurDetail.contact || fournisseurDetail.telephone || fournisseurDetail.email) && (
+                      <div className="rounded-xl p-3 space-y-1 text-sm" style={{ backgroundColor: "#0d0d14", border: "1px solid #1E1E2E" }}>
+                        {fournisseurDetail.contact && <p style={{ color: "#888" }}><span style={{ color: "#555" }}>Contact : </span>{fournisseurDetail.contact}</p>}
+                        {fournisseurDetail.telephone && <p style={{ color: "#888" }}><span style={{ color: "#555" }}>Tél : </span>{fournisseurDetail.telephone}</p>}
+                        {fournisseurDetail.email && <p style={{ color: "#888" }}><span style={{ color: "#555" }}>Email : </span>{fournisseurDetail.email}</p>}
+                        {fournisseurDetail.adresse && <p style={{ color: "#888" }}><span style={{ color: "#555" }}>Adresse : </span>{fournisseurDetail.adresse}</p>}
+                      </div>
+                    )}
+
+                    {/* Derniers BCs */}
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: "#555" }}>Derniers bons de commande</p>
+                      {fournisseurStats.bons.length === 0 ? (
+                        <p className="text-sm" style={{ color: "#555" }}>Aucun bon de commande</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {fournisseurStats.bons.slice(0, 8).map((b) => {
+                            const conf = STATUT_CONF[b.statut as Statut];
+                            return (
+                              <div key={b.id} className="flex items-center gap-3 rounded-lg p-2.5" style={{ backgroundColor: "#0d0d14", border: "1px solid #1E1E2E" }}>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-white font-mono">{b.numero}</p>
+                                  {b.dateCommande && (
+                                    <p className="text-[10px]" style={{ color: "#555" }}>
+                                      {new Date(b.dateCommande).toLocaleDateString("fr-FR")}
+                                      {b.dateReceptionEffective && ` → reçu ${new Date(b.dateReceptionEffective).toLocaleDateString("fr-FR")}`}
+                                    </p>
+                                  )}
+                                </div>
+                                <span className="text-xs font-mono text-white">{formatMGA(b.totalTTC, { compact: true })}</span>
+                                {conf && (
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#1E1E2E", color: "#888" }}>
+                                    {conf.label}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm" style={{ color: "#555" }}>Impossible de charger les données</p>
+                )}
+              </div>
+            </motion.aside>
+          </>
         )}
       </AnimatePresence>
     </div>
