@@ -451,6 +451,84 @@ export function FinancesView() {
             )}
           </div>
 
+          {/* ── Flux trésorerie & Prévision fin de mois ─────────────────── */}
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Flux : recettes vs charges */}
+            <div className="bg-[--card] border border-[--border] rounded-xl p-4">
+              <p className="text-xs font-medium text-[--foreground-subtle] mb-3">Flux trésorerie (mois courant)</p>
+              <div className="space-y-3">
+                {[
+                  { label: "Recettes TTC", val: kpi.caTTC, color: "#22c55e", bg: "#22c55e20" },
+                  { label: "COGS", val: -kpi.cogs, color: "#f59e0b", bg: "#f59e0b20" },
+                  { label: "Charges opérat.", val: -kpi.chargesOp, color: "#ef4444", bg: "#ef444420" },
+                ].map(({ label, val, color, bg }) => {
+                  const abs = Math.abs(val);
+                  const max = Math.max(kpi.caTTC, kpi.cogs + kpi.chargesOp, 1);
+                  const pct = Math.round((abs / max) * 100);
+                  return (
+                    <div key={label}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-[--foreground-muted]">{label}</span>
+                        <span className="text-xs font-semibold" style={{ color }}>
+                          {val >= 0 ? "+" : "−"}{formatMGA(abs)}
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full" style={{ backgroundColor: "#1E1E2E" }}>
+                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="flex items-center justify-between pt-2 border-t border-[--border]">
+                  <span className="text-sm font-semibold text-[--foreground]">Résultat net</span>
+                  <span className="text-base font-bold" style={{ color: kpi.margeN >= 0 ? "#22c55e" : "#ef4444" }}>
+                    {kpi.margeN >= 0 ? "+" : ""}{formatMGA(kpi.margeN)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Prévision fin de mois */}
+            <div className="bg-[--card] border border-[--border] rounded-xl p-4">
+              <p className="text-xs font-medium text-[--foreground-subtle] mb-3">Prévision fin de mois</p>
+              {(() => {
+                const now = new Date();
+                const joursEcoules = now.getDate();
+                const joursTotal = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                const caJourMoyen = joursEcoules > 0 ? kpi.caTTC / joursEcoules : 0;
+                const caPrevu = Math.round(caJourMoyen * joursTotal);
+                const margePrevu = caPrevu > 0 ? Math.round((kpi.margeN / kpi.caTTC) * caPrevu) : 0;
+                const avancement = Math.round((joursEcoules / joursTotal) * 100);
+                return (
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-[--foreground-muted]">Avancement du mois</span>
+                        <span className="text-xs font-mono text-[--foreground]">{joursEcoules}j / {joursTotal}j</span>
+                      </div>
+                      <div className="h-2 rounded-full" style={{ backgroundColor: "#1E1E2E" }}>
+                        <div className="h-full rounded-full bg-[--primary]" style={{ width: `${avancement}%` }} />
+                      </div>
+                    </div>
+                    {[
+                      { label: "CA/jour moyen", val: caJourMoyen, color: "#3b82f6" },
+                      { label: "CA prévu fin mois", val: caPrevu, color: "#FF4D00" },
+                      { label: "Résultat prévu", val: margePrevu, color: margePrevu >= 0 ? "#22c55e" : "#ef4444" },
+                    ].map(({ label, val, color }) => (
+                      <div key={label} className="flex items-center justify-between">
+                        <span className="text-xs text-[--foreground-muted]">{label}</span>
+                        <span className="text-sm font-bold" style={{ color }}>{formatMGA(Math.round(val))}</span>
+                      </div>
+                    ))}
+                    <div className="text-[10px] text-[--foreground-subtle] mt-1">
+                      * Basé sur la vélocité des {joursEcoules} premiers jours
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
           {/* ── Charges opérationnelles ───────────────────────────────────── */}
           <div className="bg-[--card] border border-[--border] rounded-xl overflow-hidden">
             <div className="flex items-center gap-2 px-4 py-3 border-b border-[--border]">
