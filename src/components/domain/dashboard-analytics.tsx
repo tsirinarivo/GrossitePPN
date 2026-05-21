@@ -141,6 +141,14 @@ export function DashboardAnalytics() {
               <FileText className="w-3.5 h-3.5" />
               Fournisseurs
             </Link>
+            <Link
+              href="/rapports/bilan"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+              style={{ backgroundColor: "#1E1E2E", color: "#A0AEC0", border: "1px solid #2E2E3E" }}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Bilan
+            </Link>
           </div>
         </div>
         <div className="flex items-center gap-1 bg-[--muted] rounded-xl p-1">

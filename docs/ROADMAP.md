@@ -109,10 +109,14 @@
 - [x] Couleurs sémantiques (vert ≥95%, ambre 85-95%, rouge &lt;85%) sur conformité et retards
 - [x] Lien dans hub `/rapports`
 
-**Sprint 22 — Bilan simplifié**
-- Compte de résultat mensuel : CA HT − Achats − Charges = Résultat
-- Tableau de bord comptable (pour rôle `comptable`)
-- Export Excel-compatible (CSV avec séparateur ;)
+### Sprint 22 — Bilan simplifié
+- [x] API `/api/rapports/bilan` agrégeant CA (commandes) + Achats (BCs reçus) + Charges (chargesOperationnelles) par mois
+- [x] Calcul marge brute, % marge, résultat net = marge − charges, taux résultat
+- [x] Page `/rapports/bilan` accessible aux comptables (requireRole admin/gerant/comptable)
+- [x] ComposedChart bars (CA / Achats / Charges) + ligne Résultat
+- [x] Compte de résultat synthétique annuel + table mensuelle détaillée
+- [x] Export CSV `/api/rapports/bilan/export` séparateur `;` + BOM UTF-8 Excel-compatible
+- [x] Navigation année (boutons ←/→) avec limite année courante
 
 **Sprint 23 — Rapport livraisons**
 - Taux ponctualité par chauffeur
