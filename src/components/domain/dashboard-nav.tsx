@@ -7,7 +7,7 @@ import {
   ShoppingCart, ShoppingBag, Package, Users, Truck,
   BarChart3, DollarSign, Settings, Store,
   Wifi, WifiOff, Receipt, History, LogOut, User,
-  X, ChevronLeft, ClipboardList,
+  X, ChevronLeft, ClipboardList, RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app.store";
@@ -22,6 +22,7 @@ const ALL_NAV_ITEMS = [
   { href: "/pos/caisse", label: "Caisse",            icon: Receipt,      color: "#8B5CF6" },
   { href: "/historique", label: "Historique",        icon: History,      color: "#6B7280" },
   { href: "/commandes",  label: "Commandes",          icon: ClipboardList, color: "#EC4899" },
+  { href: "/retours",    label: "Retours & avoirs",   icon: RotateCcw,    color: "#EF4444" },
   { href: "/finances",   label: "Finances",          icon: DollarSign,   color: "#10B981" },
   { href: "/stock",      label: "Stock",             icon: Package,      color: "#3B82F6" },
   { href: "/clients",    label: "Clients",           icon: Users,        color: "#F59E0B" },
