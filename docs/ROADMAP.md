@@ -127,10 +127,12 @@
 - [x] Filtres période (semaine/mois/trimestre/année)
 - [x] Couleurs sémantiques sur réussite et ponctualité
 
-**Sprint 24 — Analyse panier moyen**
-- Distribution des montants de commande (histogramme)
-- Produits fréquemment commandés ensemble (market basket simplifié)
-- Recommandations cross-sell dans le POS
+### Sprint 24 — Analyse panier moyen
+- [x] API `/api/rapports/panier-moyen` : tranches de montant (6 paliers de <50k à >1M)
+- [x] Calcul moyenne, médiane, min, max sur la période
+- [x] Market basket simplifié : co-occurrences de paires produits dans même commande, % corrélation
+- [x] Page `/rapports/panier-moyen` avec BarChart distribution + top 12 duos
+- [x] Suggestion cross-sell automatique basée sur le duo le plus corrélé
 
 ---
 
