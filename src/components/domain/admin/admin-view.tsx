@@ -258,6 +258,11 @@ export function AdminView() {
           >
             <Tag className="w-4 h-4" />Promotions
           </Link>
+          <Link href="/admin/depots"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0 lg:w-full text-[--foreground-muted] hover:bg-[--accent] hover:text-[--foreground]"
+          >
+            <Warehouse className="w-4 h-4" />Dépôts
+          </Link>
         </nav>
 
         <div className="lg:col-span-3 space-y-4">

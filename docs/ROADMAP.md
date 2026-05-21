@@ -72,17 +72,20 @@
 - [x] Stats progression (livrées / échecs / restantes)
 - [x] PDF feuille de route chauffeur (infos tournée, arrêts numérotés, checkboxes, signatures)
 
+### Sprint 18 — Gestion dépôts
+- [x] Page CRUD `/admin/depots` (drawer création/édition, soft delete par désactivation)
+- [x] Stock consolidé par dépôt (nb produits, unités, valeur en MGA)
+- [x] API stock consolidé (`/api/depots/stock-consolide`)
+- [x] Drawer transfert inter-dépôts (recherche produit, source ≠ destination, quantité)
+- [x] Historique transferts (`/api/stock/transferts/historique`) avec groupement par référence
+- [x] KPIs globaux : dépôts actifs, total produits, unités, valeur totale
+- [x] Lien dans menu admin
+
 ---
 
 ## 🗂 File d'attente — Sprints à venir
 
 ### Thème A — Workflows manquants
-
-**Sprint 18 — Gestion dépôts**
-- CRUD dépôts (`/admin/depots`)
-- Vue stock consolidé par dépôt
-- Transferts inter-dépôts (formulaire + mouvement auto)
-- Historique transferts
 
 **Sprint 19 — Codes promo boutique**
 - Application code promo au checkout (réduction %)
