@@ -11,6 +11,9 @@ import {
   ArrowRight,
   Tag,
   Package,
+  Loader2,
+  X,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
@@ -19,19 +22,75 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useShopCart } from "@/store/shop-cart.store";
+import { toast } from "sonner";
+
+type PromoApplied = {
+  code: string;
+  nom: string;
+  valeur: number;
+  typeValeur: string;
+  remise: number;
+};
 
 export function PanierPage() {
   const { lignes, modifierQte: modifierQteStore, supprimer: supprimerStore } = useShopCart();
   const [codePromo, setCodePromo] = useState("");
-  const [promoAppliquee, setPromoAppliquee] = useState(false);
+  const [promo, setPromo] = useState<PromoApplied | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     useShopCart.persist.rehydrate();
   }, []);
 
   const total = lignes.reduce((s, l) => s + l.qte * l.prixUnit, 0);
-  const remisePromo = promoAppliquee ? Math.round(total * 0.05) : 0;
-  const totalFinal = total - remisePromo;
+
+  // Re-vérifier la promo si le total change
+  useEffect(() => {
+    if (!promo) return;
+    if (promo.typeValeur === "pct") {
+      const nouvelleRemise = Math.round((total * promo.valeur) / 100);
+      if (nouvelleRemise !== promo.remise) {
+        setPromo({ ...promo, remise: nouvelleRemise });
+      }
+    }
+  }, [total, promo]);
+
+  const remisePromo = promo?.remise ?? 0;
+  const totalFinal = Math.max(0, total - remisePromo);
+
+  const appliquerCode = async () => {
+    if (!codePromo.trim()) return;
+    setVerifying(true);
+    try {
+      const res = await fetch("/api/shop/promotions/valider", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: codePromo.trim(), totalPanier: total }),
+      });
+      const data = await res.json();
+      if (data.valide && data.promotion) {
+        setPromo({
+          code: data.promotion.code,
+          nom: data.promotion.nom,
+          valeur: data.promotion.valeur,
+          typeValeur: data.promotion.typeValeur,
+          remise: data.remise,
+        });
+        toast.success(`Code ${data.promotion.code} appliqué`);
+      } else {
+        toast.error(data.raison ?? "Code invalide");
+      }
+    } catch {
+      toast.error("Erreur lors de la vérification");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const retirerCode = () => {
+    setPromo(null);
+    setCodePromo("");
+  };
 
   const modifierQte = (produitId: string, delta: number) => modifierQteStore(produitId, delta);
 
@@ -148,9 +207,12 @@ export function PanierPage() {
                 <span>Sous-total</span>
                 <span className="text-mga">{formatMGA(total)}</span>
               </div>
-              {remisePromo > 0 && (
+              {promo && (
                 <div className="flex justify-between text-[--success]">
-                  <span>Code promo (5%)</span>
+                  <span>
+                    Code {promo.code}
+                    {promo.typeValeur === "pct" ? ` (${promo.valeur}%)` : ""}
+                  </span>
                   <span className="text-mga">−{formatMGA(remisePromo)}</span>
                 </div>
               )}
@@ -167,27 +229,44 @@ export function PanierPage() {
 
             {/* Code promo */}
             <div className="space-y-2">
-              <div className="flex gap-2">
-                <Input
-                  value={codePromo}
-                  onChange={(e) => setCodePromo(e.target.value.toUpperCase())}
-                  placeholder="Code promo"
-                  className="text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (codePromo === "PPN5") setPromoAppliquee(true);
-                  }}
-                >
-                  <Tag className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-              {promoAppliquee && (
-                <p className="text-xs text-[--success] flex items-center gap-1">
-                  ✓ Code PPN5 appliqué — 5% de remise
-                </p>
+              {promo ? (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[--success]/30 bg-[--success]/5">
+                  <Check className="w-3.5 h-3.5 text-[--success] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-[--success]">{promo.code}</div>
+                    <div className="text-[10px] text-[--foreground-muted] truncate">{promo.nom}</div>
+                  </div>
+                  <button
+                    onClick={retirerCode}
+                    className="p-1 rounded hover:bg-[--accent] text-[--foreground-subtle]"
+                    title="Retirer le code"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    value={codePromo}
+                    onChange={(e) => setCodePromo(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        appliquerCode();
+                      }
+                    }}
+                    placeholder="Code promo"
+                    className="text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={appliquerCode}
+                    disabled={verifying || !codePromo.trim()}
+                  >
+                    {verifying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Tag className="w-3.5 h-3.5" />}
+                  </Button>
+                </div>
               )}
             </div>
 

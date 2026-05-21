@@ -122,10 +122,17 @@ export function PromotionsView() {
   async function load() {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/promotions");
+      const res = await fetch("/api/admin/promotions/stats");
       if (res.ok) {
         const data = await res.json();
         setPromotions(data.promotions ?? []);
+      } else {
+        // Fallback sur l'endpoint classique
+        const resFallback = await fetch("/api/admin/promotions");
+        if (resFallback.ok) {
+          const data = await resFallback.json();
+          setPromotions(data.promotions ?? []);
+        }
       }
     } finally {
       setLoading(false);

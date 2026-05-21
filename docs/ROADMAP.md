@@ -81,16 +81,19 @@
 - [x] KPIs globaux : dépôts actifs, total produits, unités, valeur totale
 - [x] Lien dans menu admin
 
+### Sprint 19 — Codes promo boutique
+- [x] API validation code promo (`/api/shop/promotions/valider`) avec contrôles date, actif, nb utilisations max, min commande
+- [x] Application réelle dans le panier B2B (remplace le code mockup PPN5)
+- [x] Recalcul automatique de la remise quand le panier change
+- [x] Validation type valeur : pourcentage ou montant fixe
+- [x] API stats utilisation (`/api/admin/promotions/stats`) avec statut calculé (active / expirée / future / limite atteinte)
+- [x] Affichage taux utilisation et jours restants côté admin
+
 ---
 
 ## 🗂 File d'attente — Sprints à venir
 
 ### Thème A — Workflows manquants
-
-**Sprint 19 — Codes promo boutique**
-- Application code promo au checkout (réduction %)
-- Validation : date, nb utilisations, min commande
-- Stats utilisation par code
 
 **Sprint 20 — Listes d'achat récurrentes (B2B)**
 - Boutique : "Mes listes" → sauvegarder un panier type
