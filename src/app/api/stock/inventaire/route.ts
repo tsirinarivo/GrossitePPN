@@ -10,16 +10,101 @@ export const dynamic = "force-dynamic";
 
 const inventaireSchema = z.object({
   depotId: z.string().min(1),
-  lignes: z.array(z.object({
-    produitId: z.string().min(1),
-    quantiteComptee: z.number().min(0),
-  })).min(1),
+  lignes: z
+    .array(
+      z.object({
+        produitId: z.string().min(1),
+        quantiteComptee: z.number().min(0),
+      })
+    )
+    .min(1),
   notes: z.string().optional().nullable(),
 });
 
+export async function GET(req: NextRequest) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user)
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const depotId = searchParams.get("depotId");
+
+    // Fetch all active depots
+    let depots = await db
+      .select()
+      .from(schema.depots)
+      .where(eq(schema.depots.actif, true));
+
+    if (depots.length === 0) {
+      depots = [
+        {
+          id: "demo-1",
+          nom: "Tana-Centre",
+          adresse: "Antananarivo Centre",
+          telephone: null,
+          responsableId: null,
+          actif: true,
+          estPrincipal: true,
+          createdAt: new Date(),
+        },
+        {
+          id: "demo-2",
+          nom: "Tamatave",
+          adresse: "Toamasina",
+          telephone: null,
+          responsableId: null,
+          actif: true,
+          estPrincipal: false,
+          createdAt: new Date(),
+        },
+        {
+          id: "demo-3",
+          nom: "Antsirabe",
+          adresse: "Antsirabe",
+          telephone: null,
+          responsableId: null,
+          actif: true,
+          estPrincipal: false,
+          createdAt: new Date(),
+        },
+      ];
+    }
+
+    // Build join condition: filter by depot if provided
+    const depotIdFilter = depotId
+      ? and(
+          eq(schema.stocks.produitId, schema.produits.id),
+          eq(schema.stocks.depotId, depotId)
+        )
+      : eq(schema.stocks.produitId, schema.produits.id);
+
+    const rows = await db
+      .select({
+        produitId: schema.produits.id,
+        designation: schema.produits.nom,
+        code: schema.produits.code,
+        uniteBase: schema.produits.uniteBase,
+        seuilAlerte: schema.produits.seuilAlerte,
+        stockActuel: schema.stocks.quantiteBase,
+        depotId: schema.stocks.depotId,
+      })
+      .from(schema.produits)
+      .leftJoin(schema.stocks, depotIdFilter)
+      .where(eq(schema.produits.actif, true))
+      .orderBy(schema.produits.nom);
+
+    return NextResponse.json({ depots, produits: rows });
+  } catch (e) {
+    console.error("[api/stock/inventaire GET]", e);
+    return NextResponse.json({ error: String(e) }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!session?.user)
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const body = await req.json().catch(() => null);
   const parsed = inventaireSchema.safeParse(body);
@@ -37,48 +122,56 @@ export async function POST(req: NextRequest) {
 
     for (const ligne of lignes) {
       const [stockRow] = await db
-        .select({ quantiteBase: schema.stocks.quantiteBase })
+        .select()
         .from(schema.stocks)
-        .where(and(eq(schema.stocks.produitId, ligne.produitId), eq(schema.stocks.depotId, depotId)))
+        .where(
+          and(
+            eq(schema.stocks.produitId, ligne.produitId),
+            eq(schema.stocks.depotId, depotId)
+          )
+        )
         .limit(1);
 
       const avant = stockRow?.quantiteBase ?? 0;
       const apres = ligne.quantiteComptee;
 
-      if (Math.abs(apres - avant) < 0.001) continue; // aucun écart, skip
-
-      ecarts++;
-
-      // Ajuster le stock
-      if (stockRow) {
-        await db
-          .update(schema.stocks)
-          .set({ quantiteBase: apres, updatedAt: now })
-          .where(and(eq(schema.stocks.produitId, ligne.produitId), eq(schema.stocks.depotId, depotId)));
-      } else {
-        await db.insert(schema.stocks).values({
+      // Upsert stock
+      await db
+        .insert(schema.stocks)
+        .values({
           id: crypto.randomUUID(),
           produitId: ligne.produitId,
           depotId,
           quantiteBase: apres,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: [schema.stocks.produitId, schema.stocks.depotId],
+          set: { quantiteBase: apres, updatedAt: now },
         });
+
+      const diff = apres - avant;
+      if (Math.abs(diff) >= 0.001) {
+        ecarts++;
       }
 
+      // Insert mouvement
       await db.insert(schema.mouvementsStock).values({
         id: crypto.randomUUID(),
         produitId: ligne.produitId,
         depotId,
         type: "inventaire",
-        quantiteBase: Math.abs(apres - avant),
+        quantiteBase: diff,
         quantiteAvant: avant,
         quantiteApres: apres,
         reference: ref,
         notes: notes ?? `Inventaire physique ${ref}`,
         userId: session.user.id,
+        createdAt: now,
       });
     }
 
-    return NextResponse.json({ ok: true, reference: ref, ecarts });
+    return NextResponse.json({ success: true, nbLignes: lignes.length, reference: ref, ecarts });
   } catch (e) {
     console.error("[api/stock/inventaire POST]", e);
     return NextResponse.json({ error: String(e) }, { status: 500 });

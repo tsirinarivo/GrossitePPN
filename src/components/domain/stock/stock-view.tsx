@@ -318,9 +318,11 @@ export function StockView() {
               Analyse
             </Link>
           </Button>
-          <Button variant="outline" size="sm" onClick={ouvrirInventaire} disabled={loading || produitsDB.length === 0}>
-            <ClipboardList className="w-4 h-4" />
-            Inventaire
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/stock/inventaire">
+              <ClipboardList className="w-4 h-4" />
+              Inventaire
+            </Link>
           </Button>
           <Button size="sm" asChild>
             <Link href="/stock/produits/nouveau">
