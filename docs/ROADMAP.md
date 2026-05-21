@@ -118,11 +118,14 @@
 - [x] Export CSV `/api/rapports/bilan/export` séparateur `;` + BOM UTF-8 Excel-compatible
 - [x] Navigation année (boutons ←/→) avec limite année courante
 
-**Sprint 23 — Rapport livraisons**
-- Taux ponctualité par chauffeur
-- Km parcourus simulés par tournée
-- Livraisons échouées : motifs agrégés
-- Coût moyen par livraison
+### Sprint 23 — Rapport livraisons
+- [x] API `/api/rapports/livraisons` agrégeant livraisons par chauffeur (via tournees.chauffeurId)
+- [x] Taux ponctualité = livraison effectuée dans la journée prévue (±12h)
+- [x] Taux réussite = livrées / total livraisons
+- [x] Km parcourus estimés (25 km/tournée) + coût moyen 8 500 MGA/livraison
+- [x] Page `/rapports/livraisons` avec KPIs synthèse, BarChart performance, PieChart motifs d'échec, table classement
+- [x] Filtres période (semaine/mois/trimestre/année)
+- [x] Couleurs sémantiques sur réussite et ponctualité
 
 **Sprint 24 — Analyse panier moyen**
 - Distribution des montants de commande (histogramme)
