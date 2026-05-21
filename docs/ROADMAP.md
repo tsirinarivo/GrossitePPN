@@ -101,10 +101,13 @@
 
 ### Thème B — Rapports & BI
 
-**Sprint 21 — Rapport fournisseurs**
-- Classement fournisseurs par volume d'achat, délai moyen, taux de conformité
-- Comparaison fournisseur A vs B pour même produit
-- Alertes : fournisseur avec taux retard > 30%
+### Sprint 21 — Rapport fournisseurs
+- [x] API `/api/rapports/fournisseurs` avec filtres période (mois/3mois/12mois/année)
+- [x] Calculs : nb BCs, total achats, délai moyen jours, taux conformité (qté reçue/commandée), retards
+- [x] Page `/rapports/fournisseurs` avec KPIs globaux + BarChart top 6 + table classement
+- [x] Bloc alertes pour fournisseurs avec taux retard > 30%
+- [x] Couleurs sémantiques (vert ≥95%, ambre 85-95%, rouge &lt;85%) sur conformité et retards
+- [x] Lien dans hub `/rapports`
 
 **Sprint 22 — Bilan simplifié**
 - Compte de résultat mensuel : CA HT − Achats − Charges = Résultat
