@@ -7,7 +7,7 @@ import {
   ShoppingCart, ShoppingBag, Package, Users, Truck,
   BarChart3, DollarSign, Settings, Store,
   Wifi, WifiOff, Receipt, History, LogOut, User,
-  X, ChevronLeft, ClipboardList, RotateCcw,
+  X, ChevronLeft, ClipboardList, RotateCcw, Route,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app.store";
@@ -27,6 +27,7 @@ const ALL_NAV_ITEMS = [
   { href: "/stock",      label: "Stock",             icon: Package,      color: "#3B82F6" },
   { href: "/clients",    label: "Clients",           icon: Users,        color: "#F59E0B" },
   { href: "/livraisons", label: "Livraisons",        icon: Truck,        color: "#6B7280" },
+  { href: "/tournees",   label: "Tournées",          icon: Route,        color: "#3B82F6" },
   { href: "/achats",     label: "Achats",            icon: ShoppingBag,  color: "#6B7280" },
   { href: "/rapports",   label: "Rapports",          icon: BarChart3,    color: "#6B7280" },
   { href: "/shop",       label: "Boutique",          icon: Store,        color: "#6B7280" },

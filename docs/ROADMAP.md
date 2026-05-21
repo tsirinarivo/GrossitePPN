@@ -62,18 +62,21 @@
 - [x] 4 modes remboursement (avoir crédit / espèces / virement / mobile money)
 - [x] PDF avoir A4 (lignes retournées, motif, mode, signatures, mentions légales)
 
+### Sprint 17 — Tournées logistiques
+- [x] API CRUD tournées (`/api/tournees`, `/api/tournees/[id]`)
+- [x] API ressources (`/api/tournees/ressources` : chauffeurs, véhicules, livraisons libres)
+- [x] API affectation livraisons + réordonnancement (`/api/tournees/[id]/affecter`)
+- [x] Module `/tournees` : liste groupée par date avec barre de progression, statuts (planifiée / en cours / terminée)
+- [x] Drawer création tournée (date + chauffeur + véhicule + notes)
+- [x] Page détail `/tournees/[id]` : édition meta, picker livraisons libres, boutons ↑↓ pour réordonner, retirer
+- [x] Stats progression (livrées / échecs / restantes)
+- [x] PDF feuille de route chauffeur (infos tournée, arrêts numérotés, checkboxes, signatures)
+
 ---
 
 ## 🗂 File d'attente — Sprints à venir
 
 ### Thème A — Workflows manquants
-
-**Sprint 17 — Tournées logistiques**
-- Création/édition tournée (date, chauffeur, véhicule)
-- Affectation de livraisons à une tournée par drag-and-drop (ou bouton)
-- Réordonnancement des arrêts (ordre numéroté)
-- Statut tournée : planifiée → en_cours → terminée
-- Feuille de route chauffeur PDF
 
 **Sprint 18 — Gestion dépôts**
 - CRUD dépôts (`/admin/depots`)
