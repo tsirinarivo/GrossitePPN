@@ -77,6 +77,7 @@ export function ShopFooter() {
                 { href: "/compte/commandes", label: "Mes commandes" },
                 { href: "/compte/factures", label: "Mes factures" },
                 { href: "/compte/fidelite", label: "Ma fidélité ⭐" },
+                { href: "/compte/listes", label: "Mes listes d'achat" },
                 { href: "/compte/adresses", label: "Mes adresses" },
                 { href: "/compte/equipe", label: "Mon équipe" },
               ].map((l) => (

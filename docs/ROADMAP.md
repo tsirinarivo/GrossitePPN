@@ -89,16 +89,13 @@
 - [x] API stats utilisation (`/api/admin/promotions/stats`) avec statut calculé (active / expirée / future / limite atteinte)
 - [x] Affichage taux utilisation et jours restants côté admin
 
----
-
-## 🗂 File d'attente — Sprints à venir
-
-### Thème A — Workflows manquants
-
-**Sprint 20 — Listes d'achat récurrentes (B2B)**
-- Boutique : "Mes listes" → sauvegarder un panier type
-- Commande rapide depuis une liste sauvegardée
-- Partage de liste entre sous-utilisateurs équipe
+### Sprint 20 — Listes d'achat récurrentes (B2B)
+- [x] API CRUD `/api/shop/listes` et `/api/shop/listes/[id]` (auth B2B + sous-utilisateurs)
+- [x] Page `/compte/listes` avec grille de listes (badges nb articles, fréquence, date dernière commande)
+- [x] Drawer création : nom + fréquence (hebdo/bimensuel/mensuel) + import optionnel du panier actuel
+- [x] Drawer détail : vue articles, suppression à l'unité, ajout au panier en 1 clic
+- [x] Suppression de liste avec confirmation inline
+- [x] Lien dans le footer de la boutique
 
 ---
 
