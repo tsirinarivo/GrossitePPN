@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { e } from "@/lib/escape";
 
 export const dynamic = "force-dynamic";
 
@@ -93,13 +94,13 @@ export async function GET(
 </head>
 <body>
 <div class="header">
-  <div class="logo">${(entreprise?.nom ?? "Grossiste") + "<span>PPN</span>"}</div>
+  <div class="logo">${e(entreprise?.nom ?? "Grossiste")}<span>PPN</span></div>
   <div class="facture-title">
     <h1>FACTURE</h1>
-    <div class="numero">${facture.numero}</div>
-    <div class="date">Émise le ${dateFacture}</div>
+    <div class="numero">${e(facture.numero)}</div>
+    <div class="date">Émise le ${e(dateFacture)}</div>
     <div style="margin-top:2mm">
-      <span class="statut-badge statut-${facture.statut}">${facture.statut}</span>
+      <span class="statut-badge statut-${e(facture.statut)}">${e(facture.statut)}</span>
     </div>
   </div>
 </div>
@@ -108,19 +109,19 @@ export async function GET(
 <div class="parties">
   <div class="partie">
     <h3>Émetteur</h3>
-    <p class="nom">${entreprise?.nom ?? "GrossistePPN"}</p>
-    ${entreprise?.adresse ? `<p>${entreprise.adresse}</p>` : ""}
-    ${entreprise?.telephone ? `<p>Tél : ${entreprise.telephone}</p>` : ""}
-    ${entreprise?.nif ? `<p>NIF : ${entreprise.nif}</p>` : ""}
-    ${entreprise?.stat ? `<p>STAT : ${entreprise.stat}</p>` : ""}
+    <p class="nom">${e(entreprise?.nom ?? "GrossistePPN")}</p>
+    ${entreprise?.adresse ? `<p>${e(entreprise.adresse)}</p>` : ""}
+    ${entreprise?.telephone ? `<p>Tél : ${e(entreprise.telephone)}</p>` : ""}
+    ${entreprise?.nif ? `<p>NIF : ${e(entreprise.nif)}</p>` : ""}
+    ${entreprise?.stat ? `<p>STAT : ${e(entreprise.stat)}</p>` : ""}
   </div>
   <div class="partie" style="text-align:right">
     <h3>Client</h3>
     ${client ? `
-      <p class="nom">${client.raisonSociale}</p>
-      ${client.adresse ? `<p>${client.adresse}</p>` : ""}
-      ${client.telephone ? `<p>Tél : ${client.telephone}</p>` : ""}
-      ${client.nif ? `<p>NIF : ${client.nif}</p>` : ""}
+      <p class="nom">${e(client.raisonSociale)}</p>
+      ${client.adresse ? `<p>${e(client.adresse)}</p>` : ""}
+      ${client.telephone ? `<p>Tél : ${e(client.telephone)}</p>` : ""}
+      ${client.nif ? `<p>NIF : ${e(client.nif)}</p>` : ""}
     ` : `<p class="nom">Client comptoir</p>`}
     ${commande?.source === "ecommerce" ? `<p style="color:#3b82f6; font-size:9pt">Commande web</p>` : ""}
   </div>
@@ -140,8 +141,8 @@ export async function GET(
   <tbody>
     ${lignes.map((l) => `
       <tr>
-        <td>${l.nomProduit ?? "—"}</td>
-        <td>${l.nomUnite ?? ""}</td>
+        <td>${e(l.nomProduit ?? "—")}</td>
+        <td>${e(l.nomUnite ?? "")}</td>
         <td>${Number(l.quantite).toLocaleString("fr-FR")}</td>
         <td>${mgaFmt(Number(l.prixUnitaire))}</td>
         ${facture.totalTVA > 0 ? `<td>${Number(l.tauxTVA ?? 0)}%</td>` : ""}
@@ -158,13 +159,13 @@ export async function GET(
     <span class="label">Total TTC</span>
     <span>${mgaFmt(facture.totalTTC)}</span>
   </div>
-  ${facture.modePaiement ? `<div class="totaux-ligne" style="color:#888; font-size:9pt"><span>Mode</span><span>${String(facture.modePaiement).replace(/_/g," ")}</span></div>` : ""}
+  ${facture.modePaiement ? `<div class="totaux-ligne" style="color:#888; font-size:9pt"><span>Mode</span><span>${e(String(facture.modePaiement).replace(/_/g," "))}</span></div>` : ""}
   ${facture.soldeRestant > 0 ? `<div class="totaux-ligne" style="color:#ef4444"><span>Solde restant</span><span>${mgaFmt(facture.soldeRestant)}</span></div>` : ""}
 </div>
 
 <div class="mentions">
-  <p>Cette facture a été émise par ${entreprise?.nom ?? "GrossistePPN"} conformément à la législation malgache en vigueur.</p>
-  ${entreprise?.nif ? `<p>NIF : ${entreprise.nif}${entreprise?.stat ? ` · STAT : ${entreprise.stat}` : ""}${entreprise?.rcs ? ` · RCS : ${entreprise.rcs}` : ""}</p>` : ""}
+  <p>Cette facture a été émise par ${e(entreprise?.nom ?? "GrossistePPN")} conformément à la législation malgache en vigueur.</p>
+  ${entreprise?.nif ? `<p>NIF : ${e(entreprise.nif)}${entreprise?.stat ? ` · STAT : ${e(entreprise.stat)}` : ""}${entreprise?.rcs ? ` · RCS : ${e(entreprise.rcs)}` : ""}</p>` : ""}
   <p style="margin-top:2mm">En cas de contestation, veuillez nous contacter dans les 7 jours suivant la réception.</p>
 </div>
 

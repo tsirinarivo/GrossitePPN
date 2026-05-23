@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { e } from "@/lib/escape";
 
 export const dynamic = "force-dynamic";
 
@@ -139,11 +140,11 @@ export async function GET(
 </head>
 <body>
 <div class="header">
-  <div class="logo">${(entreprise?.nom ?? "Grossiste") + "<span>PPN</span>"}</div>
+  <div class="logo">${e(entreprise?.nom ?? "Grossiste")}<span>PPN</span></div>
   <div class="doc-title">
-    <h1>${documentTitle}</h1>
-    <div class="numero">${documentNumero}</div>
-    <div class="date">Émis le ${dateRetour}</div>
+    <h1>${e(documentTitle)}</h1>
+    <div class="numero">${e(documentNumero)}</div>
+    <div class="date">Émis le ${e(dateRetour)}</div>
   </div>
 </div>
 <div class="divider"></div>
@@ -151,20 +152,20 @@ export async function GET(
 <div class="parties">
   <div class="partie">
     <h3>Émetteur</h3>
-    <p class="nom">${entreprise?.nom ?? "GrossistePPN"}</p>
-    ${entreprise?.adresse ? `<p>${entreprise.adresse}</p>` : ""}
-    ${entreprise?.telephone ? `<p>Tél : ${entreprise.telephone}</p>` : ""}
-    ${entreprise?.nif ? `<p>NIF : ${entreprise.nif}</p>` : ""}
+    <p class="nom">${e(entreprise?.nom ?? "GrossistePPN")}</p>
+    ${entreprise?.adresse ? `<p>${e(entreprise.adresse)}</p>` : ""}
+    ${entreprise?.telephone ? `<p>Tél : ${e(entreprise.telephone)}</p>` : ""}
+    ${entreprise?.nif ? `<p>NIF : ${e(entreprise.nif)}</p>` : ""}
   </div>
   <div class="partie" style="text-align:right">
     <h3>Client</h3>
     ${
       client
         ? `
-      <p class="nom">${client.raisonSociale}</p>
-      ${client.adresse ? `<p>${client.adresse}</p>` : ""}
-      ${client.telephone ? `<p>Tél : ${client.telephone}</p>` : ""}
-      ${client.nif ? `<p>NIF : ${client.nif}</p>` : ""}
+      <p class="nom">${e(client.raisonSociale)}</p>
+      ${client.adresse ? `<p>${e(client.adresse)}</p>` : ""}
+      ${client.telephone ? `<p>Tél : ${e(client.telephone)}</p>` : ""}
+      ${client.nif ? `<p>NIF : ${e(client.nif)}</p>` : ""}
     `
         : `<p class="nom">Client comptoir</p>`
     }
@@ -175,15 +176,15 @@ ${
   facture
     ? `<div class="ref-facture">
   <span class="label">Référence facture d'origine</span><br/>
-  <strong>${facture.numero}</strong> — ${mgaFmt(facture.totalTTC)} (${new Date(facture.createdAt ?? Date.now()).toLocaleDateString("fr-FR")})
+  <strong>${e(facture.numero)}</strong> — ${mgaFmt(facture.totalTTC)} (${new Date(facture.createdAt ?? Date.now()).toLocaleDateString("fr-FR")})
 </div>`
     : ""
 }
 
 <div class="motif">
   <span class="label">Motif du retour</span><br/>
-  <strong>${MOTIF_LABELS[retour.motif] ?? retour.motif}</strong>
-  ${retour.motifDetail ? ` — ${retour.motifDetail}` : ""}
+  <strong>${e(MOTIF_LABELS[retour.motif] ?? retour.motif)}</strong>
+  ${retour.motifDetail ? ` — ${e(retour.motifDetail)}` : ""}
 </div>
 
 <table>
@@ -202,8 +203,8 @@ ${
       .map(
         (l) => `
       <tr>
-        <td>${l.nomProduit ?? "—"}${l.motifLigne ? `<br/><small style="color:#888">${l.motifLigne}</small>` : ""}</td>
-        <td>${l.nomUnite ?? ""}</td>
+        <td>${e(l.nomProduit ?? "—")}${l.motifLigne ? `<br/><small style="color:#888">${e(l.motifLigne)}</small>` : ""}</td>
+        <td>${e(l.nomUnite ?? "")}</td>
         <td>${Number(l.quantite).toLocaleString("fr-FR")}</td>
         <td>${mgaFmt(Number(l.prixUnitaire))}</td>
         ${Number(retour.totalTVA) > 0 ? `<td>${Number(l.tauxTVA ?? 0)}%</td>` : ""}
@@ -226,12 +227,12 @@ ${
 
 <div class="mode-remb">
   <span class="label">Mode de remboursement</span><br/>
-  <strong>${MODE_LABELS[retour.modeRemboursement] ?? retour.modeRemboursement}</strong>
+  <strong>${e(MODE_LABELS[retour.modeRemboursement] ?? retour.modeRemboursement)}</strong>
 </div>
 
 ${
   retour.notes
-    ? `<div style="margin-bottom:6mm; padding:3mm 4mm; background:#f9fafb; border-radius:2mm; font-size:9pt; color:#444"><strong>Notes :</strong> ${retour.notes}</div>`
+    ? `<div style="margin-bottom:6mm; padding:3mm 4mm; background:#f9fafb; border-radius:2mm; font-size:9pt; color:#444"><strong>Notes :</strong> ${e(retour.notes)}</div>`
     : ""
 }
 

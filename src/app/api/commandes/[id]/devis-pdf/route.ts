@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { e } from "@/lib/escape";
 
 export const dynamic = "force-dynamic";
 
@@ -69,7 +70,7 @@ export async function GET(
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<title>Devis ${commande.numero}</title>
+<title>Devis ${e(commande.numero)}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11pt; color: #111; background: #fff; padding: 20mm 20mm; }
@@ -116,14 +117,14 @@ export async function GET(
 <div class="header">
   <div>
     <div class="logo">${(entreprise?.nom ?? "Grossiste") + "<span>PPN</span>"}</div>
-    ${entreprise?.adresse ? `<div style="font-size:9pt;color:#666;margin-top:1mm">${entreprise.adresse}</div>` : ""}
-    ${entreprise?.telephone ? `<div style="font-size:9pt;color:#666">${entreprise.telephone}</div>` : ""}
-    ${entreprise?.nif ? `<div style="font-size:9pt;color:#666">NIF : ${entreprise.nif}</div>` : ""}
-    ${entreprise?.stat ? `<div style="font-size:9pt;color:#666">STAT : ${entreprise.stat}</div>` : ""}
+    ${entreprise?.adresse ? `<div style="font-size:9pt;color:#666;margin-top:1mm">${e(entreprise.adresse)}</div>` : ""}
+    ${entreprise?.telephone ? `<div style="font-size:9pt;color:#666">${e(entreprise.telephone)}</div>` : ""}
+    ${entreprise?.nif ? `<div style="font-size:9pt;color:#666">NIF : ${e(entreprise.nif)}</div>` : ""}
+    ${entreprise?.stat ? `<div style="font-size:9pt;color:#666">STAT : ${e(entreprise.stat)}</div>` : ""}
   </div>
   <div class="devis-title">
     <h1>DEVIS</h1>
-    <div class="numero">N° ${commande.numero}</div>
+    <div class="numero">N° ${e(commande.numero)}</div>
     <div class="date">Date : ${dateDevis}</div>
   </div>
 </div>
@@ -137,19 +138,19 @@ export async function GET(
 <div class="parties">
   <div class="partie">
     <h3>Émetteur</h3>
-    <p class="nom">${entreprise?.nom ?? "GrossistePPN"}</p>
-    ${entreprise?.adresse ? `<p>${entreprise.adresse}</p>` : ""}
-    ${entreprise?.telephone ? `<p>Tél : ${entreprise.telephone}</p>` : ""}
-    ${entreprise?.nif ? `<p>NIF : ${entreprise.nif}</p>` : ""}
-    ${entreprise?.stat ? `<p>STAT : ${entreprise.stat}</p>` : ""}
+    <p class="nom">${e(entreprise?.nom ?? "GrossistePPN")}</p>
+    ${entreprise?.adresse ? `<p>${e(entreprise.adresse)}</p>` : ""}
+    ${entreprise?.telephone ? `<p>Tél : ${e(entreprise.telephone)}</p>` : ""}
+    ${entreprise?.nif ? `<p>NIF : ${e(entreprise.nif)}</p>` : ""}
+    ${entreprise?.stat ? `<p>STAT : ${e(entreprise.stat)}</p>` : ""}
   </div>
   <div class="partie" style="text-align:right">
     <h3>Client</h3>
     ${client ? `
-      <p class="nom">${client.raisonSociale}</p>
-      ${client.adresse ? `<p>${client.adresse}</p>` : ""}
-      ${client.telephone ? `<p>Tél : ${client.telephone}</p>` : ""}
-      ${client.nif ? `<p>NIF : ${client.nif}</p>` : ""}
+      <p class="nom">${e(client.raisonSociale)}</p>
+      ${client.adresse ? `<p>${e(client.adresse)}</p>` : ""}
+      ${client.telephone ? `<p>Tél : ${e(client.telephone)}</p>` : ""}
+      ${client.nif ? `<p>NIF : ${e(client.nif)}</p>` : ""}
     ` : `<p class="nom">Client comptoir</p>`}
   </div>
 </div>
@@ -169,9 +170,9 @@ export async function GET(
       .map(
         (l) => `
       <tr>
-        <td>${l.nomProduit ?? "—"}</td>
+        <td>${e(l.nomProduit ?? "—")}</td>
         <td>${Number(l.quantite).toLocaleString("fr-FR")}</td>
-        <td>${l.nomUnite ?? ""}</td>
+        <td>${e(l.nomUnite ?? "")}</td>
         <td>${mgaFmt(Number(l.prixUnitaire))}</td>
         <td>${mgaFmt(Number(l.totalHT))}</td>
       </tr>

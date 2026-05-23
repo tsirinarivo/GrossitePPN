@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { escapeCsvCell } from "@/lib/escape";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
 
   for (const l of lignes as Ligne[]) {
     rows.push([
-      l.label,
+      escapeCsvCell(l.label),
       String(l.nbCommandes),
       String(l.caHT),
       String(l.caTTC),

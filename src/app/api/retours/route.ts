@@ -134,22 +134,43 @@ export async function POST(req: NextRequest) {
     commandeId = facture.commandeId;
   }
 
-  // Compute totals
+  // Compute totals — refuse les valeurs négatives ou nulles
   let totalHT = 0;
   let totalTVA = 0;
   let totalTTC = 0;
 
-  const lignesData = lignes.map((l) => {
+  type LigneCalculee = LigneInput & {
+    totalHT: number;
+    totalTVA: number;
+    totalTTC: number;
+  };
+  const lignesData: LigneCalculee[] = [];
+  for (const l of lignes) {
     const qte = Number(l.quantite) || 0;
     const pu = Math.round(Number(l.prixUnitaire) || 0);
-    const tva = Number(l.tauxTVA ?? 0);
+    const tva = Math.max(0, Math.min(100, Number(l.tauxTVA ?? 0)));
+
+    if (qte <= 0) {
+      return NextResponse.json(
+        { error: `Quantité invalide pour ${l.nomProduit ?? "ligne"} (doit être > 0)` },
+        { status: 400 }
+      );
+    }
+    if (pu < 0) {
+      return NextResponse.json(
+        { error: `Prix unitaire négatif refusé pour ${l.nomProduit ?? "ligne"}` },
+        { status: 400 }
+      );
+    }
+
     const ht = Math.round(qte * pu);
     const montantTVA = Math.round(ht * (tva / 100));
     const ttc = ht + montantTVA;
     totalHT += ht;
     totalTVA += montantTVA;
     totalTTC += ttc;
-    return {
+
+    lignesData.push({
       ...l,
       quantite: qte,
       prixUnitaire: pu,
@@ -157,8 +178,8 @@ export async function POST(req: NextRequest) {
       totalHT: ht,
       totalTVA: montantTVA,
       totalTTC: ttc,
-    };
-  });
+    });
+  }
 
   try {
     // Numéro retour

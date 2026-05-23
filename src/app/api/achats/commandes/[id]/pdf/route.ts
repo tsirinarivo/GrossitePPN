@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { e } from "@/lib/escape";
 
 export const dynamic = "force-dynamic";
 
@@ -107,7 +108,7 @@ export async function GET(
 </head>
 <body>
 <div class="header">
-  <div class="logo">${entreprise?.nom ?? "GrossistePPN"}</div>
+  <div class="logo">${e(entreprise?.nom ?? "GrossistePPN")}</div>
   <div class="bc-title">
     <h1>BON DE COMMANDE</h1>
     <div class="numero">${bc.numero}</div>
@@ -120,10 +121,10 @@ export async function GET(
 <div class="parties">
   <div class="partie">
     <h3>Acheteur</h3>
-    <p class="nom">${entreprise?.nom ?? "GrossistePPN"}</p>
-    ${entreprise?.adresse ? `<p>${entreprise.adresse}</p>` : ""}
-    ${entreprise?.telephone ? `<p>Tél : ${entreprise.telephone}</p>` : ""}
-    ${entreprise?.nif ? `<p>NIF : ${entreprise.nif}</p>` : ""}
+    <p class="nom">${e(entreprise?.nom ?? "GrossistePPN")}</p>
+    ${entreprise?.adresse ? `<p>${e(entreprise.adresse)}</p>` : ""}
+    ${entreprise?.telephone ? `<p>Tél : ${e(entreprise.telephone)}</p>` : ""}
+    ${entreprise?.nif ? `<p>NIF : ${e(entreprise.nif)}</p>` : ""}
   </div>
   <div class="partie" style="text-align:right">
     <h3>Fournisseur</h3>
@@ -155,8 +156,8 @@ export async function GET(
   <tbody>
     ${lignes.map((l) => `
       <tr>
-        <td>${l.nomProduit}</td>
-        <td>${l.nomUnite}</td>
+        <td>${e(l.nomProduit)}</td>
+        <td>${e(l.nomUnite)}</td>
         <td>${Number(l.quantiteCommandee).toLocaleString("fr-FR")}</td>
         <td>${mgaFmt(Number(l.prixUnitaireHT))}</td>
         <td>${mgaFmt(Number(l.totalHT))}</td>
@@ -178,7 +179,7 @@ ${bc.notes || bc.conditions ? `
 </div>` : ""}
 
 <div class="footer">
-  <p>Bon de commande émis par ${entreprise?.nom ?? "GrossistePPN"}${entreprise?.nif ? ` · NIF : ${entreprise.nif}` : ""}.</p>
+  <p>Bon de commande émis par ${e(entreprise?.nom ?? "GrossistePPN")}${entreprise?.nif ? ` · NIF : ${e(entreprise.nif)}` : ""}.</p>
   <p>Prière de rappeler le numéro de bon de commande sur toute correspondance et livraison.</p>
 </div>
 

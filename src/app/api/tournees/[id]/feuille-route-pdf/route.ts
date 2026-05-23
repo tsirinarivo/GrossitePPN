@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { e } from "@/lib/escape";
 
 export const dynamic = "force-dynamic";
 
@@ -127,11 +128,11 @@ export async function GET(
 </head>
 <body>
 <div class="header">
-  <div class="logo">${(entreprise?.nom ?? "Grossiste") + "<span>PPN</span>"}</div>
+  <div class="logo">${e(entreprise?.nom ?? "Grossiste")}<span>PPN</span></div>
   <div class="doc-title">
     <h1>FEUILLE DE ROUTE</h1>
-    <div class="date">${dateTournee}</div>
-    <div style="font-size:9pt; color:#888; font-family:monospace">${numeroTournee}</div>
+    <div class="date">${e(dateTournee)}</div>
+    <div style="font-size:9pt; color:#888; font-family:monospace">${e(numeroTournee)}</div>
   </div>
 </div>
 <div class="divider"></div>
@@ -139,13 +140,13 @@ export async function GET(
 <div class="infos">
   <div class="info-bloc">
     <div class="label">Chauffeur</div>
-    <div class="valeur">${chauffeur?.name ?? "— Non assigné —"}</div>
+    <div class="valeur">${e(chauffeur?.name ?? "— Non assigné —")}</div>
   </div>
   <div class="info-bloc">
     <div class="label">Véhicule</div>
     <div class="valeur">${
       vehicule
-        ? `${vehicule.modele ?? ""}${vehicule.modele ? " — " : ""}${vehicule.immatriculation}`
+        ? `${e(vehicule.modele ?? "")}${vehicule.modele ? " — " : ""}${e(vehicule.immatriculation)}`
         : "— Non assigné —"
     }</div>
   </div>
@@ -159,7 +160,7 @@ ${
   tournee.notes
     ? `<div class="notes-bloc">
   <div class="label">Notes</div>
-  <p>${tournee.notes}</p>
+  <p>${e(tournee.notes)}</p>
 </div>`
     : ""
 }
@@ -185,11 +186,11 @@ ${
       <tr>
         <td><span class="ordre-badge">${l.ordre || i + 1}</span></td>
         <td>
-          <div style="font-weight:600">${l.clientNom ?? "Client comptoir"}</div>
-          <div style="font-size:9pt; color:#666; font-family:monospace">${l.commandeNumero ?? "—"}</div>
+          <div style="font-weight:600">${e(l.clientNom ?? "Client comptoir")}</div>
+          <div style="font-size:9pt; color:#666; font-family:monospace">${e(l.commandeNumero ?? "—")}</div>
         </td>
-        <td style="font-size:9pt">${l.adresseLivraison ?? l.clientAdresse ?? "—"}</td>
-        <td style="font-size:9pt; font-family:monospace">${l.clientTelephone ?? "—"}</td>
+        <td style="font-size:9pt">${e(l.adresseLivraison ?? l.clientAdresse ?? "—")}</td>
+        <td style="font-size:9pt; font-family:monospace">${e(l.clientTelephone ?? "—")}</td>
         <td style="text-align:right; font-weight:600">${mgaFmt(l.commandeTotalTTC ?? 0)}</td>
         <td style="text-align:center"><span class="checkbox"></span></td>
       </tr>

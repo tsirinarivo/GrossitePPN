@@ -101,13 +101,18 @@ export async function POST(req: NextRequest) {
 
   if (!date) return NextResponse.json({ error: "Date requise" }, { status: 400 });
 
+  const dateObj = new Date(date);
+  if (isNaN(dateObj.getTime())) {
+    return NextResponse.json({ error: "Date invalide" }, { status: 400 });
+  }
+
   try {
     const id = crypto.randomUUID();
     const [tournee] = await db
       .insert(schema.tournees)
       .values({
         id,
-        date: new Date(date),
+        date: dateObj,
         chauffeurId: chauffeurId ?? null,
         vehiculeId: vehiculeId ?? null,
         statut: "planifiee",

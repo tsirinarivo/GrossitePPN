@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { escapeCsvCell } from "@/lib/escape";
 
 export const dynamic = "force-dynamic";
 
@@ -52,16 +53,16 @@ export async function GET(req: NextRequest) {
       date.toLocaleDateString("fr-FR"),
       date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
       TYPE_LABELS[l.type] ?? l.type,
-      l.produitCode ?? "",
-      l.produitNom ?? "",
-      l.depotNom ?? "",
+      escapeCsvCell(l.produitCode ?? ""),
+      escapeCsvCell(l.produitNom ?? ""),
+      escapeCsvCell(l.depotNom ?? ""),
       String(l.quantiteBase),
-      l.produitUnite ?? "",
+      escapeCsvCell(l.produitUnite ?? ""),
       String(l.quantiteAvant),
       String(l.quantiteApres),
-      l.reference ?? "",
-      l.agentNom ?? "",
-      (l.notes ?? "").replace(/\r?\n/g, " "),
+      escapeCsvCell(l.reference ?? ""),
+      escapeCsvCell(l.agentNom ?? ""),
+      escapeCsvCell((l.notes ?? "").replace(/\r?\n/g, " ")),
     ]);
   }
 

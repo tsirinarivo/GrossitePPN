@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { e } from "@/lib/escape";
 
 export const dynamic = "force-dynamic";
 
@@ -138,8 +139,8 @@ export async function GET(
 <div class="header">
   <div>
     <div class="logo">${(entreprise?.nom ?? "Grossiste") + "<span>PPN</span>"}</div>
-    ${entreprise?.adresse ? `<div style="font-size:9pt;color:#555;margin-top:1mm">${entreprise.adresse}</div>` : ""}
-    ${entreprise?.telephone ? `<div style="font-size:9pt;color:#555">${entreprise.telephone}</div>` : ""}
+    ${entreprise?.adresse ? `<div style="font-size:9pt;color:#555;margin-top:1mm">${e(entreprise.adresse)}</div>` : ""}
+    ${entreprise?.telephone ? `<div style="font-size:9pt;color:#555">${e(entreprise.telephone)}</div>` : ""}
   </div>
   <div class="bl-title">
     <h1>BON DE LIVRAISON</h1>
@@ -153,7 +154,7 @@ export async function GET(
 
 <!-- Ref block -->
 <div class="ref-block">
-  ${commande ? `<div class="ref-item"><div class="key">Commande</div><div class="val">${commande.numero}</div></div>` : ""}
+  ${commande ? `<div class="ref-item"><div class="key">Commande</div><div class="val">${e(commande.numero)}</div></div>` : ""}
   <div class="ref-item"><div class="key">BL Ref</div><div class="val">BL-${blRef}</div></div>
   <div class="ref-item"><div class="key">Statut livraison</div><div class="val">${livraison.statut.replace(/_/g, " ").toUpperCase()}</div></div>
   <div class="ref-item"><div class="key">Date création</div><div class="val">${fmtDate(livraison.createdAt)}</div></div>
@@ -167,23 +168,23 @@ export async function GET(
   <div class="section">
     <h3>Destinataire</h3>
     ${client ? `
-      <p class="nom">${client.raisonSociale}</p>
-      ${client.adresse ? `<p>${client.adresse}</p>` : ""}
+      <p class="nom">${e(client.raisonSociale)}</p>
+      ${client.adresse ? `<p>${e(client.adresse)}</p>` : ""}
       ${("ville" in client && client.ville) ? `<p>${(client as {ville?: string}).ville ?? ""}</p>` : ""}
-      ${client.telephone ? `<p>Tél : ${client.telephone}</p>` : ""}
+      ${client.telephone ? `<p>Tél : ${e(client.telephone)}</p>` : ""}
     ` : `
       <p class="nom">Client comptoir</p>
     `}
-    ${livraison.adresseLivraison ? `<p class="sub" style="margin-top:1mm">📍 ${livraison.adresseLivraison}</p>` : ""}
+    ${livraison.adresseLivraison ? `<p class="sub" style="margin-top:1mm">📍 ${e(livraison.adresseLivraison)}</p>` : ""}
   </div>
 
   <!-- Émetteur -->
   <div class="section">
     <h3>Émetteur</h3>
-    <p class="nom">${entreprise?.nom ?? "GrossistePPN"}</p>
-    ${entreprise?.adresse ? `<p>${entreprise.adresse}</p>` : ""}
-    ${entreprise?.telephone ? `<p>Tél : ${entreprise.telephone}</p>` : ""}
-    ${entreprise?.nif ? `<p>NIF : ${entreprise.nif}</p>` : ""}
+    <p class="nom">${e(entreprise?.nom ?? "GrossistePPN")}</p>
+    ${entreprise?.adresse ? `<p>${e(entreprise.adresse)}</p>` : ""}
+    ${entreprise?.telephone ? `<p>Tél : ${e(entreprise.telephone)}</p>` : ""}
+    ${entreprise?.nif ? `<p>NIF : ${e(entreprise.nif)}</p>` : ""}
   </div>
 
   <!-- Transporteur -->
@@ -213,9 +214,9 @@ export async function GET(
   <tbody>
     ${lignes.length > 0 ? lignes.map((l) => `
       <tr>
-        <td>${l.nomProduit ?? "—"}</td>
+        <td>${e(l.nomProduit ?? "—")}</td>
         <td class="right">${Number(l.quantite).toLocaleString("fr-FR")}</td>
-        <td>${l.nomUnite ?? ""}</td>
+        <td>${e(l.nomUnite ?? "")}</td>
         ${commande ? `<td class="right">${mgaFmt(Number(l.totalTTC))}</td>` : ""}
         <td></td>
       </tr>
