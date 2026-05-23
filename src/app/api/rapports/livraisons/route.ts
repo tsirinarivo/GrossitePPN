@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, gte, lte, and, sql, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { isDemoFallbackEnabled } from "@/lib/demo-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -76,20 +77,28 @@ export async function GET(req: NextRequest) {
       .where(gte(schema.livraisons.createdAt, debut));
 
     if (livraisons.length === 0) {
+      if (isDemoFallbackEnabled()) {
+        return NextResponse.json({
+          chauffeurs: DEMO_CHAUFFEURS,
+          motifsEchecs: DEMO_MOTIFS,
+          synthese: {
+            total: DEMO_CHAUFFEURS.reduce((s, c) => s + c.nbLivraisons, 0),
+            livrees: DEMO_CHAUFFEURS.reduce((s, c) => s + c.nbLivrees, 0),
+            echecs: DEMO_CHAUFFEURS.reduce((s, c) => s + c.nbEchecs, 0),
+            tauxReussite: 93,
+            tauxPonctualite: 89,
+            kmTotal: DEMO_CHAUFFEURS.reduce((s, c) => s + c.kmParcourus, 0),
+            coutTotal: DEMO_CHAUFFEURS.reduce((s, c) => s + c.nbLivraisons * c.coutMoyenParLivraison, 0),
+            coutMoyenLivraison: COUT_BASE_LIVRAISON,
+          },
+          isDemo: true,
+        });
+      }
       return NextResponse.json({
-        chauffeurs: DEMO_CHAUFFEURS,
-        motifsEchecs: DEMO_MOTIFS,
-        synthese: {
-          total: DEMO_CHAUFFEURS.reduce((s, c) => s + c.nbLivraisons, 0),
-          livrees: DEMO_CHAUFFEURS.reduce((s, c) => s + c.nbLivrees, 0),
-          echecs: DEMO_CHAUFFEURS.reduce((s, c) => s + c.nbEchecs, 0),
-          tauxReussite: 93,
-          tauxPonctualite: 89,
-          kmTotal: DEMO_CHAUFFEURS.reduce((s, c) => s + c.kmParcourus, 0),
-          coutTotal: DEMO_CHAUFFEURS.reduce((s, c) => s + c.nbLivraisons * c.coutMoyenParLivraison, 0),
-          coutMoyenLivraison: COUT_BASE_LIVRAISON,
-        },
-        isDemo: true,
+        chauffeurs: [],
+        motifsEchecs: [],
+        synthese: { total: 0, livrees: 0, echecs: 0, tauxReussite: 0, tauxPonctualite: 0, kmTotal: 0, coutTotal: 0, coutMoyenLivraison: COUT_BASE_LIVRAISON },
+        isDemo: false,
       });
     }
 
@@ -187,20 +196,22 @@ export async function GET(req: NextRequest) {
       isDemo: false,
     });
   } catch {
+    if (isDemoFallbackEnabled()) {
+      return NextResponse.json({
+        chauffeurs: DEMO_CHAUFFEURS,
+        motifsEchecs: DEMO_MOTIFS,
+        synthese: {
+          total: 148, livrees: 138, echecs: 5, tauxReussite: 93, tauxPonctualite: 89,
+          kmTotal: 3700, coutTotal: 1_258_000, coutMoyenLivraison: 8500,
+        },
+        isDemo: true,
+      });
+    }
     return NextResponse.json({
-      chauffeurs: DEMO_CHAUFFEURS,
-      motifsEchecs: DEMO_MOTIFS,
-      synthese: {
-        total: 148,
-        livrees: 138,
-        echecs: 5,
-        tauxReussite: 93,
-        tauxPonctualite: 89,
-        kmTotal: 3700,
-        coutTotal: 1_258_000,
-        coutMoyenLivraison: 8500,
-      },
-      isDemo: true,
+      chauffeurs: [],
+      motifsEchecs: [],
+      synthese: { total: 0, livrees: 0, echecs: 0, tauxReussite: 0, tauxPonctualite: 0, kmTotal: 0, coutTotal: 0, coutMoyenLivraison: COUT_BASE_LIVRAISON },
+      isDemo: false,
     });
   }
 }

@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, desc, and, gte, sql, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { isDemoFallbackEnabled } from "@/lib/demo-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -115,7 +116,10 @@ export async function GET(req: NextRequest) {
       .where(gte(schema.bonsCommande.createdAt, debut));
 
     if (bcsRows.length === 0) {
-      return NextResponse.json({ fournisseurs: DEMO, isDemo: true });
+      if (isDemoFallbackEnabled()) {
+        return NextResponse.json({ fournisseurs: DEMO, isDemo: true });
+      }
+      return NextResponse.json({ fournisseurs: [], isDemo: false });
     }
 
     // Fournisseurs concernés
@@ -230,6 +234,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ fournisseurs, isDemo: false });
   } catch {
-    return NextResponse.json({ fournisseurs: DEMO, isDemo: true });
+    if (isDemoFallbackEnabled()) {
+      return NextResponse.json({ fournisseurs: DEMO, isDemo: true });
+    }
+    return NextResponse.json({ fournisseurs: [], isDemo: false });
   }
 }

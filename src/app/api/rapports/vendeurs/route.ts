@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, desc, and, gte, inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { isDemoFallbackEnabled } from "@/lib/demo-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -60,11 +61,14 @@ export async function GET(req: NextRequest) {
       .orderBy(desc(sql`COALESCE(SUM(${schema.commandes.totalTTC}), 0)`));
 
     if (rows.length === 0) {
-      const totaux = {
-        caTTC: DEMO_VENDEURS.reduce((s, v) => s + v.caTTC, 0),
-        nbCommandes: DEMO_VENDEURS.reduce((s, v) => s + v.nbCommandes, 0),
-      };
-      return NextResponse.json({ vendeurs: DEMO_VENDEURS, periode, totaux, demo: true });
+      if (isDemoFallbackEnabled()) {
+        const totaux = {
+          caTTC: DEMO_VENDEURS.reduce((s, v) => s + v.caTTC, 0),
+          nbCommandes: DEMO_VENDEURS.reduce((s, v) => s + v.nbCommandes, 0),
+        };
+        return NextResponse.json({ vendeurs: DEMO_VENDEURS, periode, totaux, demo: true });
+      }
+      return NextResponse.json({ vendeurs: [], periode, totaux: { caTTC: 0, nbCommandes: 0 }, demo: false });
     }
 
     const totaux = {

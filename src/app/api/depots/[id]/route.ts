@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, ne } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   try {
     // Soft delete — désactiver uniquement
     await db.update(schema.depots).set({ actif: false, estPrincipal: false }).where(eq(schema.depots.id, id));
+    await logAudit({ action: "depot.desactiver", entite: "depot", entiteId: id });
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[api/depots DELETE]", e);

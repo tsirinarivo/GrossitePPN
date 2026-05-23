@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, desc, and, gte, sql, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { isDemoFallbackEnabled } from "@/lib/demo-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -127,19 +128,23 @@ export async function GET(req: NextRequest) {
       .limit(50);
 
     if (rows.length === 0) {
-      const clients = computeRFM(DEMO_CLIENTS as Parameters<typeof computeRFM>[0]);
-      const champions = clients.filter((c) => c.segment === "Champions");
-      const totaux = {
-        nbClients: clients.length,
-        caTTC: clients.reduce((s, c) => s + c.caTTC, 0),
-        panierMoyen: Math.round(clients.reduce((s, c) => s + c.panierMoyen, 0) / clients.length),
-      };
+      if (isDemoFallbackEnabled()) {
+        const clients = computeRFM(DEMO_CLIENTS as Parameters<typeof computeRFM>[0]);
+        const champions = clients.filter((c) => c.segment === "Champions");
+        const totaux = {
+          nbClients: clients.length,
+          caTTC: clients.reduce((s, c) => s + c.caTTC, 0),
+          panierMoyen: Math.round(clients.reduce((s, c) => s + c.panierMoyen, 0) / clients.length),
+        };
+        return NextResponse.json({
+          clients, totaux, periode, demo: true,
+          pctChampions: Math.round((champions.length / clients.length) * 100),
+        });
+      }
       return NextResponse.json({
-        clients,
-        totaux,
-        periode,
-        demo: true,
-        pctChampions: Math.round((champions.length / clients.length) * 100),
+        clients: [],
+        totaux: { nbClients: 0, caTTC: 0, panierMoyen: 0 },
+        periode, demo: false, pctChampions: 0,
       });
     }
 

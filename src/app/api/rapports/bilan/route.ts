@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { and, gte, lte, inArray, sql, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { isDemoFallbackEnabled } from "@/lib/demo-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -168,11 +169,17 @@ export async function GET(req: NextRequest) {
     }
 
     if (totalCa === 0) {
-      return NextResponse.json({ mois: demoBilan(annee), isDemo: true, annee });
+      if (isDemoFallbackEnabled()) {
+        return NextResponse.json({ mois: demoBilan(annee), isDemo: true, annee });
+      }
+      return NextResponse.json({ mois, isDemo: false, annee });
     }
 
     return NextResponse.json({ mois, isDemo: false, annee });
   } catch {
-    return NextResponse.json({ mois: demoBilan(annee), isDemo: true, annee });
+    if (isDemoFallbackEnabled()) {
+      return NextResponse.json({ mois: demoBilan(annee), isDemo: true, annee });
+    }
+    return NextResponse.json({ mois: [], isDemo: false, annee, error: "Erreur de chargement" });
   }
 }

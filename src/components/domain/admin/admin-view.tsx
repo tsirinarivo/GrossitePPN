@@ -263,6 +263,11 @@ export function AdminView() {
           >
             <Warehouse className="w-4 h-4" />Dépôts
           </Link>
+          <Link href="/admin/audit"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0 lg:w-full text-[--foreground-muted] hover:bg-[--accent] hover:text-[--foreground]"
+          >
+            <ShieldCheck className="w-4 h-4" />Audit
+          </Link>
         </nav>
 
         <div className="lg:col-span-3 space-y-4">

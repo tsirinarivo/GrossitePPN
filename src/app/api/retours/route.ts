@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, desc, and, inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -234,6 +235,13 @@ export async function POST(req: NextRequest) {
           .where(eq(schema.clients.id, clientId));
       }
     }
+
+    await logAudit({
+      action: "retour.creer",
+      entite: "retour",
+      entiteId: retourId,
+      details: { numero, totalTTC, motif, modeRemboursement, clientId, factureId, avoirNumero: avoir?.numero },
+    });
 
     return NextResponse.json({ retour, avoir }, { status: 201 });
   } catch (e) {

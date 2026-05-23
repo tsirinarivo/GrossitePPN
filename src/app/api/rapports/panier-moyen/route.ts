@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, gte, inArray, sql, and } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { isDemoFallbackEnabled } from "@/lib/demo-mode";
 
 export const dynamic = "force-dynamic";
 
@@ -76,17 +77,19 @@ export async function GET(req: NextRequest) {
       );
 
     if (commandes.length === 0) {
+      if (isDemoFallbackEnabled()) {
+        return NextResponse.json({
+          tranches: DEMO_TRANCHES,
+          duos: DEMO_DUOS,
+          stats: { total: 299, panierMoyen: 261_000, panierMedian: 175_000, panierMin: 8_500, panierMax: 2_450_000 },
+          isDemo: true,
+        });
+      }
       return NextResponse.json({
-        tranches: DEMO_TRANCHES,
-        duos: DEMO_DUOS,
-        stats: {
-          total: 299,
-          panierMoyen: 261_000,
-          panierMedian: 175_000,
-          panierMin: 8_500,
-          panierMax: 2_450_000,
-        },
-        isDemo: true,
+        tranches: TRANCHES.map((t) => ({ tranche: t.label, nbCommandes: 0, ttcSum: 0 })),
+        duos: [],
+        stats: { total: 0, panierMoyen: 0, panierMedian: 0, panierMin: 0, panierMax: 0 },
+        isDemo: false,
       });
     }
 
@@ -190,11 +193,18 @@ export async function GET(req: NextRequest) {
       isDemo: false,
     });
   } catch {
+    if (isDemoFallbackEnabled()) {
+      return NextResponse.json({
+        tranches: DEMO_TRANCHES,
+        duos: DEMO_DUOS,
+        stats: { total: 299, panierMoyen: 261_000, panierMedian: 175_000, panierMin: 8_500, panierMax: 2_450_000 },
+        isDemo: true,
+      });
+    }
     return NextResponse.json({
-      tranches: DEMO_TRANCHES,
-      duos: DEMO_DUOS,
-      stats: { total: 299, panierMoyen: 261_000, panierMedian: 175_000, panierMin: 8_500, panierMax: 2_450_000 },
-      isDemo: true,
+      tranches: [], duos: [],
+      stats: { total: 0, panierMoyen: 0, panierMedian: 0, panierMin: 0, panierMax: 0 },
+      isDemo: false,
     });
   }
 }

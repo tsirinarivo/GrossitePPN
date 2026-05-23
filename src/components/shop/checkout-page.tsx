@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -14,6 +15,9 @@ import {
   CheckCircle2,
   ChevronRight,
   Package,
+  Loader2,
+  ShoppingCart,
+  Tag,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -22,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { useShopCart } from "@/store/shop-cart.store";
 
 const ETAPES = ["Livraison", "Paiement", "Confirmation"];
 
@@ -29,14 +34,14 @@ const MODES_PAIEMENT = [
   { id: "mvola", label: "Mvola", icon: Smartphone, couleur: "text-red-500", desc: "Paiement mobile Telma" },
   { id: "orange_money", label: "Orange Money", icon: Smartphone, couleur: "text-orange-500", desc: "Paiement mobile Orange" },
   { id: "airtel_money", label: "Airtel Money", icon: Smartphone, couleur: "text-blue-500", desc: "Paiement mobile Airtel" },
-  { id: "especes", label: "Espèces", icon: Banknote, couleur: "text-green-600", desc: "Paiement à la livraison" },
-  { id: "credit", label: "Crédit client", icon: CreditCard, couleur: "text-[--primary]", desc: "Encours disponible : 350 000 Ar" },
+  { id: "especes", label: "Espèces à la livraison", icon: Banknote, couleur: "text-green-600", desc: "Vous payez à la réception" },
+  { id: "credit", label: "Crédit client", icon: CreditCard, couleur: "text-[--primary]", desc: "Selon votre encours disponible" },
 ];
 
 const CRENEAUX = [
-  { id: "matin", label: "Matin 8h–12h", dispo: true },
-  { id: "aprem", label: "Après-midi 14h–18h", dispo: true },
-  { id: "urgent", label: "Livraison urgente (+15 000 Ar)", dispo: true },
+  { id: "matin", label: "Matin 8h–12h" },
+  { id: "aprem", label: "Après-midi 14h–18h" },
+  { id: "urgent", label: "Livraison urgente (+15 000 Ar)" },
 ];
 
 const livSchema = z.object({
@@ -48,13 +53,35 @@ const livSchema = z.object({
 
 type LivFields = z.infer<typeof livSchema>;
 
-const TOTAL = 499000;
+type PromoState = {
+  code: string;
+  nom: string;
+  valeur: number;
+  typeValeur: string;
+  remise: number;
+} | null;
 
 export function CheckoutPage() {
+  const router = useRouter();
+  const { lignes, vider } = useShopCart();
+
   const [etape, setEtape] = useState(0);
   const [modePaiement, setModePaiement] = useState<string | null>(null);
   const [creneau, setCreneau] = useState<string>("matin");
   const [loading, setLoading] = useState(false);
+  const [confirmedCmd, setConfirmedCmd] = useState<{ numero: string; total: number } | null>(null);
+  const [livraison, setLivraison] = useState<LivFields | null>(null);
+  const [codePromo, setCodePromo] = useState("");
+  const [promo, setPromo] = useState<PromoState>(null);
+  const [verifyingPromo, setVerifyingPromo] = useState(false);
+
+  useEffect(() => {
+    useShopCart.persist.rehydrate();
+  }, []);
+
+  const sousTotal = lignes.reduce((s, l) => s + l.qte * l.prixUnit, 0);
+  const remisePromo = promo?.remise ?? 0;
+  const total = Math.max(0, sousTotal - remisePromo);
 
   const {
     register,
@@ -62,18 +89,108 @@ export function CheckoutPage() {
     formState: { errors },
   } = useForm<LivFields>({ resolver: zodResolver(livSchema) });
 
-  const onLivraisonSubmit = () => setEtape(1);
+  const onLivraisonSubmit = (data: LivFields) => {
+    if (lignes.length === 0) {
+      toast.error("Votre panier est vide");
+      return;
+    }
+    setLivraison(data);
+    setEtape(1);
+  };
+
+  const appliquerCode = async () => {
+    if (!codePromo.trim()) return;
+    setVerifyingPromo(true);
+    try {
+      const res = await fetch("/api/shop/promotions/valider", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: codePromo.trim(), totalPanier: sousTotal }),
+      });
+      const data = await res.json();
+      if (data.valide && data.promotion) {
+        setPromo({
+          code: data.promotion.code,
+          nom: data.promotion.nom,
+          valeur: data.promotion.valeur,
+          typeValeur: data.promotion.typeValeur,
+          remise: data.remise,
+        });
+        toast.success(`Code ${data.promotion.code} appliqué`);
+      } else {
+        toast.error(data.raison ?? "Code invalide");
+      }
+    } catch {
+      toast.error("Erreur de vérification");
+    } finally {
+      setVerifyingPromo(false);
+    }
+  };
 
   const onPayer = async () => {
-    if (!modePaiement) return;
+    if (!modePaiement || !livraison) return;
+    if (lignes.length === 0) {
+      toast.error("Panier vide");
+      return;
+    }
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
-    setEtape(2);
-    toast.success("Commande validée !", {
-      description: "Vous recevrez une confirmation par SMS.",
-    });
+    try {
+      const res = await fetch("/api/shop/commandes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lignes: lignes.map((l) => ({
+            produitId: l.produitId,
+            nom: l.nom,
+            unite: l.unite,
+            qte: l.qte,
+            prixUnit: l.prixUnit,
+          })),
+          adresse: livraison.adresse,
+          quartier: livraison.quartier,
+          telephone: livraison.telephone,
+          notes: livraison.notes,
+          creneau,
+          modePaiement,
+          codePromo: promo?.code,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? "Erreur");
+      }
+      const data = await res.json();
+      setConfirmedCmd({ numero: data.numero, total: data.total });
+      vider();
+      setEtape(2);
+      toast.success(`Commande ${data.numero} créée !`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur lors de la commande");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // Panier vide → renvoyer
+  if (lignes.length === 0 && etape < 2) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-24 text-center">
+        <div className="w-20 h-20 rounded-2xl bg-[--background-muted] flex items-center justify-center mx-auto mb-6">
+          <ShoppingCart className="w-10 h-10 text-[--foreground-subtle]" />
+        </div>
+        <h2 className="text-2xl font-bold mb-2">Votre panier est vide</h2>
+        <p className="text-[--foreground-muted] mb-6">
+          Ajoutez des produits avant de finaliser une commande.
+        </p>
+        <Button size="lg" asChild>
+          <Link href="/shop">
+            <Package className="w-4 h-4" />
+            Voir le catalogue
+          </Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
@@ -129,31 +246,19 @@ export function CheckoutPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="sm:col-span-2 space-y-1.5">
                     <label className="text-sm font-medium">Adresse</label>
-                    <Input
-                      {...register("adresse")}
-                      placeholder="N° lot, rue, immeuble..."
-                      error={!!errors.adresse}
-                    />
+                    <Input {...register("adresse")} placeholder="N° lot, rue, immeuble..." error={!!errors.adresse} />
                     {errors.adresse && <p className="text-xs text-[--destructive]">{errors.adresse.message}</p>}
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium">Quartier / Commune</label>
-                    <Input
-                      {...register("quartier")}
-                      placeholder="Analakely, Behoririka..."
-                      error={!!errors.quartier}
-                    />
+                    <Input {...register("quartier")} placeholder="Analakely, Behoririka..." error={!!errors.quartier} />
                     {errors.quartier && <p className="text-xs text-[--destructive]">{errors.quartier.message}</p>}
                   </div>
 
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium">Téléphone</label>
-                    <Input
-                      {...register("telephone")}
-                      placeholder="034 XX XXX XX"
-                      error={!!errors.telephone}
-                    />
+                    <Input {...register("telephone")} placeholder="034 XX XXX XX" error={!!errors.telephone} />
                     {errors.telephone && <p className="text-xs text-[--destructive]">{errors.telephone.message}</p>}
                   </div>
 
@@ -164,7 +269,6 @@ export function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Créneau */}
               <div className="rounded-2xl border border-[--card-border] bg-[--card] p-6 space-y-4">
                 <h2 className="font-semibold text-[--foreground] flex items-center gap-2">
                   <Clock className="w-5 h-5 text-[--primary]" />
@@ -189,13 +293,14 @@ export function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Récap commande */}
               <div className="rounded-2xl border border-[--border] bg-[--background-subtle] p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Package className="w-5 h-5 text-[--foreground-muted]" />
-                  <span className="text-sm text-[--foreground-muted]">Total commande</span>
+                  <span className="text-sm text-[--foreground-muted]">
+                    {lignes.length} article(s) · Total
+                  </span>
                 </div>
-                <span className="font-bold text-[--foreground] text-mga">{formatMGA(TOTAL)}</span>
+                <span className="font-bold text-[--foreground] text-mga">{formatMGA(total)}</span>
               </div>
 
               <Button type="submit" size="lg" className="w-full">
@@ -221,6 +326,7 @@ export function CheckoutPage() {
                 {MODES_PAIEMENT.map((m) => (
                   <button
                     key={m.id}
+                    type="button"
                     onClick={() => setModePaiement(m.id)}
                     className={cn(
                       "w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left",
@@ -237,31 +343,49 @@ export function CheckoutPage() {
                     <div
                       className={cn(
                         "w-4 h-4 rounded-full border-2 transition-all",
-                        modePaiement === m.id
-                          ? "border-[--primary] bg-[--primary]"
-                          : "border-[--border]"
+                        modePaiement === m.id ? "border-[--primary] bg-[--primary]" : "border-[--border]"
                       )}
                     />
                   </button>
                 ))}
               </div>
+            </div>
 
-              {modePaiement && ["mvola", "orange_money", "airtel_money"].includes(modePaiement) && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  className="space-y-2"
-                >
-                  <Separator />
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium">Numéro de téléphone</label>
-                    <Input placeholder="034 XX XXX XX" />
+            {/* Code promo */}
+            <div className="rounded-2xl border border-[--card-border] bg-[--card] p-5 space-y-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Tag className="w-4 h-4 text-[--primary]" />
+                Code promo
+              </h3>
+              {promo ? (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[--success]/30 bg-[--success]/5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[--success] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-[--success]">{promo.code}</div>
+                    <div className="text-[10px] text-[--foreground-muted] truncate">
+                      −{formatMGA(promo.remise)} appliqués
+                    </div>
                   </div>
-                  <p className="text-xs text-[--foreground-muted] bg-[--background-subtle] p-3 rounded-lg">
-                    Vous recevrez une demande de confirmation sur votre mobile.
-                    Validez le paiement puis cliquez sur "Confirmer".
-                  </p>
-                </motion.div>
+                  <button
+                    onClick={() => { setPromo(null); setCodePromo(""); }}
+                    className="text-xs text-[--foreground-muted] hover:underline"
+                  >
+                    Retirer
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    value={codePromo}
+                    onChange={(e) => setCodePromo(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); appliquerCode(); } }}
+                    placeholder="Entrer un code promo"
+                    className="text-sm"
+                  />
+                  <Button variant="outline" size="sm" onClick={appliquerCode} disabled={verifyingPromo || !codePromo.trim()}>
+                    {verifyingPromo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Appliquer"}
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -269,8 +393,14 @@ export function CheckoutPage() {
             <div className="rounded-2xl border border-[--card-border] bg-[--card] p-5 space-y-2 text-sm">
               <div className="flex justify-between text-[--foreground-muted]">
                 <span>Sous-total</span>
-                <span className="text-mga">{formatMGA(TOTAL)}</span>
+                <span className="text-mga">{formatMGA(sousTotal)}</span>
               </div>
+              {remisePromo > 0 && (
+                <div className="flex justify-between text-[--success]">
+                  <span>Code {promo?.code}</span>
+                  <span className="text-mga">−{formatMGA(remisePromo)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-[--foreground-muted]">
                 <span>Livraison</span>
                 <span className="text-[--success] font-medium">Gratuite</span>
@@ -278,22 +408,21 @@ export function CheckoutPage() {
               <Separator />
               <div className="flex justify-between font-bold text-base">
                 <span>À payer</span>
-                <span className="text-[--primary] text-mga">{formatMGA(TOTAL)}</span>
+                <span className="text-[--primary] text-mga">{formatMGA(total)}</span>
               </div>
             </div>
 
             <div className="flex gap-3">
-              <Button variant="outline" size="lg" onClick={() => setEtape(0)}>
+              <Button variant="outline" size="lg" onClick={() => setEtape(0)} disabled={loading}>
                 Retour
               </Button>
               <Button
                 size="lg"
                 className="flex-1"
-                disabled={!modePaiement}
-                loading={loading}
+                disabled={!modePaiement || loading}
                 onClick={onPayer}
               >
-                <CheckCircle2 className="w-4 h-4" />
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                 Confirmer la commande
               </Button>
             </div>
@@ -301,7 +430,7 @@ export function CheckoutPage() {
         )}
 
         {/* ── Étape 2 : Confirmation ── */}
-        {etape === 2 && (
+        {etape === 2 && confirmedCmd && (
           <motion.div
             key="confirmation"
             initial={{ opacity: 0, scale: 0.95 }}
@@ -313,29 +442,26 @@ export function CheckoutPage() {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-[--foreground]">Commande confirmée !</h2>
-              <p className="text-[--foreground-muted] mt-2">
-                CMD-2026-0852 · Livraison prévue aujourd'hui, créneau matin 8h–12h
-              </p>
+              <p className="text-[--foreground-muted] mt-2 font-mono">{confirmedCmd.numero}</p>
             </div>
 
-            <div className="bg-[--background-subtle] rounded-2xl p-6 text-left space-y-3">
+            <div className="bg-[--background-subtle] rounded-2xl p-6 text-left space-y-3 max-w-md mx-auto">
               <h3 className="font-semibold text-[--foreground] mb-3">Récapitulatif</h3>
               {[
-                { label: "Montant total", val: formatMGA(TOTAL) },
-                { label: "Mode de paiement", val: "Mvola" },
-                { label: "Adresse", val: "Lot II B 45, Analakely" },
-                { label: "Créneau", val: "Matin 8h–12h" },
+                { label: "Montant total", val: formatMGA(confirmedCmd.total) },
+                { label: "Mode de paiement", val: MODES_PAIEMENT.find((m) => m.id === modePaiement)?.label ?? modePaiement },
+                { label: "Adresse", val: `${livraison?.adresse ?? ""}${livraison?.quartier ? `, ${livraison.quartier}` : ""}` },
+                { label: "Créneau", val: CRENEAUX.find((c) => c.id === creneau)?.label ?? "—" },
               ].map((r) => (
-                <div key={r.label} className="flex justify-between text-sm">
-                  <span className="text-[--foreground-muted]">{r.label}</span>
-                  <span className="font-medium text-[--foreground] text-mga">{r.val}</span>
+                <div key={r.label} className="flex justify-between text-sm gap-3">
+                  <span className="text-[--foreground-muted] shrink-0">{r.label}</span>
+                  <span className="font-medium text-[--foreground] text-right">{r.val}</span>
                 </div>
               ))}
             </div>
 
-            <p className="text-sm text-[--foreground-muted]">
-              Un SMS de confirmation a été envoyé à votre numéro.
-              Suivez votre commande en temps réel dans votre espace client.
+            <p className="text-sm text-[--foreground-muted] max-w-md mx-auto">
+              Votre commande a été transmise. Vous pouvez suivre son avancement dans votre espace client.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">

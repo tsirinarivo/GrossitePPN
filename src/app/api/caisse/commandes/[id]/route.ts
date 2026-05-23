@@ -5,6 +5,7 @@ import { and, eq, notInArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { broadcastMiseAJour, broadcastAnnulation } from "@/lib/sse/broadcast";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -327,6 +328,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     broadcastAnnulation({ commandeId: id, numero: updated.numero });
 
+    await logAudit({
+      action: "commande.valider",
+      entite: "commande",
+      entiteId: id,
+      details: { numero: updated.numero, factureNumero, totalTTC: updated.totalTTC, modePaiement },
+    });
+
     return NextResponse.json({ ok: true, factureNumero });
   } catch (e) {
     console.error("[api/caisse/commandes/[id] PATCH]", e);
@@ -357,6 +365,13 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       .where(eq(schema.commandes.id, id));
 
     broadcastAnnulation({ commandeId: id, numero: commande.numero });
+
+    await logAudit({
+      action: "commande.annuler",
+      entite: "commande",
+      entiteId: id,
+      details: { numero: commande.numero },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (e) {
