@@ -19,6 +19,7 @@ import {
   ChevronRight,
   ArrowLeftRight,
   ClipboardList,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatMGA } from "@/lib/money";
@@ -316,6 +317,12 @@ export function StockView() {
             <Link href="/stock/analyse">
               <BarChart2 className="w-4 h-4" />
               Analyse
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/stock/historique">
+              <History className="w-4 h-4" />
+              Historique
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>

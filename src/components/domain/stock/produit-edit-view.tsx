@@ -102,7 +102,7 @@ export function ProduitEditView({ id }: { id: string }) {
   const [saving, setSaving] = useState(false);
   const [categories, setCategories] = useState<Categorie[]>([]);
   const [unitesVente, setUnitesVente] = useState<UniteVente[]>([]);
-  const [activeTab, setActiveTab] = useState<"edit" | "analytics">("edit");
+  const [activeTab, setActiveTab] = useState<"edit" | "analytics" | "historique">("edit");
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
 
@@ -274,8 +274,9 @@ export function ProduitEditView({ id }: { id: string }) {
       {/* Tabs */}
       <div className="flex border-b border-[--border] gap-1">
         {([
-          { key: "edit",      label: "Édition",    icon: Settings },
-          { key: "analytics", label: "Analytique", icon: BarChart2 },
+          { key: "edit",       label: "Édition",    icon: Settings },
+          { key: "analytics",  label: "Analytique", icon: BarChart2 },
+          { key: "historique", label: "Historique", icon: History },
         ] as const).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -294,6 +295,10 @@ export function ProduitEditView({ id }: { id: string }) {
 
       {activeTab === "analytics" && (
         <ProduitAnalyticsPanel analytics={analytics} loading={loadingAnalytics} uniteBase={form.uniteBase} />
+      )}
+
+      {activeTab === "historique" && (
+        <ProduitHistoriquePanel produitId={id} uniteBase={form.uniteBase} />
       )}
 
       {activeTab === "edit" && <>
@@ -768,6 +773,504 @@ function ProduitAnalyticsPanel({ analytics, loading, uniteBase }: { analytics: A
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// ── Historique panel ─────────────────────────────────────────────────────────
+
+type HistoriqueData = {
+  produit: {
+    id: string;
+    nom: string;
+    code: string;
+    uniteBase: string;
+    prixVenteDetail: number | null;
+    prixVenteGros: number | null;
+    prixVenteSemiGros: number | null;
+  };
+  synthese: {
+    nbMouvements: number;
+    nbVentes: number;
+    qteVendue: number;
+    caVentes: number;
+    nbAchats: number;
+    qteAchetee: number;
+    coutAchats: number;
+    prixAchatMoyen: number;
+    nbCasse: number;
+    qteCasse: number;
+    nbInventaires: number;
+    nbTransferts: number;
+  };
+  mouvements: {
+    id: string; type: string; quantiteBase: number; quantiteAvant: number;
+    quantiteApres: number; reference: string | null; notes: string | null;
+    createdAt: string; agentNom: string; nomDepot: string;
+  }[];
+  ventes: {
+    ligneId: string; commandeId: string; numeroCommande: string;
+    quantiteBase: number; prixUnitaire: number; totalTTC: number;
+    clientId: string | null; clientNom: string | null; valideeAt: string | null;
+    statut: string;
+  }[];
+  topClients: {
+    clientId: string; nom: string; nbCommandes: number; qte: number; ca: number;
+  }[];
+  achats: {
+    ligneBCId: string; bonCommandeId: string; numeroBC: string;
+    quantiteCommandee: number; quantiteRecue: number; quantiteBase: number;
+    prixUnitaireHT: number; totalHT: number; statut: string;
+    dateCommande: string | null; dateReception: string | null;
+    fournisseurId: string | null; fournisseurNom: string | null;
+  }[];
+  topFournisseurs: {
+    fournisseurId: string; nom: string; nbBC: number; qte: number;
+    montant: number; prixMin: number; prixMax: number;
+  }[];
+  evolutionPrix: { mois: string; prixMoyen: number; qte: number }[];
+};
+
+const TYPE_LABELS_HIST: Record<string, { label: string; color: string }> = {
+  entree:      { label: "Entrée",      color: "#22c55e" },
+  vente:       { label: "Vente",       color: "#3b82f6" },
+  transfert:   { label: "Transfert",   color: "#8b5cf6" },
+  casse:       { label: "Casse",       color: "#ef4444" },
+  inventaire:  { label: "Inventaire",  color: "#f59e0b" },
+  reservation: { label: "Réservation", color: "#6b7280" },
+};
+
+function ProduitHistoriquePanel({ produitId, uniteBase }: { produitId: string; uniteBase: string }) {
+  const [data, setData] = useState<HistoriqueData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [periode, setPeriode] = useState<string>("3mois");
+  const [section, setSection] = useState<"timeline" | "ventes" | "achats" | "prix">("timeline");
+  const [filtreType, setFiltreType] = useState<string>("all");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ periode, type: filtreType });
+      const res = await fetch(`/api/produits/${produitId}/historique?${params}`);
+      if (res.ok) setData(await res.json());
+    } catch {
+      toast.error("Impossible de charger l'historique");
+    } finally {
+      setLoading(false);
+    }
+  }, [produitId, periode, filtreType]);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (loading && !data) {
+    return (
+      <div className="flex items-center justify-center py-16 gap-2 text-[--foreground-muted]">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        <span className="text-sm">Chargement de l&apos;historique...</span>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="text-center py-16 text-[--foreground-muted] text-sm">
+        Aucune donnée d&apos;historique disponible.
+      </div>
+    );
+  }
+
+  const s = data.synthese;
+
+  return (
+    <div className="space-y-4">
+      {/* Période */}
+      <div className="flex items-center gap-1 bg-[--muted] rounded-xl p-1 w-fit">
+        {(["semaine", "mois", "3mois", "12mois", "annee"] as const).map((p) => (
+          <button
+            key={p}
+            onClick={() => setPeriode(p)}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+              periode === p
+                ? "bg-[--card] text-[--foreground] shadow-sm"
+                : "text-[--foreground-muted] hover:text-[--foreground]"
+            )}
+          >
+            {p === "semaine" ? "7j" : p === "mois" ? "Mois" : p === "3mois" ? "3 mois" : p === "12mois" ? "12 mois" : "Année"}
+          </button>
+        ))}
+      </div>
+
+      {/* Synthèse */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-[--foreground-muted]">Mouvements</p>
+            <p className="text-xl font-bold">{s.nbMouvements}</p>
+            <p className="text-[10px] text-[--foreground-muted]">
+              {s.nbTransferts} transferts · {s.nbInventaires} inventaires
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-[--foreground-muted]">Ventes</p>
+            <p className="text-xl font-bold">{s.nbVentes}</p>
+            <p className="text-[10px] text-[--foreground-muted]">
+              {s.qteVendue.toLocaleString("fr-FR")} {uniteBase} · {formatMGA(s.caVentes)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-[--foreground-muted]">Achats</p>
+            <p className="text-xl font-bold">{s.nbAchats}</p>
+            <p className="text-[10px] text-[--foreground-muted]">
+              {s.qteAchetee.toLocaleString("fr-FR")} {uniteBase} · {formatMGA(s.coutAchats)}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-xs text-[--foreground-muted]">Casse</p>
+            <p className="text-xl font-bold text-red-500">{s.nbCasse}</p>
+            <p className="text-[10px] text-[--foreground-muted]">
+              {s.qteCasse.toLocaleString("fr-FR")} {uniteBase} perdues
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs section */}
+      <div className="flex border-b border-[--border] gap-1">
+        {([
+          { key: "timeline", label: "Timeline" },
+          { key: "ventes",   label: `Ventes (${data.ventes.length})` },
+          { key: "achats",   label: `Achats (${data.achats.length})` },
+          { key: "prix",     label: "Évolution prix" },
+        ] as const).map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setSection(key)}
+            className={cn(
+              "px-4 py-2 text-xs font-medium border-b-2 -mb-px transition-colors",
+              section === key
+                ? "border-[--primary] text-[--primary]"
+                : "border-transparent text-[--foreground-muted] hover:text-[--foreground]"
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Timeline */}
+      {section === "timeline" && (
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            {(["all", "entree", "vente", "transfert", "casse", "inventaire"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setFiltreType(t)}
+                className={cn(
+                  "px-2.5 py-1 rounded-md text-[10px] font-semibold border transition-all uppercase tracking-wider",
+                  filtreType === t
+                    ? "bg-[--primary]/10 border-[--primary] text-[--primary]"
+                    : "border-[--border] text-[--foreground-muted] hover:bg-[--accent]"
+                )}
+              >
+                {t === "all" ? "Tous" : TYPE_LABELS_HIST[t]?.label ?? t}
+              </button>
+            ))}
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              {data.mouvements.length === 0 ? (
+                <div className="py-12 text-center text-sm text-[--foreground-muted]">
+                  Aucun mouvement pour cette période et ce filtre.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[--border] bg-[--muted]/30">
+                        <th className="text-left px-3 py-2 text-xs text-[--foreground-muted] font-medium">Date</th>
+                        <th className="text-left px-3 py-2 text-xs text-[--foreground-muted] font-medium">Type</th>
+                        <th className="text-left px-3 py-2 text-xs text-[--foreground-muted] font-medium hidden md:table-cell">Dépôt</th>
+                        <th className="text-right px-3 py-2 text-xs text-[--foreground-muted] font-medium">Qté</th>
+                        <th className="text-right px-3 py-2 text-xs text-[--foreground-muted] font-medium hidden lg:table-cell">Avant → Après</th>
+                        <th className="text-left px-3 py-2 text-xs text-[--foreground-muted] font-medium hidden md:table-cell">Référence</th>
+                        <th className="text-left px-3 py-2 text-xs text-[--foreground-muted] font-medium hidden lg:table-cell">Agent</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.mouvements.map((m) => {
+                        const info = TYPE_LABELS_HIST[m.type] ?? { label: m.type, color: "#94a3b8" };
+                        const isPos = m.type === "entree" || (m.type === "transfert" && m.quantiteApres > m.quantiteAvant);
+                        const isNeg = m.type === "vente" || m.type === "casse";
+                        return (
+                          <tr key={m.id} className="border-b border-[--border] last:border-0">
+                            <td className="px-3 py-2 text-xs">
+                              {new Date(m.createdAt).toLocaleDateString("fr-FR")}
+                              <div className="text-[9px] text-[--foreground-muted]">
+                                {new Date(m.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
+                                style={{ backgroundColor: info.color + "20", color: info.color }}>
+                                {info.label}
+                              </span>
+                            </td>
+                            <td className="px-3 py-2 text-xs text-[--foreground-muted] hidden md:table-cell">{m.nomDepot}</td>
+                            <td className="px-3 py-2 text-right font-bold"
+                              style={{ color: isPos ? "#22c55e" : isNeg ? "#ef4444" : "#94a3b8" }}>
+                              {isPos && "+"}{isNeg && "−"}{Number(m.quantiteBase).toLocaleString("fr-FR")}
+                            </td>
+                            <td className="px-3 py-2 text-right hidden lg:table-cell text-[10px] font-mono text-[--foreground-muted]">
+                              {Number(m.quantiteAvant).toLocaleString("fr-FR")} → {Number(m.quantiteApres).toLocaleString("fr-FR")}
+                            </td>
+                            <td className="px-3 py-2 hidden md:table-cell text-[11px] font-mono text-[--foreground-muted]">{m.reference ?? "—"}</td>
+                            <td className="px-3 py-2 hidden lg:table-cell text-xs text-[--foreground-muted]">{m.agentNom || "—"}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+
+      {/* Ventes */}
+      {section === "ventes" && (
+        <div className="grid lg:grid-cols-3 gap-4">
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Dernières ventes</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {data.ventes.length === 0 ? (
+                <div className="py-12 text-center text-sm text-[--foreground-muted]">
+                  Aucune vente sur la période.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[--border] bg-[--muted]/30">
+                        <th className="text-left px-3 py-2 text-xs text-[--foreground-muted] font-medium">Date</th>
+                        <th className="text-left px-3 py-2 text-xs text-[--foreground-muted] font-medium">Commande</th>
+                        <th className="text-left px-3 py-2 text-xs text-[--foreground-muted] font-medium">Client</th>
+                        <th className="text-right px-3 py-2 text-xs text-[--foreground-muted] font-medium">Qté</th>
+                        <th className="text-right px-3 py-2 text-xs text-[--foreground-muted] font-medium hidden sm:table-cell">PU</th>
+                        <th className="text-right px-3 py-2 text-xs text-[--foreground-muted] font-medium">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.ventes.map((v) => (
+                        <tr key={v.ligneId} className="border-b border-[--border] last:border-0 hover:bg-[--muted]/10">
+                          <td className="px-3 py-2 text-xs">
+                            {v.valideeAt ? new Date(v.valideeAt).toLocaleDateString("fr-FR") : "—"}
+                          </td>
+                          <td className="px-3 py-2 text-[11px] font-mono text-[--foreground-muted]">{v.numeroCommande}</td>
+                          <td className="px-3 py-2 text-sm font-medium">{v.clientNom ?? "Comptoir"}</td>
+                          <td className="px-3 py-2 text-right text-xs">{Number(v.quantiteBase).toLocaleString("fr-FR")}</td>
+                          <td className="px-3 py-2 text-right text-xs hidden sm:table-cell">{formatMGA(v.prixUnitaire)}</td>
+                          <td className="px-3 py-2 text-right font-semibold text-sm">{formatMGA(v.totalTTC)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Top 10 clients</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {data.topClients.length === 0 ? (
+                <div className="py-8 text-center text-xs text-[--foreground-muted]">Aucun client</div>
+              ) : (
+                <div className="divide-y divide-[--border]">
+                  {data.topClients.map((c, i) => (
+                    <div key={c.clientId} className="px-4 py-2 flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-[--primary]/10 text-[--primary] flex items-center justify-center text-[10px] font-bold shrink-0">
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-medium truncate">{c.nom}</div>
+                        <div className="text-[10px] text-[--foreground-muted]">
+                          {c.nbCommandes} cmd · {c.qte.toLocaleString("fr-FR")} {uniteBase}
+                        </div>
+                      </div>
+                      <span className="text-xs font-bold shrink-0">{formatMGA(c.ca)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Achats */}
+      {section === "achats" && (
+        <div className="grid lg:grid-cols-3 gap-4">
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Derniers achats fournisseurs</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {data.achats.length === 0 ? (
+                <div className="py-12 text-center text-sm text-[--foreground-muted]">
+                  Aucun achat sur la période.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-[--border] bg-[--muted]/30">
+                        <th className="text-left px-3 py-2 text-xs text-[--foreground-muted] font-medium">Date</th>
+                        <th className="text-left px-3 py-2 text-xs text-[--foreground-muted] font-medium">BC</th>
+                        <th className="text-left px-3 py-2 text-xs text-[--foreground-muted] font-medium">Fournisseur</th>
+                        <th className="text-right px-3 py-2 text-xs text-[--foreground-muted] font-medium">Qté</th>
+                        <th className="text-right px-3 py-2 text-xs text-[--foreground-muted] font-medium">PU HT</th>
+                        <th className="text-right px-3 py-2 text-xs text-[--foreground-muted] font-medium">Total HT</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.achats.map((a) => (
+                        <tr key={a.ligneBCId} className="border-b border-[--border] last:border-0 hover:bg-[--muted]/10">
+                          <td className="px-3 py-2 text-xs">
+                            {a.dateCommande ? new Date(a.dateCommande).toLocaleDateString("fr-FR") : "—"}
+                          </td>
+                          <td className="px-3 py-2 text-[11px] font-mono text-[--foreground-muted]">{a.numeroBC}</td>
+                          <td className="px-3 py-2 text-sm font-medium">{a.fournisseurNom ?? "—"}</td>
+                          <td className="px-3 py-2 text-right text-xs">
+                            {Number(a.quantiteBase).toLocaleString("fr-FR")}
+                            <div className="text-[9px] text-[--foreground-muted]">
+                              {Number(a.quantiteRecue).toLocaleString("fr-FR")}/{Number(a.quantiteCommandee).toLocaleString("fr-FR")}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-right text-xs">{formatMGA(a.prixUnitaireHT)}</td>
+                          <td className="px-3 py-2 text-right font-semibold text-sm">{formatMGA(a.totalHT)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Top fournisseurs</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {data.topFournisseurs.length === 0 ? (
+                <div className="py-8 text-center text-xs text-[--foreground-muted]">Aucun fournisseur</div>
+              ) : (
+                <div className="divide-y divide-[--border]">
+                  {data.topFournisseurs.map((f, i) => (
+                    <div key={f.fournisseurId} className="px-4 py-2.5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center text-[10px] font-bold shrink-0">
+                          {i + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium truncate">{f.nom}</div>
+                          <div className="text-[10px] text-[--foreground-muted]">
+                            {f.nbBC} BC · {f.qte.toLocaleString("fr-FR")} {uniteBase}
+                          </div>
+                        </div>
+                        <span className="text-xs font-bold shrink-0">{formatMGA(f.montant)}</span>
+                      </div>
+                      <div className="mt-1 text-[10px] text-[--foreground-muted] flex items-center justify-between pl-9">
+                        <span>Prix : {formatMGA(f.prixMin)} - {formatMGA(f.prixMax)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Évolution prix */}
+      {section === "prix" && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <TrendingUp className="w-4 h-4" /> Évolution du prix d&apos;achat moyen
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {data.evolutionPrix.length === 0 ? (
+              <div className="py-12 text-center text-sm text-[--foreground-muted]">
+                Pas assez de données pour tracer une courbe.
+              </div>
+            ) : (
+              <>
+                <div style={{ width: "100%", height: 240 }}>
+                  <ResponsiveContainer>
+                    <BarChart data={data.evolutionPrix}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                      <XAxis dataKey="mois" tick={{ fontSize: 11 }} />
+                      <YAxis
+                        tick={{ fontSize: 10 }}
+                        tickFormatter={(v: number) => `${Math.round(v / 1000)}k`}
+                      />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: "#1E1E2E", border: "1px solid #2E2E3E", borderRadius: 8, fontSize: 11 }}
+                        formatter={(v) => [formatMGA(Number(v)), "Prix moyen"]}
+                      />
+                      <Bar dataKey="prixMoyen" fill="#FF4D00" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Comparatif prix vente */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 pt-4 border-t border-[--border]">
+                  <div>
+                    <div className="text-[10px] text-[--foreground-muted] uppercase tracking-wider">Prix achat moyen</div>
+                    <div className="text-base font-bold">{formatMGA(s.prixAchatMoyen)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-[--foreground-muted] uppercase tracking-wider">Prix vente détail</div>
+                    <div className="text-base font-bold">{formatMGA(data.produit.prixVenteDetail ?? 0)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-[--foreground-muted] uppercase tracking-wider">Prix vente semi-gros</div>
+                    <div className="text-base font-bold">{formatMGA(data.produit.prixVenteSemiGros ?? 0)}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-[--foreground-muted] uppercase tracking-wider">Prix vente gros</div>
+                    <div className="text-base font-bold">{formatMGA(data.produit.prixVenteGros ?? 0)}</div>
+                  </div>
+                </div>
+
+                {/* Marges */}
+                {s.prixAchatMoyen > 0 && data.produit.prixVenteDetail && (
+                  <div className="mt-4 p-3 bg-green-500/5 border border-green-500/20 rounded-lg text-xs">
+                    <strong className="text-green-500">Marge brute détail :</strong>{" "}
+                    {formatMGA(data.produit.prixVenteDetail - s.prixAchatMoyen)}{" "}
+                    ({Math.round(((data.produit.prixVenteDetail - s.prixAchatMoyen) / data.produit.prixVenteDetail) * 100)}%)
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
