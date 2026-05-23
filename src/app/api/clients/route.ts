@@ -71,21 +71,26 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { raisonSociale, code, nif, stat, telephone, email, adresse, palier, creditAutorise, plafondCredit, notes, agentId } = body;
 
-    if (!raisonSociale || !code) {
+    const codeTrim = String(code ?? "").trim();
+    const raisonTrim = String(raisonSociale ?? "").trim();
+    if (!raisonTrim || !codeTrim) {
       return NextResponse.json({ error: "Raison sociale et code sont requis" }, { status: 400 });
+    }
+    if (raisonTrim.length > 200 || codeTrim.length > 50) {
+      return NextResponse.json({ error: "Champs trop longs" }, { status: 400 });
     }
 
     const id = crypto.randomUUID();
 
     const [inserted] = await db.insert(schema.clients).values({
       id,
-      code: String(code).trim(),
-      raisonSociale: String(raisonSociale).trim(),
-      nif: nif ?? null,
-      stat: stat ?? null,
-      telephone: telephone ?? null,
-      email: email ?? null,
-      adresse: adresse ?? null,
+      code: codeTrim,
+      raisonSociale: raisonTrim,
+      nif: nif?.trim() || null,
+      stat: stat?.trim() || null,
+      telephone: telephone?.trim() || null,
+      email: email?.trim() || null,
+      adresse: adresse?.trim() || null,
       palier: palier ?? "detail",
       creditAutorise: creditAutorise ?? false,
       plafondCredit: plafondCredit ?? 0,

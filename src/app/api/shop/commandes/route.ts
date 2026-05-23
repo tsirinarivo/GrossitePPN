@@ -158,9 +158,24 @@ export async function POST(req: NextRequest) {
   // Calcule totaux à partir du panier (côté serveur, on ne fait pas confiance au client)
   let totalHT = 0;
   for (const l of body.lignes) {
-    const qte = Number(l.qte) || 0;
-    const pu = Math.round(Number(l.prixUnit) || 0);
+    const qte = Number(l.qte);
+    const pu = Math.round(Number(l.prixUnit));
+    if (!Number.isFinite(qte) || qte <= 0) {
+      return NextResponse.json(
+        { error: `Quantité invalide pour ${l.nom ?? "article"} (doit être > 0)` },
+        { status: 400 }
+      );
+    }
+    if (!Number.isFinite(pu) || pu < 0) {
+      return NextResponse.json(
+        { error: `Prix invalide pour ${l.nom ?? "article"}` },
+        { status: 400 }
+      );
+    }
     totalHT += qte * pu;
+  }
+  if (totalHT <= 0) {
+    return NextResponse.json({ error: "Montant total invalide" }, { status: 400 });
   }
 
   // Application code promo serveur-side

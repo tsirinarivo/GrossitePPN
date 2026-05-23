@@ -181,10 +181,10 @@ export function POSClientBar() {
                     </span>
                   );
                 })()}
-                {client.pointsFidelite > 0 && (
+                {(client.pointsFidelite ?? 0) > 0 && (
                   <span className="flex items-center gap-1">
                     <Star className="w-3 h-3" />
-                    {client.pointsFidelite.toLocaleString("fr-FR")} pts fidélité
+                    {(client.pointsFidelite ?? 0).toLocaleString("fr-FR")} pts fidélité
                   </span>
                 )}
               </div>

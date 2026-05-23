@@ -49,16 +49,34 @@ export async function PATCH(
 
     type ClientUpdate = Partial<typeof schema.clients.$inferInsert>;
     const patch: ClientUpdate = {};
-    if ("raisonSociale" in body) patch.raisonSociale = body.raisonSociale;
-    if ("code" in body) patch.code = body.code;
-    if ("nif" in body) patch.nif = body.nif ?? null;
-    if ("stat" in body) patch.stat = body.stat ?? null;
-    if ("telephone" in body) patch.telephone = body.telephone ?? null;
-    if ("email" in body) patch.email = body.email ?? null;
-    if ("adresse" in body) patch.adresse = body.adresse ?? null;
-    if ("palier" in body) patch.palier = body.palier;
-    if ("notes" in body) patch.notes = body.notes ?? null;
-    if ("zoneTournee" in body) patch.zoneTournee = body.zoneTournee ?? null;
+    // Trim + null si vide (refuse strings d'espaces blancs uniquement)
+    const tr = (v: unknown): string | null => {
+      if (v == null) return null;
+      const s = String(v).trim();
+      return s === "" ? null : s;
+    };
+
+    if ("raisonSociale" in body) {
+      const v = tr(body.raisonSociale);
+      if (!v) return NextResponse.json({ error: "Raison sociale ne peut être vide" }, { status: 400 });
+      patch.raisonSociale = v;
+    }
+    if ("code" in body) {
+      const v = tr(body.code);
+      if (!v) return NextResponse.json({ error: "Code ne peut être vide" }, { status: 400 });
+      patch.code = v;
+    }
+    if ("nif" in body) patch.nif = tr(body.nif);
+    if ("stat" in body) patch.stat = tr(body.stat);
+    if ("telephone" in body) patch.telephone = tr(body.telephone);
+    if ("email" in body) patch.email = tr(body.email);
+    if ("adresse" in body) patch.adresse = tr(body.adresse);
+    if ("palier" in body) {
+      const v = tr(body.palier);
+      if (v) patch.palier = v as typeof schema.clients.$inferInsert.palier;
+    }
+    if ("notes" in body) patch.notes = tr(body.notes);
+    if ("zoneTournee" in body) patch.zoneTournee = tr(body.zoneTournee);
 
     // Champs sensibles → réservés aux managers
     if (isManager) {

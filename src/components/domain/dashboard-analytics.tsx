@@ -228,7 +228,7 @@ export function DashboardAnalytics() {
             />
             <KpiCard
               label="Nb commandes"
-              value={kpi ? kpi.nbCommandes.toLocaleString("fr-FR") : "—"}
+              value={kpi ? (kpi.nbCommandes ?? 0).toLocaleString("fr-FR") : "—"}
               icon={ShoppingBag}
               iconClass="text-[--color-vanille-600]"
               bgClass="bg-[--color-vanille-50] dark:bg-[--color-vanille-950]"

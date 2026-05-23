@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { Search, Package, Users, Receipt, ArrowRight, Loader2, X } from "lucide-react";
@@ -59,11 +59,11 @@ export function GlobalSearch() {
   const hasResults = total > 0;
 
   type Item = { href: string; label: string; sub: string; icon: typeof Package; iconColor: string };
-  const items: Item[] = [
+  const items: Item[] = useMemo(() => [
     ...results.produits.map((p) => ({ href: `/stock/produits/${p.id}`, label: p.nom, sub: `${p.code} · ${p.uniteBase}`, icon: Package, iconColor: "#3B82F6" })),
     ...results.clients.map((c) => ({ href: `/clients`, label: c.raisonSociale, sub: `${c.code} · ${c.palier}`, icon: Users, iconColor: "#F59E0B" })),
     ...results.commandes.map((o) => ({ href: `/historique`, label: o.numero, sub: `${o.statut} · ${formatMGA(o.totalTTC)}`, icon: Receipt, iconColor: "#8B5CF6" })),
-  ];
+  ], [results]);
 
   function navigate(href: string) {
     setOpen(false);

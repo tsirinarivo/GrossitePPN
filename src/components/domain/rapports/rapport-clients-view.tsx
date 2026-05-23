@@ -464,10 +464,12 @@ export function RapportClientsView() {
                             {formatMGA(Number(c.panierMoyen))}
                           </td>
                           <td className="px-4 py-3 text-right text-[--foreground-muted] text-xs">
-                            {new Date(c.derniereCommande).toLocaleDateString(
-                              "fr-FR",
-                              { day: "2-digit", month: "short", year: "numeric" }
-                            )}
+                            {c.derniereCommande
+                              ? new Date(c.derniereCommande).toLocaleDateString(
+                                  "fr-FR",
+                                  { day: "2-digit", month: "short", year: "numeric" }
+                                )
+                              : "—"}
                           </td>
                           <td className="px-4 py-3">
                             <SegmentBadge segment={c.segment} />

@@ -30,8 +30,11 @@ function getPeriodRange(searchParams: URLSearchParams): { from: Date; to: Date; 
     return { from, to, mois: from.toISOString().slice(0, 7) };
   }
   // mois — par défaut
-  const y = parseInt(searchParams.get("annee") ?? String(now.getFullYear()));
-  const m = parseInt(searchParams.get("moisNum") ?? String(now.getMonth() + 1)) - 1;
+  const yRaw = parseInt(searchParams.get("annee") ?? String(now.getFullYear()), 10);
+  const mRaw = parseInt(searchParams.get("moisNum") ?? String(now.getMonth() + 1), 10);
+  const y = !isNaN(yRaw) && yRaw >= 2000 && yRaw <= 2100 ? yRaw : now.getFullYear();
+  const mInput = !isNaN(mRaw) && mRaw >= 1 && mRaw <= 12 ? mRaw : now.getMonth() + 1;
+  const m = mInput - 1;
   const from = new Date(y, m, 1);
   const to   = new Date(y, m + 1, 0, 23, 59, 59, 999);
   return { from, to, mois: `${y}-${String(m + 1).padStart(2, "0")}` };
