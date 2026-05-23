@@ -128,6 +128,7 @@ export function CheckoutPage() {
   };
 
   const onPayer = async () => {
+    if (loading) return; // garde anti double-clic
     if (!modePaiement || !livraison) return;
     if (lignes.length === 0) {
       toast.error("Panier vide");

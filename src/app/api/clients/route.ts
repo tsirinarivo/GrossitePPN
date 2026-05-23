@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, or, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
@@ -11,9 +11,15 @@ export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const role: string = (session.user as any).role ?? "agent";
+
+  // Un "agent" ne voit que ses clients (agentId === lui) ou ceux sans agent assigné
+  // Les rôles managériaux voient tout
+  const isManager = ["admin", "gerant", "comptable", "caissier", "marketing"].includes(role);
+
   try {
-    const clients = await db
-      .select({
+    const baseSelect = {
         id: schema.clients.id,
         code: schema.clients.code,
         raisonSociale: schema.clients.raisonSociale,
@@ -33,9 +39,20 @@ export async function GET(req: NextRequest) {
         actif: schema.clients.actif,
         notes: schema.clients.notes,
         createdAt: schema.clients.createdAt,
-      })
-      .from(schema.clients)
-      .orderBy(desc(schema.clients.totalAchats));
+    };
+
+    const clients = isManager
+      ? await db.select(baseSelect).from(schema.clients).orderBy(desc(schema.clients.totalAchats))
+      : await db
+          .select(baseSelect)
+          .from(schema.clients)
+          .where(
+            or(
+              eq(schema.clients.agentId, session.user.id),
+              isNull(schema.clients.agentId)
+            )
+          )
+          .orderBy(desc(schema.clients.totalAchats));
 
     return NextResponse.json(clients);
   } catch (e) {

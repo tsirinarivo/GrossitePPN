@@ -40,6 +40,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const role: string = (session.user as any).role ?? "agent";
+    const isManager = role === "admin" || role === "gerant";
+
     const { id } = await params;
     const body = await req.json();
 
@@ -53,12 +57,21 @@ export async function PATCH(
     if ("email" in body) patch.email = body.email ?? null;
     if ("adresse" in body) patch.adresse = body.adresse ?? null;
     if ("palier" in body) patch.palier = body.palier;
-    if ("creditAutorise" in body) patch.creditAutorise = body.creditAutorise;
-    if ("plafondCredit" in body) patch.plafondCredit = body.plafondCredit;
     if ("notes" in body) patch.notes = body.notes ?? null;
-    if ("actif" in body) patch.actif = body.actif;
-    if ("agentId" in body) patch.agentId = body.agentId ?? null;
     if ("zoneTournee" in body) patch.zoneTournee = body.zoneTournee ?? null;
+
+    // Champs sensibles → réservés aux managers
+    if (isManager) {
+      if ("creditAutorise" in body) patch.creditAutorise = body.creditAutorise;
+      if ("plafondCredit" in body) patch.plafondCredit = body.plafondCredit;
+      if ("actif" in body) patch.actif = body.actif;
+      if ("agentId" in body) patch.agentId = body.agentId ?? null;
+    } else if ("creditAutorise" in body || "plafondCredit" in body || "actif" in body || "agentId" in body) {
+      return NextResponse.json(
+        { error: "Réassignation et droits crédit réservés aux gérants" },
+        { status: 403 }
+      );
+    }
 
     if (Object.keys(patch).length === 0) {
       return NextResponse.json({ error: "Aucun champ à mettre à jour" }, { status: 400 });

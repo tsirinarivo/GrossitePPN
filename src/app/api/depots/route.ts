@@ -8,6 +8,8 @@ import { headers } from "next/headers";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   try {
     const depots = await db
       .select()

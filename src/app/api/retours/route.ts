@@ -100,8 +100,6 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const {
     factureId,
-    commandeId,
-    clientId,
     motif,
     motifDetail,
     modeRemboursement,
@@ -109,8 +107,6 @@ export async function POST(req: NextRequest) {
     lignes,
   } = body as {
     factureId?: string;
-    commandeId?: string;
-    clientId?: string;
     motif: MotifRetour;
     motifDetail?: string;
     modeRemboursement: ModeRemb;
@@ -120,6 +116,22 @@ export async function POST(req: NextRequest) {
 
   if (!motif || !modeRemboursement || !Array.isArray(lignes) || lignes.length === 0) {
     return NextResponse.json({ error: "Champs requis manquants" }, { status: 400 });
+  }
+
+  // Dérive clientId/commandeId depuis la facture (pas de confiance au body)
+  let clientId: string | null = null;
+  let commandeId: string | null = null;
+  if (factureId) {
+    const [facture] = await db
+      .select({ clientId: schema.factures.clientId, commandeId: schema.factures.commandeId })
+      .from(schema.factures)
+      .where(eq(schema.factures.id, factureId))
+      .limit(1);
+    if (!facture) {
+      return NextResponse.json({ error: "Facture introuvable" }, { status: 404 });
+    }
+    clientId = facture.clientId;
+    commandeId = facture.commandeId;
   }
 
   // Compute totals
@@ -229,11 +241,73 @@ export async function POST(req: NextRequest) {
         await db
           .update(schema.clients)
           .set({
-            encoursCourant: sql`GREATEST(${schema.clients.encoursCourant} - ${totalTTC}, 0)`,
+            encoursCourant: sql`GREATEST(COALESCE(${schema.clients.encoursCourant}, 0) - ${totalTTC}, 0)`,
             updatedAt: new Date(),
           })
           .where(eq(schema.clients.id, clientId));
       }
+    }
+
+    // ── Réintégration stock pour chaque ligne avec produitId ───────────────
+    // On crédite le dépôt principal (ou n'importe quel actif si pas de principal)
+    try {
+      const lignesAvecProduit = lignesData.filter((l) => l.produitId);
+      if (lignesAvecProduit.length > 0) {
+        const [depotCible] = await db
+          .select({ id: schema.depots.id })
+          .from(schema.depots)
+          .where(eq(schema.depots.actif, true))
+          .orderBy(sql`${schema.depots.estPrincipal} DESC NULLS LAST`)
+          .limit(1);
+
+        if (depotCible) {
+          for (const l of lignesAvecProduit) {
+            const [stockRow] = await db
+              .select({ id: schema.stocks.id, quantiteBase: schema.stocks.quantiteBase })
+              .from(schema.stocks)
+              .where(
+                and(
+                  eq(schema.stocks.produitId, l.produitId!),
+                  eq(schema.stocks.depotId, depotCible.id)
+                )
+              )
+              .limit(1);
+
+            const avant = stockRow?.quantiteBase ?? 0;
+            const apres = avant + l.quantite;
+
+            if (stockRow) {
+              await db
+                .update(schema.stocks)
+                .set({ quantiteBase: apres, updatedAt: new Date() })
+                .where(eq(schema.stocks.id, stockRow.id));
+            } else {
+              await db.insert(schema.stocks).values({
+                id: crypto.randomUUID(),
+                produitId: l.produitId!,
+                depotId: depotCible.id,
+                quantiteBase: apres,
+              });
+            }
+
+            await db.insert(schema.mouvementsStock).values({
+              id: crypto.randomUUID(),
+              produitId: l.produitId!,
+              depotId: depotCible.id,
+              type: "retour",
+              quantiteBase: l.quantite,
+              quantiteAvant: avant,
+              quantiteApres: apres,
+              reference: numero,
+              notes: `Retour client — motif: ${motif}`,
+              userId,
+            });
+          }
+        }
+      }
+    } catch (stockErr) {
+      // Best-effort : on ne bloque pas la création du retour si le stock échoue
+      console.error("[retour] Erreur réintégration stock:", stockErr);
     }
 
     await logAudit({

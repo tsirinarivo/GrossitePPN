@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { and, eq, notInArray } from "drizzle-orm";
+import { and, eq, notInArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { broadcastMiseAJour, broadcastAnnulation } from "@/lib/sse/broadcast";
@@ -157,7 +157,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  const modePaiement: string = body?.modePaiement ?? "especes";
+  const modePaiementRaw: string = body?.modePaiement ?? "especes";
+
+  // Whitelist du mode de paiement contre l'enum DB
+  const MODES_VALIDES = [
+    "especes", "mvola", "orange_money", "airtel_money",
+    "virement", "cheque", "credit_client", "mixte",
+  ] as const;
+  type ModePaiement = (typeof MODES_VALIDES)[number];
+  const modePaiement: ModePaiement = MODES_VALIDES.includes(modePaiementRaw as ModePaiement)
+    ? (modePaiementRaw as ModePaiement)
+    : "especes";
 
   try {
     // Atomic state transition — prevents double-validation and race conditions
@@ -203,31 +213,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         .where(eq(schema.lignesCommande.commandeId, id));
 
       for (const ligne of lignes) {
-        const [stockRow] = await db
-          .select({ quantiteBase: schema.stocks.quantiteBase })
-          .from(schema.stocks)
+        // UPDATE atomique : SET quantiteBase = GREATEST(0, quantiteBase - X) + RETURNING
+        // Évite la race condition entre SELECT et UPDATE
+        const [updatedStock] = await db
+          .update(schema.stocks)
+          .set({
+            quantiteBase: sql`GREATEST(0, ${schema.stocks.quantiteBase} - ${ligne.quantiteBase})`,
+            updatedAt: new Date(),
+          })
           .where(
             and(
               eq(schema.stocks.produitId, ligne.produitId),
               eq(schema.stocks.depotId, depotId)
             )
           )
-          .limit(1);
+          .returning({ apres: schema.stocks.quantiteBase });
 
-        const avant = stockRow?.quantiteBase ?? 0;
-        const apres = Math.max(0, avant - ligne.quantiteBase);
-
-        if (stockRow) {
-          await db
-            .update(schema.stocks)
-            .set({ quantiteBase: apres, updatedAt: new Date() })
-            .where(
-              and(
-                eq(schema.stocks.produitId, ligne.produitId),
-                eq(schema.stocks.depotId, depotId)
-              )
-            );
-        }
+        const apres = updatedStock?.apres ?? 0;
+        const avant = apres + ligne.quantiteBase; // reconstruit pour le mouvement
 
         await db.insert(schema.mouvementsStock).values({
           id: crypto.randomUUID(),
@@ -259,19 +262,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       totalHT: updated.totalHT,
       totalTVA: updated.totalTVA,
       totalTTC: updated.totalTTC,
-      totalRegle: updated.totalTTC,
-      soldeRestant: 0,
-      modePaiement: modePaiement as Parameters<typeof db.insert>[0] extends never ? never : "especes",
-      statut: "payee",
+      totalRegle: modePaiement === "credit_client" ? 0 : updated.totalTTC,
+      soldeRestant: modePaiement === "credit_client" ? updated.totalTTC : 0,
+      modePaiement,
+      statut: modePaiement === "credit_client" ? "emise" : "payee",
     });
 
-    await db.insert(schema.paiements).values({
-      id: crypto.randomUUID(),
-      factureId,
-      mode: modePaiement as "especes",
-      montant: updated.totalTTC,
-      confirme: true,
-    });
+    if (modePaiement !== "credit_client") {
+      await db.insert(schema.paiements).values({
+        id: crypto.randomUUID(),
+        factureId,
+        mode: modePaiement,
+        montant: updated.totalTTC,
+        confirme: true,
+      });
+    }
 
     // ── 3. Mise à jour stats + encours client ──────────────────────────────
     if (updated.clientId) {
@@ -288,17 +293,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         .limit(1);
 
       if (client) {
-        const nouveauTotal = client.totalAchats + updated.totalTTC;
-        const nouveauNb = client.nbCommandes + 1;
-        const nouveauPanier = Math.round(nouveauTotal / nouveauNb);
+        const nouveauTotal = (client.totalAchats ?? 0) + updated.totalTTC;
+        const nouveauNb = (client.nbCommandes ?? 0) + 1;
+        const nouveauPanier = nouveauNb > 0 ? Math.round(nouveauTotal / nouveauNb) : 0;
 
-        // Encours: incrémenter si paiement à crédit, décrémenter sinon (si mode = "credit_client")
+        // Encours: incrémenter si paiement à crédit
         const deltaEncours = modePaiement === "credit_client" ? updated.totalTTC : 0;
-        const nouvelEncours = Math.max(0, client.encoursCourant + deltaEncours);
+        const nouvelEncours = Math.max(0, (client.encoursCourant ?? 0) + deltaEncours);
 
         // Points fidélité: 1 point par 1 000 MGA
         const pointsGagnes = Math.floor(updated.totalTTC / 1000);
-        const nouveauxPoints = client.pointsFidelite + pointsGagnes;
+        const nouveauxPoints = (client.pointsFidelite ?? 0) + pointsGagnes;
         const nouveauTier = getTierFidelite(nouveauxPoints);
 
         await db.update(schema.clients).set({

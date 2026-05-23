@@ -27,6 +27,8 @@ function formatEta(date: Date | null | undefined): string {
 }
 
 export async function GET(req: NextRequest) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   try {
     const { searchParams } = new URL(req.url);
     const dateParam = searchParams.get("date");

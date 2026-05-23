@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
@@ -73,9 +73,19 @@ export async function DELETE(req: NextRequest) {
     }
 
     // Delete the sous-utilisateur (only if it belongs to this client)
-    await db
+    const deleted = await db
       .delete(schema.sousUtilisateurs)
-      .where(eq(schema.sousUtilisateurs.id, membreId));
+      .where(
+        and(
+          eq(schema.sousUtilisateurs.id, membreId),
+          eq(schema.sousUtilisateurs.clientId, client.id)
+        )
+      )
+      .returning({ id: schema.sousUtilisateurs.id });
+
+    if (deleted.length === 0) {
+      return NextResponse.json({ error: "Membre introuvable" }, { status: 404 });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

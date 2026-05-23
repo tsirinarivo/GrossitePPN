@@ -18,6 +18,11 @@ const DEMO_VENDEURS = [
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const role: string = (session.user as any).role ?? "agent";
+  if (!["admin", "gerant", "comptable", "marketing"].includes(role)) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
 
   const { searchParams } = new URL(req.url);
   const periode = searchParams.get("periode") ?? "mois";

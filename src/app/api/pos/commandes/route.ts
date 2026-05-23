@@ -77,11 +77,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { lignes, client, notes, agentId, depotId, totalHT, totalTVA, totalTTC, totalRemise } = body;
+    const { lignes, client, notes, depotId, totalHT, totalTVA, totalTTC, totalRemise } = body;
 
     if (!lignes || lignes.length === 0) {
       return NextResponse.json({ error: "Panier vide" }, { status: 400 });
     }
+
+    // L'agent est TOUJOURS celui de la session — on ignore tout agentId fourni dans le body
+    const agentId = session.user.id;
 
     // Vérification limite crédit client
     if (client?.id) {
@@ -113,7 +116,7 @@ export async function POST(req: NextRequest) {
       id: commandeId,
       numero,
       clientId: client?.id || null,
-      agentId: agentId || session.user.id,
+      agentId,
       depotId: (depotId && depotId !== "default") ? depotId : null,
       source: "pos_agent",
       statut: "soumise",
