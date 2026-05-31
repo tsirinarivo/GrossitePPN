@@ -53,119 +53,84 @@
 - [x] Prévisions saisonnières (ComposedChart, facteurs Madagascar, top produits)
 - [x] Suivi livraison public enrichi (timeline 5 étapes, infos transporteur)
 
-### Sprint 16 — Retours & avoirs
-- [x] Schéma DB retours / lignes_retour / avoirs (numérotation auto RET-YYYY-NNNN, AV-YYYY-NNNN)
-- [x] API retours (CRUD list, POST avec génération auto avoir + impact encours client)
-- [x] Module `/retours` avec KPIs (nb retours, total remboursé, avoirs émis, remb. directs) + filtres
-- [x] Wizard 3 étapes : choix facture → sélection lignes (quantités max contrôlées) → motif & mode remboursement
-- [x] 6 motifs (défectueux, non conforme, erreur livraison, péremption, geste commercial, autre)
-- [x] 4 modes remboursement (avoir crédit / espèces / virement / mobile money)
-- [x] PDF avoir A4 (lignes retournées, motif, mode, signatures, mentions légales)
+### Sprint 16-20 — Thème A workflows métier
+- [x] Sprint 16 — Retours & avoirs (wizard 3 étapes + PDF + impact encours + réintégration stock)
+- [x] Sprint 17 — Tournées logistiques (CRUD + affectation livraisons + réordonnancement + PDF feuille de route)
+- [x] Sprint 18 — Gestion dépôts (`/admin/depots` CRUD + stock consolidé + transferts inter-dépôts + historique)
+- [x] Sprint 19 — Codes promo boutique (validation API serveur-side + stats admin + compteur d'utilisations)
+- [x] Sprint 20 — Listes d'achat récurrentes B2B (CRUD + import panier + ajout au panier 1 clic)
 
-### Sprint 17 — Tournées logistiques
-- [x] API CRUD tournées (`/api/tournees`, `/api/tournees/[id]`)
-- [x] API ressources (`/api/tournees/ressources` : chauffeurs, véhicules, livraisons libres)
-- [x] API affectation livraisons + réordonnancement (`/api/tournees/[id]/affecter`)
-- [x] Module `/tournees` : liste groupée par date avec barre de progression, statuts (planifiée / en cours / terminée)
-- [x] Drawer création tournée (date + chauffeur + véhicule + notes)
-- [x] Page détail `/tournees/[id]` : édition meta, picker livraisons libres, boutons ↑↓ pour réordonner, retirer
-- [x] Stats progression (livrées / échecs / restantes)
-- [x] PDF feuille de route chauffeur (infos tournée, arrêts numérotés, checkboxes, signatures)
+### Sprint 21-24 — Thème B rapports & BI
+- [x] Sprint 21 — Rapport fournisseurs (volume + conformité + délais + alertes retard >30%)
+- [x] Sprint 22 — Bilan simplifié comptable (compte résultat mensuel + ComposedChart + export CSV)
+- [x] Sprint 23 — Rapport livraisons (ponctualité chauffeur + km + motifs échec + coûts)
+- [x] Sprint 24 — Analyse panier moyen (distribution + market basket + suggestion cross-sell)
 
-### Sprint 18 — Gestion dépôts
-- [x] Page CRUD `/admin/depots` (drawer création/édition, soft delete par désactivation)
-- [x] Stock consolidé par dépôt (nb produits, unités, valeur en MGA)
-- [x] API stock consolidé (`/api/depots/stock-consolide`)
-- [x] Drawer transfert inter-dépôts (recherche produit, source ≠ destination, quantité)
-- [x] Historique transferts (`/api/stock/transferts/historique`) avec groupement par référence
-- [x] KPIs globaux : dépôts actifs, total produits, unités, valeur totale
-- [x] Lien dans menu admin
+### Hors-sprint — Historique des articles
+- [x] Page globale `/stock/historique` avec filtres période/type/dépôt/recherche + export CSV
+- [x] Onglet "Historique" dans la fiche produit (4 sections : timeline, ventes, achats, évolution prix)
+- [x] API `/api/produits/[id]/historique` (mouvements + top clients/fournisseurs + évolution prix + synthèse)
+- [x] API `/api/stock/historique` (toutes opérations + agrégations) + export CSV
 
-### Sprint 19 — Codes promo boutique
-- [x] API validation code promo (`/api/shop/promotions/valider`) avec contrôles date, actif, nb utilisations max, min commande
-- [x] Application réelle dans le panier B2B (remplace le code mockup PPN5)
-- [x] Recalcul automatique de la remise quand le panier change
-- [x] Validation type valeur : pourcentage ou montant fixe
-- [x] API stats utilisation (`/api/admin/promotions/stats`) avec statut calculé (active / expirée / future / limite atteinte)
-- [x] Affichage taux utilisation et jours restants côté admin
+### Hors-sprint — Hardening production (P0/P1/P2)
+- [x] Checkout B2B câblé à l'API : crée vraiment une commande, incrémente compteur promo, vide le panier
+- [x] Audit log : table `audit_logs` + helper `logAudit()` + page `/admin/audit`
+- [x] Rate limiting Better-Auth en prod
+- [x] Désactivation auto des fallbacks démo en prod (`isDemoFallbackEnabled()`)
+- [x] Logger structuré JSON (`@/lib/logger`)
+- [x] Global error boundary + endpoint `/api/log/client-error`
+- [x] 24 tests Vitest (money, demo-mode, escape) + smoke Playwright
 
-### Sprint 20 — Listes d'achat récurrentes (B2B)
-- [x] API CRUD `/api/shop/listes` et `/api/shop/listes/[id]` (auth B2B + sous-utilisateurs)
-- [x] Page `/compte/listes` avec grille de listes (badges nb articles, fréquence, date dernière commande)
-- [x] Drawer création : nom + fréquence (hebdo/bimensuel/mensuel) + import optionnel du panier actuel
-- [x] Drawer détail : vue articles, suppression à l'unité, ajout au panier en 1 clic
-- [x] Suppression de liste avec confirmation inline
-- [x] Lien dans le footer de la boutique
+### Hors-sprint — Audit sécurité (34 bugs corrigés en 3 passes)
+- [x] **Mode paiement** : forcé à "especes" par cast TS cassé → whitelist + gestion crédit
+- [x] **Retours** : ne réintégraient pas le stock → mouvements + update auto
+- [x] **Null-safe** : encoursCourant/totalAchats/pointsFidelite/nbCommandes/derniereCommande
+- [x] **XSS PDF** : 6 templates (factures, avoirs, devis, BC, bon livraison, feuille route) → `escapeHtml`
+- [x] **CSV injection** : exports → `escapeCsvCell`
+- [x] **Race condition stock** : SELECT-puis-UPDATE → UPDATE atomique `GREATEST + RETURNING`
+- [x] **IDOR** : agentId/clientId/membreId/factureId — dérivés de session ou jointure
+- [x] **Permission escalation** : champs sensibles clients réservés managers
+- [x] **Auth manquante** : depots GET, livraisons GET
+- [x] **Validation négative** : retours refusent qte/pu < 0
+- [x] **Validation dates/inputs** : tournées, finances, clients (espaces blancs)
+- [x] **useEffect deps mutables** : global-search → useMemo
 
 ---
 
-### Thème B — Rapports & BI
-
-### Sprint 21 — Rapport fournisseurs
-- [x] API `/api/rapports/fournisseurs` avec filtres période (mois/3mois/12mois/année)
-- [x] Calculs : nb BCs, total achats, délai moyen jours, taux conformité (qté reçue/commandée), retards
-- [x] Page `/rapports/fournisseurs` avec KPIs globaux + BarChart top 6 + table classement
-- [x] Bloc alertes pour fournisseurs avec taux retard > 30%
-- [x] Couleurs sémantiques (vert ≥95%, ambre 85-95%, rouge &lt;85%) sur conformité et retards
-- [x] Lien dans hub `/rapports`
-
-### Sprint 22 — Bilan simplifié
-- [x] API `/api/rapports/bilan` agrégeant CA (commandes) + Achats (BCs reçus) + Charges (chargesOperationnelles) par mois
-- [x] Calcul marge brute, % marge, résultat net = marge − charges, taux résultat
-- [x] Page `/rapports/bilan` accessible aux comptables (requireRole admin/gerant/comptable)
-- [x] ComposedChart bars (CA / Achats / Charges) + ligne Résultat
-- [x] Compte de résultat synthétique annuel + table mensuelle détaillée
-- [x] Export CSV `/api/rapports/bilan/export` séparateur `;` + BOM UTF-8 Excel-compatible
-- [x] Navigation année (boutons ←/→) avec limite année courante
-
-### Sprint 23 — Rapport livraisons
-- [x] API `/api/rapports/livraisons` agrégeant livraisons par chauffeur (via tournees.chauffeurId)
-- [x] Taux ponctualité = livraison effectuée dans la journée prévue (±12h)
-- [x] Taux réussite = livrées / total livraisons
-- [x] Km parcourus estimés (25 km/tournée) + coût moyen 8 500 MGA/livraison
-- [x] Page `/rapports/livraisons` avec KPIs synthèse, BarChart performance, PieChart motifs d'échec, table classement
-- [x] Filtres période (semaine/mois/trimestre/année)
-- [x] Couleurs sémantiques sur réussite et ponctualité
-
-### Sprint 24 — Analyse panier moyen
-- [x] API `/api/rapports/panier-moyen` : tranches de montant (6 paliers de <50k à >1M)
-- [x] Calcul moyenne, médiane, min, max sur la période
-- [x] Market basket simplifié : co-occurrences de paires produits dans même commande, % corrélation
-- [x] Page `/rapports/panier-moyen` avec BarChart distribution + top 12 duos
-- [x] Suggestion cross-sell automatique basée sur le duo le plus corrélé
-
----
+## 🗂 File d'attente — Sprints à venir
 
 ### Thème C — Expérience utilisateur
 
 **Sprint 25 — Raccourcis clavier POS**
 - Panel aide raccourcis (F1 pour ouvrir)
-- F2 → focus recherche produit
-- F3 → focus recherche client
-- F12 → valider commande
-- +/- → ajuster quantité ligne sélectionnée
+- F2 → focus recherche produit, F3 → focus recherche client
+- F12 → valider commande, +/- → ajuster quantité ligne sélectionnée
+- Ctrl+S → sauver brouillon
+- Affichage discret des raccourcis actifs dans la barre POS
 
 **Sprint 26 — Mode impression thermique**
 - Aperçu ticket thermique 58mm dans le POS avant impression
 - Configuration : logo, message de pied, afficher/masquer TVA
 - Test d'impression depuis `/admin/printer`
+- Profils enregistrés (caisse 1, caisse 2…)
 
 **Sprint 27 — Application mobile chauffeur**
 - Vue `/chauffeur` dédiée (responsive, gros boutons)
-- Liste tournée du jour
+- Liste tournée du jour avec géolocalisation
 - Bouton "Livré" / "Refusé" + saisie motif
 - Photo preuve (input file → base64 stocké)
 - Mode offline : queue Dexie + sync au retour réseau
 
 **Sprint 28 — Notifications avancées**
 - Priorités : critique / warning / info
-- Marquer comme lu (persisté en DB ou localStorage)
+- Marquer comme lu (persisté en DB)
 - Page `/notifications` avec historique
 - Badge sur l'onglet navigateur (document.title)
+- Push notifications navigateur (opt-in)
 
 **Sprint 29 — Onboarding & setup wizard**
 - Wizard première connexion : renseigner entreprise, créer premier dépôt, importer produits CSV
-- Page `/setup` (déjà route API présente)
+- Page `/setup` (route déjà présente, à compléter)
 - Import produits via CSV (colonnes : code, designation, prix, stock, categorie)
 
 ---
@@ -174,7 +139,7 @@
 
 **Sprint 30 — Optimisation cache & vitesse**
 - `staleTime` TanStack Query sur les endpoints lents
-- Prefetch produits POS au mount (eviter le premier fetch)
+- Prefetch produits POS au mount
 - Skeleton loading systématique (pas de flash de contenu vide)
 - Image optimization pour les photos produits
 
@@ -184,19 +149,20 @@
 - Banner "Installer l'app" sur mobile
 - Sync offline : commandes POS créées hors-ligne envoyées au retour réseau
 
-**Sprint 32 — Tests & qualité**
-- Tests Vitest pour les utilitaires (`formatMGA`, calculs TVA, scoring RFM)
-- Tests API critiques (commandes POST, auth)
-- Playwright : smoke test login → POS → commande → historique
+**Sprint 32 — Coverage tests étendue**
+- Tests Vitest pour : calculs TVA, scoring RFM, market basket, conformité fournisseur
+- Tests API critiques (commandes POST/PATCH, retours, transferts) avec DB de test
+- Playwright : parcours complet login → POS → encaissement → facture → audit
 
 ---
 
 ### Thème E — Intégrations
 
-**Sprint 33 — Mobile Money (simulation)**
+**Sprint 33 — Mobile Money (simulation puis réel)**
 - Page confirmation paiement Mvola/Orange Money avec QR code fictif
 - Webhook simulé : after 3s → statut "payé"
 - Bouton "Vérifier le paiement" avec polling
+- Architecture prête pour brancher la vraie API quand contrat signé
 
 **Sprint 34 — Export comptable**
 - Export commandes/factures au format FEC (fichier écritures comptables France)
@@ -210,10 +176,44 @@
 
 ---
 
+### Thème F — Métier avancé
+
+**Sprint 36 — Réservations / pré-commandes**
+- Marquer une commande "à livrer dans N jours" qui réserve du stock
+- Page `/reservations` avec date prévue, statut, conversion en vraie commande
+- Alerte si stock insuffisant à l'approche
+
+**Sprint 37 — Gestion des prix par client**
+- Tarifs négociés client par client (override du palier)
+- Historique des changements de prix
+- Application automatique au POS quand client sélectionné
+
+**Sprint 38 — Programme de parrainage B2B**
+- Code parrainage par client
+- Tracking conversions
+- Crédit fidélité automatique si commande filleul > X MGA
+
+**Sprint 39 — Centre de support intégré**
+- Tickets clients (création, réponse, statut)
+- FAQ recherchable
+- Chat in-app vers admin (SSE)
+
+**Sprint 40 — Multi-entreprises (multi-tenant léger)**
+- Plusieurs entités juridiques sur la même installation
+- Filtre top-level entreprise dans toutes les requêtes
+- Switcher dans le header pour les users multi-entité
+
+---
+
 ## Notes de priorité
 
 Pour reprendre : prendre le **premier sprint non coché** de la "File d'attente" ou demander un thème précis.
 
-Les sprints **16, 17, 18** (retours, tournées, dépôts) ont le plus d'impact sur le workflow terrain.
-Les sprints **25, 27** (raccourcis POS, app chauffeur) améliorent l'usage quotidien.
-Les sprints **30, 31** (cache, PWA) améliorent la performance perçue.
+**Recommandations** :
+- **Sprint 27** (app chauffeur) : haute valeur terrain, débloque le module livraisons en mode mobile
+- **Sprint 31** (PWA offline) : critique pour Madagascar (connexion instable)
+- **Sprint 29** (onboarding) : nécessaire avant de vendre à un nouveau client
+- **Sprint 25** (raccourcis POS) : améliore drastiquement la vitesse en caisse
+- **Sprint 33** (Mobile Money) : feature commerciale différenciante locale
+
+Les sprints **36-40** sont des extensions métier — n'attaquer qu'après que le périmètre actuel soit stabilisé en prod sur 1-2 mois.
