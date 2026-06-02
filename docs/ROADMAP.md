@@ -205,15 +205,65 @@
 
 ---
 
+### Thème G — Spécificités secteur PPN Madagascar
+
+**Sprint 41 — Gestion lots & DLC (Date Limite de Consommation)**
+- Saisie n° lot + DLC à la réception fournisseur
+- Picking FEFO automatique (First Expired, First Out) au POS et en livraison
+- Alertes dashboard : produits à <30j de DLC, à <7j, expirés à retirer
+- Rapport pertes par DLC mensuel
+- Critique pour PPN alimentaire (riz, huile, conserves, lait)
+
+**Sprint 42 — Inventaire tournant**
+- Au lieu d'un full inventaire annuel : compter X produits / semaine en rotation
+- Calendrier auto qui propose les produits à compter (priorité forte valeur ou fort écart historique)
+- Score de fiabilité par produit (basé sur l'historique des écarts)
+- Notification magasinier de la liste du jour
+
+**Sprint 43 — Workflow validation BC > seuil**
+- Configuration : BC > X MGA nécessite validation gérant
+- Notification au gérant + lien d'approbation 1-clic
+- Audit log de chaque validation
+- Empêche les commandes massives non contrôlées
+
+**Sprint 44 — CRM relances commerciales actives**
+- Détection auto : client qui n'a pas commandé depuis N jours (selon palier)
+- File de relances pour les agents avec script personnalisé
+- Tracking : appelé / commande passée / converti / abandonné
+- Stats taux de conversion par agent
+
+**Sprint 45 — Notifications SMS via API externe**
+- Intégration Twilio ou Vonage (mock d'abord)
+- Templates : confirmation commande, livraison en route, relance crédit, promo
+- Page admin pour configurer le sender ID + templates
+- Tracking envois et coûts
+
+**Sprint 46 — Dashboard responsable de zone**
+- Vue dédiée pour les superviseurs régionaux (Tana / Mahajanga / Toamasina)
+- KPIs par zone : CA, clients actifs, livraisons réussies, taux retour
+- Liste des agents de la zone avec performance
+- Affectation et réaffectation des clients à des agents
+
+**Sprint 47 — Recommandations produits intelligentes**
+- Suggestion "Clients ayant acheté X ont aussi acheté Y" au POS
+- Bandeau "Commandé d'habitude" dans la boutique B2B (basé sur l'historique du client)
+- Algo simple : top 5 co-occurrences sur 90j, exclus déjà au panier
+- Tracking : combien de suggestions acceptées
+
+---
+
 ## Notes de priorité
 
 Pour reprendre : prendre le **premier sprint non coché** de la "File d'attente" ou demander un thème précis.
 
-**Recommandations** :
+**Recommandations (par valeur métier décroissante)** :
+- **Sprint 41** (lots & DLC) : critique pour PPN alimentaire, évite les pertes
 - **Sprint 27** (app chauffeur) : haute valeur terrain, débloque le module livraisons en mode mobile
 - **Sprint 31** (PWA offline) : critique pour Madagascar (connexion instable)
 - **Sprint 29** (onboarding) : nécessaire avant de vendre à un nouveau client
 - **Sprint 25** (raccourcis POS) : améliore drastiquement la vitesse en caisse
 - **Sprint 33** (Mobile Money) : feature commerciale différenciante locale
+- **Sprint 45** (SMS) : engagement client + recouvrement crédit
+- **Sprint 44** (CRM relances) : revenu récurrent
 
 Les sprints **36-40** sont des extensions métier — n'attaquer qu'après que le périmètre actuel soit stabilisé en prod sur 1-2 mois.
