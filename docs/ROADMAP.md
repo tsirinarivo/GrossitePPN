@@ -53,17 +53,19 @@
 - [x] Prévisions saisonnières (ComposedChart, facteurs Madagascar, top produits)
 - [x] Suivi livraison public enrichi (timeline 5 étapes, infos transporteur)
 
+### Sprint 16 — Retours & avoirs ✅
+- [x] Schéma DB : retours, lignesRetour, avoirs (+ enums motif/statut/mode remboursement)
+- [x] Module /retours : KPIs, filtres statut, table actions (valider/rembourser/imprimer/annuler)
+- [x] Drawer création : recherche facture → sélection lignes → quantité partielle + motif
+- [x] Génération automatique de l'avoir à la validation (numéro AVR-YYYY-XXXXX)
+- [x] Impact encours crédit client (décrément si mode credit_compte)
+- [x] PDF avoir HTML A4 (style facture rouge, infos retour/facture origine/mode)
+
 ---
 
 ## 🗂 File d'attente — Sprints à venir
 
 ### Thème A — Workflows manquants
-
-**Sprint 16 — Retours & avoirs**
-- Module retours clients : saisie motif, produits retournés, quantités
-- Génération avoir (crédit note) rattaché à la facture d'origine
-- Impact sur encours crédit client
-- PDF avoir
 
 **Sprint 17 — Tournées logistiques**
 - Création/édition tournée (date, chauffeur, véhicule)
