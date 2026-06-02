@@ -1,24 +1,50 @@
 {
   "name": "GrossistePPN Madagascar",
   "short_name": "GrossistePPN",
-  "description": "Système de gestion grossiste PPN pour Madagascar",
-  "start_url": "/pos/agent",
+  "description": "Système de gestion grossiste PPN pour Madagascar — POS, stock, livraisons, B2B",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#0e0f1a",
-  "theme_color": "#0e0f1a",
+  "theme_color": "#FF4D00",
   "orientation": "any",
   "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
     {
-      "src": "/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "name": "Point de vente",
+      "short_name": "POS",
+      "description": "Ouvrir le POS agent",
+      "url": "/pos/agent",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
-      "src": "/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "name": "Caisse",
+      "short_name": "Caisse",
+      "description": "Ouvrir la caisse",
+      "url": "/pos/caisse",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ma tournée",
+      "short_name": "Tournée",
+      "description": "App chauffeur",
+      "url": "/chauffeur",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Boutique B2B",
+      "short_name": "Shop",
+      "description": "Catalogue produits",
+      "url": "/shop",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ],
-  "categories": ["business", "productivity"],
-  "lang": "fr"
+  "categories": ["business", "productivity", "shopping"],
+  "lang": "fr",
+  "dir": "ltr",
+  "prefer_related_applications": false
 }

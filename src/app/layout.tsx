@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import "@/styles/globals.css";
 import { Providers } from "./providers";
 import { PwaRegister } from "@/components/pwa-register";
+import { PWAInstallBanner } from "@/components/pwa-install-banner";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -60,6 +61,7 @@ export default async function RootLayout({
           <Providers>
             {children}
             <PwaRegister />
+            <PWAInstallBanner />
             <Toaster
               position="top-right"
               richColors
