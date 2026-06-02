@@ -14,7 +14,9 @@ import {
   CheckCircle2,
   Edit3,
   RefreshCw,
+  Printer,
 } from "lucide-react";
+import { POSTicketPreview } from "./pos-ticket-preview";
 import { cn } from "@/lib/utils";
 import { usePOSStore, usePOSTotaux } from "@/store/pos.store";
 import { formatMGA } from "@/lib/money";
@@ -48,6 +50,7 @@ export function POSPanier({ onClose, totalTTC, nbArticles }: Props) {
   const { totalHT, totalTVA, totalRemise } = usePOSTotaux();
   const [notesVisible, setNotesVisible] = useState(false);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const handleEnvoyer = async () => {
     if (lignes.length === 0) return;
@@ -187,8 +190,39 @@ export function POSPanier({ onClose, totalTTC, nbArticles }: Props) {
               )}
             />
           )}
+          {lignes.length > 0 && (
+            <button
+              onClick={() => setPreviewOpen(true)}
+              className="mt-2 flex items-center gap-2 text-xs text-[--pos-text-muted] hover:text-[--pos-text] transition-colors"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Aperçu ticket thermique</span>
+            </button>
+          )}
         </div>
       </div>
+
+      {previewOpen && (
+        <POSTicketPreview
+          entrepriseNom="GrossistePPN"
+          entrepriseAdresse="Antananarivo"
+          numeroFacture="PREVIEW"
+          clientNom={client?.raisonSociale}
+          lignes={lignes.map((l) => ({
+            id: l.id,
+            nom: l.nomProduit,
+            unite: l.nomUnite,
+            quantite: l.quantite,
+            prixUnitaire: l.prixUnitaire,
+            totalTTC: l.totalTTC,
+          }))}
+          sousTotalHT={totalHT}
+          tva={totalTVA}
+          totalTTC={totalTTC}
+          modePaiement="Espèces"
+          onClose={() => setPreviewOpen(false)}
+        />
+      )}
 
       {/* Footer totaux + actions */}
       <div className="border-t border-[--pos-border] bg-[--pos-surface] p-4 space-y-3">
