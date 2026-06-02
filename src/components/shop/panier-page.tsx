@@ -23,15 +23,47 @@ import { useShopCart } from "@/store/shop-cart.store";
 export function PanierPage() {
   const { lignes, modifierQte: modifierQteStore, supprimer: supprimerStore } = useShopCart();
   const [codePromo, setCodePromo] = useState("");
-  const [promoAppliquee, setPromoAppliquee] = useState(false);
+  const [promoState, setPromoState] = useState<{ code: string; libelle: string; reduction: number } | null>(null);
+  const [promoErr, setPromoErr] = useState<string | null>(null);
+  const [validating, setValidating] = useState(false);
 
   useEffect(() => {
     useShopCart.persist.rehydrate();
   }, []);
 
   const total = lignes.reduce((s, l) => s + l.qte * l.prixUnit, 0);
-  const remisePromo = promoAppliquee ? Math.round(total * 0.05) : 0;
-  const totalFinal = total - remisePromo;
+  const remisePromo = promoState?.reduction ?? 0;
+  const totalFinal = Math.max(0, total - remisePromo);
+
+  const appliquerCode = async () => {
+    if (!codePromo.trim()) return;
+    setValidating(true);
+    setPromoErr(null);
+    try {
+      const res = await fetch("/api/promotions/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: codePromo.trim(), totalCommande: total }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setPromoState({ code: data.code, libelle: data.libelle, reduction: data.reduction });
+      } else {
+        setPromoErr(data.error ?? "Code invalide");
+        setPromoState(null);
+      }
+    } catch {
+      setPromoErr("Erreur de connexion");
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  const retirerCode = () => {
+    setPromoState(null);
+    setCodePromo("");
+    setPromoErr(null);
+  };
 
   const modifierQte = (produitId: string, delta: number) => modifierQteStore(produitId, delta);
 
@@ -148,9 +180,9 @@ export function PanierPage() {
                 <span>Sous-total</span>
                 <span className="text-mga">{formatMGA(total)}</span>
               </div>
-              {remisePromo > 0 && (
+              {remisePromo > 0 && promoState && (
                 <div className="flex justify-between text-[--success]">
-                  <span>Code promo (5%)</span>
+                  <span>Code {promoState.code}</span>
                   <span className="text-mga">−{formatMGA(remisePromo)}</span>
                 </div>
               )}
@@ -167,27 +199,36 @@ export function PanierPage() {
 
             {/* Code promo */}
             <div className="space-y-2">
-              <div className="flex gap-2">
-                <Input
-                  value={codePromo}
-                  onChange={(e) => setCodePromo(e.target.value.toUpperCase())}
-                  placeholder="Code promo"
-                  className="text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (codePromo === "PPN5") setPromoAppliquee(true);
-                  }}
-                >
-                  <Tag className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-              {promoAppliquee && (
-                <p className="text-xs text-[--success] flex items-center gap-1">
-                  ✓ Code PPN5 appliqué — 5% de remise
-                </p>
+              {!promoState ? (
+                <>
+                  <div className="flex gap-2">
+                    <Input
+                      value={codePromo}
+                      onChange={(e) => { setCodePromo(e.target.value.toUpperCase()); setPromoErr(null); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") appliquerCode(); }}
+                      placeholder="Code promo"
+                      className="text-sm"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={appliquerCode}
+                      disabled={validating || !codePromo.trim()}
+                    >
+                      <Tag className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                  {promoErr && (
+                    <p className="text-xs text-[--destructive]">{promoErr}</p>
+                  )}
+                  <p className="text-[10px] text-[--foreground-subtle]">Essayez : BIENVENUE10, PPN5, FETE50K</p>
+                </>
+              ) : (
+                <div className="flex items-center gap-2 p-2 rounded-lg bg-[--success]/10 border border-[--success]/30">
+                  <Tag className="w-3.5 h-3.5 text-[--success]" />
+                  <span className="text-xs font-medium flex-1">✓ {promoState.libelle} appliqué</span>
+                  <button onClick={retirerCode} className="text-[--foreground-subtle] hover:text-[--destructive] text-xs">×</button>
+                </div>
               )}
             </div>
 
