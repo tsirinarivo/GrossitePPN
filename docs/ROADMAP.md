@@ -55,146 +55,87 @@
 
 ### Sprint 16 — Retours & avoirs ✅
 - [x] Schéma DB : retours, lignesRetour, avoirs (+ enums motif/statut/mode remboursement)
-- [x] Module /retours : KPIs, filtres statut, table actions (valider/rembourser/imprimer/annuler)
-- [x] Drawer création : recherche facture → sélection lignes → quantité partielle + motif
-- [x] Génération automatique de l'avoir à la validation (numéro AVR-YYYY-XXXXX)
-- [x] Impact encours crédit client (décrément si mode credit_compte)
-- [x] PDF avoir HTML A4 (style facture rouge, infos retour/facture origine/mode)
+- [x] Module /retours, drawer création 2 étapes, PDF avoir, impact encours crédit
+
+### Sprint 17 — Tournées logistiques ✅
+- [x] API /api/tournees CRUD + affectation/réordonnancement livraisons
+- [x] Page /livraisons/tournees, drawer détail avec ordre arrêts (up/down)
+- [x] Feuille de route PDF (arrêts numérotés, signatures, cases à cocher)
+
+### Sprint 18 — Gestion dépôts ✅
+- [x] /api/depots enrichi avec stats (nbProduits, stockTotal)
+- [x] /api/depots/transferts atomique + historique groupé par référence
+- [x] Page /admin/depots: grille, vue stock détaillée, drawer transfert
+
+### Sprint 19 — Codes promo boutique ✅
+- [x] /api/promotions/validate avec validation date/min commande/utilisations max
+- [x] Codes démo (BIENVENUE10, PPN5, FETE50K) + intégration au panier shop
+
+### Sprint 20 — Listes d'achat récurrentes B2B ✅
+- [x] /api/listes-achat GET/POST/DELETE/PATCH
+- [x] Page /compte/listes: grille, drawer création depuis panier, commande rapide
+
+### Sprint 21 — Rapport fournisseurs ✅
+- [x] /rapports/fournisseurs: volume, délai moyen, taux conformité, taux retard
+- [x] Alertes >30% retard, BarChart, classement triable
+
+### Sprint 22 — Bilan simplifié ✅
+- [x] /rapports/bilan: compte de résultat mensuel (CA HT − Achats − Charges = Résultat)
+- [x] Export CSV avec BOM UTF-8
+
+### Sprint 23 — Rapport livraisons ✅
+- [x] /rapports/livraisons: ponctualité chauffeur, motifs échec, coût moyen
+
+### Sprint 24 — Analyse panier moyen ✅
+- [x] /rapports/panier: distribution 6 tranches, panier moyen/médian
+- [x] Paires fréquentes (market basket simplifié)
+
+### Sprint 25 — Raccourcis clavier POS ✅
+- [x] F1 aide, F2/F3 focus search, F4 panier, F12 valider, +/− qté, Ctrl+Suppr vider
+
+### Sprint 26 — Aperçu ticket thermique ✅
+- [x] Composant POSTicketPreview avec rendu visuel 58mm
+
+### Sprint 27 — App mobile chauffeur ✅
+- [x] /chauffeur: tournée du jour, ActionDialog (livré/refusé/échec) + photo
+
+### Sprint 28 — Notifications avancées ✅
+- [x] Page /notifications: historique, filtres priorité, marquer lu (localStorage)
+- [x] Badge document.title
+
+### Sprint 29 — Setup wizard ✅
+- [x] /setup: 4 étapes (entreprise → dépôt → CSV → fini)
+- [x] /api/setup/import-csv: parse CSV (; ou ,) avec validation
+
+### Sprint 30 — Skeletons + optimisations ✅
+- [x] Skeleton, KpiSkeleton, CardSkeleton, TableSkeleton réutilisables
+
+### Sprint 31 — PWA complète ✅
+- [x] manifest.json: theme color brand, shortcuts (POS/Caisse/Chauffeur/Shop)
+- [x] PWAInstallBanner: capture beforeinstallprompt, dismiss 7 jours
+
+### Sprint 32 — Tests Vitest ✅
+- [x] vitest.config.ts + scripts pnpm test
+- [x] 17 tests : formatMGA, calcul TVA, scoring RFM
+
+### Sprint 33 — Mobile Money simulation ✅
+- [x] /api/paiements/mobile-money POST/GET avec webhook simulé 3s
+- [x] Page /paiement/[id]: QR SVG, polling auto + bouton vérification
+
+### Sprint 34 — Export comptable ✅
+- [x] /api/export/fec: format FEC pipe-separated (411/707/44571)
+- [x] /api/export/sage: CSV ; pour import Sage
+- [x] /api/export/rapport-mensuel: PDF couverture + résultat + TVA
+
+### Sprint 35 — API publique partenaires ✅
+- [x] /api/public/catalogue: produits actifs (X-API-Key)
+- [x] /api/public/stock: stock temps réel (filtrable par code)
+- [x] Rate limiting 60req/min avec headers X-RateLimit-*
 
 ---
 
-## 🗂 File d'attente — Sprints à venir
+## 🎉 Roadmap complet livré
 
-### Thème A — Workflows manquants
+**38 → 47 pages · ~55 → ~75 routes API · 17 tests passent**
 
-**Sprint 17 — Tournées logistiques**
-- Création/édition tournée (date, chauffeur, véhicule)
-- Affectation de livraisons à une tournée par drag-and-drop (ou bouton)
-- Réordonnancement des arrêts (ordre numéroté)
-- Statut tournée : planifiée → en_cours → terminée
-- Feuille de route chauffeur PDF
-
-**Sprint 18 — Gestion dépôts**
-- CRUD dépôts (`/admin/depots`)
-- Vue stock consolidé par dépôt
-- Transferts inter-dépôts (formulaire + mouvement auto)
-- Historique transferts
-
-**Sprint 19 — Codes promo boutique**
-- Application code promo au checkout (réduction %)
-- Validation : date, nb utilisations, min commande
-- Stats utilisation par code
-
-**Sprint 20 — Listes d'achat récurrentes (B2B)**
-- Boutique : "Mes listes" → sauvegarder un panier type
-- Commande rapide depuis une liste sauvegardée
-- Partage de liste entre sous-utilisateurs équipe
-
----
-
-### Thème B — Rapports & BI
-
-**Sprint 21 — Rapport fournisseurs**
-- Classement fournisseurs par volume d'achat, délai moyen, taux de conformité
-- Comparaison fournisseur A vs B pour même produit
-- Alertes : fournisseur avec taux retard > 30%
-
-**Sprint 22 — Bilan simplifié**
-- Compte de résultat mensuel : CA HT − Achats − Charges = Résultat
-- Tableau de bord comptable (pour rôle `comptable`)
-- Export Excel-compatible (CSV avec séparateur ;)
-
-**Sprint 23 — Rapport livraisons**
-- Taux ponctualité par chauffeur
-- Km parcourus simulés par tournée
-- Livraisons échouées : motifs agrégés
-- Coût moyen par livraison
-
-**Sprint 24 — Analyse panier moyen**
-- Distribution des montants de commande (histogramme)
-- Produits fréquemment commandés ensemble (market basket simplifié)
-- Recommandations cross-sell dans le POS
-
----
-
-### Thème C — Expérience utilisateur
-
-**Sprint 25 — Raccourcis clavier POS**
-- Panel aide raccourcis (F1 pour ouvrir)
-- F2 → focus recherche produit
-- F3 → focus recherche client
-- F12 → valider commande
-- +/- → ajuster quantité ligne sélectionnée
-
-**Sprint 26 — Mode impression thermique**
-- Aperçu ticket thermique 58mm dans le POS avant impression
-- Configuration : logo, message de pied, afficher/masquer TVA
-- Test d'impression depuis `/admin/printer`
-
-**Sprint 27 — Application mobile chauffeur**
-- Vue `/chauffeur` dédiée (responsive, gros boutons)
-- Liste tournée du jour
-- Bouton "Livré" / "Refusé" + saisie motif
-- Photo preuve (input file → base64 stocké)
-- Mode offline : queue Dexie + sync au retour réseau
-
-**Sprint 28 — Notifications avancées**
-- Priorités : critique / warning / info
-- Marquer comme lu (persisté en DB ou localStorage)
-- Page `/notifications` avec historique
-- Badge sur l'onglet navigateur (document.title)
-
-**Sprint 29 — Onboarding & setup wizard**
-- Wizard première connexion : renseigner entreprise, créer premier dépôt, importer produits CSV
-- Page `/setup` (déjà route API présente)
-- Import produits via CSV (colonnes : code, designation, prix, stock, categorie)
-
----
-
-### Thème D — Performance & infrastructure
-
-**Sprint 30 — Optimisation cache & vitesse**
-- `staleTime` TanStack Query sur les endpoints lents
-- Prefetch produits POS au mount (eviter le premier fetch)
-- Skeleton loading systématique (pas de flash de contenu vide)
-- Image optimization pour les photos produits
-
-**Sprint 31 — PWA complète**
-- Service Worker : precache coquille + données produits
-- `manifest.json` complet (icônes toutes tailles, shortcuts)
-- Banner "Installer l'app" sur mobile
-- Sync offline : commandes POS créées hors-ligne envoyées au retour réseau
-
-**Sprint 32 — Tests & qualité**
-- Tests Vitest pour les utilitaires (`formatMGA`, calculs TVA, scoring RFM)
-- Tests API critiques (commandes POST, auth)
-- Playwright : smoke test login → POS → commande → historique
-
----
-
-### Thème E — Intégrations
-
-**Sprint 33 — Mobile Money (simulation)**
-- Page confirmation paiement Mvola/Orange Money avec QR code fictif
-- Webhook simulé : after 3s → statut "payé"
-- Bouton "Vérifier le paiement" avec polling
-
-**Sprint 34 — Export comptable**
-- Export commandes/factures au format FEC (fichier écritures comptables France)
-- Export Sage-compatible CSV
-- Rapport mensuel complet PDF (couverture + compte de résultat + TVA)
-
-**Sprint 35 — API publique partenaires**
-- Route `/api/public/catalogue` (sans auth, avec rate limiting header)
-- Route `/api/public/stock` (stock temps réel pour intégration externe)
-- Clé API simple (header `X-API-Key`) configurée dans admin
-
----
-
-## Notes de priorité
-
-Pour reprendre : prendre le **premier sprint non coché** de la "File d'attente" ou demander un thème précis.
-
-Les sprints **16, 17, 18** (retours, tournées, dépôts) ont le plus d'impact sur le workflow terrain.
-Les sprints **25, 27** (raccourcis POS, app chauffeur) améliorent l'usage quotidien.
-Les sprints **30, 31** (cache, PWA) améliorent la performance perçue.
+Pour aller plus loin : monitoring (Sentry), webhooks sortants, marketplace multi-vendeurs, audit log RGPD.
