@@ -246,6 +246,7 @@ export function POSPanier({ onClose, totalTTC, nbArticles }: Props) {
 
         {/* CTA */}
         <Button
+          id="pos-submit-btn"
           variant="pos"
           size="pos-lg"
           className={cn(

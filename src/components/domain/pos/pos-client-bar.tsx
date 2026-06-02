@@ -198,11 +198,12 @@ export function POSClientBar() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[--pos-text-muted] pointer-events-none" />
             <input
+              id="pos-client-search-input"
               ref={inputRef}
               value={recherche}
               onChange={(e) => { setRecherche(e.target.value); openDropdown(); }}
               onFocus={() => openDropdown()}
-              placeholder="Rechercher un client…"
+              placeholder="Rechercher un client… (F3)"
               className="w-full pl-9 pr-4 h-9 rounded-xl text-sm border border-[--pos-border] focus:outline-none focus:border-[--pos-primary] transition-colors text-[--pos-text] placeholder:text-[--pos-text-muted]"
               style={{ backgroundColor: "#1a1a1a" }}
             />

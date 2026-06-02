@@ -14,6 +14,7 @@ import { POSPanier } from "./pos-panier";
 import { POSClientBar } from "./pos-client-bar";
 import { POSCategorieBar } from "./pos-categorie-bar";
 import { POSMesCommandes } from "./pos-mes-commandes";
+import { POSKeyboardShortcuts } from "./pos-keyboard-shortcuts";
 import { CATEGORIES_DEMO, PRODUITS_DEMO } from "./pos-data-demo";
 import { useSession } from "@/lib/auth/client";
 import { FullscreenToggle } from "@/components/ui/fullscreen-toggle";
@@ -148,9 +149,10 @@ export function POSAgent() {
           <div className="relative flex-1 min-w-0">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-[--pos-text-muted]" />
             <Input
+              id="pos-search-input"
               value={recherche}
               onChange={(e) => setRecherche(e.target.value)}
-              placeholder="Rechercher..."
+              placeholder="Rechercher... (F2)"
               className="pl-8 sm:pl-9 bg-[--pos-surface-hover] border-[--pos-border] text-[--pos-text] placeholder:text-[--pos-text-muted] h-10 text-sm"
             />
           </div>
@@ -317,6 +319,17 @@ export function POSAgent() {
           nbArticles={nbArticles}
         />
       </div>
+
+      {/* Raccourcis clavier */}
+      <POSKeyboardShortcuts
+        searchInputId="pos-search-input"
+        clientInputId="pos-client-search-input"
+        onTogglePanier={() => setPanierOuvert((v) => !v)}
+        onSubmit={() => {
+          const btn = document.getElementById("pos-submit-btn") as HTMLButtonElement | null;
+          btn?.click();
+        }}
+      />
     </div>
   );
 }
