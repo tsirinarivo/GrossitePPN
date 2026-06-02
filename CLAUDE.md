@@ -30,10 +30,12 @@
 ## Branche de travail
 
 ```
-claude/wholesale-management-pwa-khts0
+claude/inspiring-bardeen-utEpQ
 ```
 
 **Toujours développer et pousser sur cette branche. Ne jamais toucher `main`.**
+
+> Branche historique (sprints 1→15) : `claude/wholesale-management-pwa-khts0`. Les sprints 16→35 ont été poussés sur `claude/inspiring-bardeen-utEpQ` qui tourne en prod (port 3002 via PM2, vhost `grossiste.dago-it.com`).
 
 ---
 
@@ -83,7 +85,7 @@ Projet installé dans `/opt/grossiteppn`. Gestionnaire de processus : **pm2**.
 
 ```bash
 cd /opt/grossiteppn
-git pull origin claude/wholesale-management-pwa-khts0
+git pull origin claude/inspiring-bardeen-utEpQ
 pnpm install --frozen-lockfile
 pnpm build
 cp -r .next/static .next/standalone/.next/static
@@ -98,7 +100,7 @@ pm2 restart grossiteppn
 Afficher OBLIGATOIREMENT ce bloc exact, prêt à copier-coller :
 
 ```
-cd /opt/grossiteppn && git pull origin claude/wholesale-management-pwa-khts0 && pnpm build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public && pm2 restart grossiteppn
+cd /opt/grossiteppn && git pull origin claude/inspiring-bardeen-utEpQ && pnpm build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public && pm2 restart grossiteppn
 ```
 
 ---
@@ -132,16 +134,17 @@ Routes : X → Y
 
 ---
 
-## État actuel (sprint 15 — Mai 2026)
+## État actuel (sprint 35 — Juin 2026)
 
-### Routes implémentées (38 pages + ~55 API routes)
+### Routes implémentées (~47 pages + ~75 API routes)
 
 **Dashboard / Back-office :**
 - `/` Dashboard home (KPIs, graphiques, quick actions mobile)
-- `/pos/agent` POS agent (recherche produits, client inline, panier)
+- `/pos/agent` POS agent (recherche, client inline, panier, raccourcis F1-F12, aperçu ticket thermique 58mm)
 - `/pos/caisse` Caisse (sessions, Z-report, paiements multi-mode)
 - `/pos/sessions` Historique sessions caisse
 - `/commandes` Dashboard commandes (liste + kanban statuts)
+- `/retours` Retours clients + génération avoirs + PDF (sprint 16)
 - `/historique` Historique ventes enrichi (filtres, graph CA/jour)
 - `/stock` Gestion stock + mouvements
 - `/stock/analyse` Analyse rotation, réappro suggérée
@@ -151,33 +154,60 @@ Routes : X → Y
 - `/clients` CRM clients (liste, KPIs, drawer détail)
 - `/clients/encours` Encours crédit + relances
 - `/livraisons` Tableau de bord livraisons + carte SVG
+- `/livraisons/tournees` Tournées logistiques + feuille de route PDF (sprint 17)
+- `/chauffeur` App mobile chauffeur — tournée du jour, photo preuve, offline (sprint 27)
 - `/achats` Bons de commande fournisseurs + réceptions
 - `/finances` Dashboard financier (CA, charges, prévision fin de mois)
 - `/finances/charges` CRUD charges opérationnelles
-- `/historique` Historique ventes avec filtres avancés
+- `/notifications` Historique + filtres priorité + marquer lu (sprint 28)
 - `/rapports` Hub rapports
 - `/rapports/marges` Marges produits (top/flop, tableau)
 - `/rapports/tva` Rapport TVA mensuel/trimestriel
 - `/rapports/vendeurs` Performance par agent/vendeur
 - `/rapports/clients` Analyse RFM clients (Champions/Fidèles/etc.)
 - `/rapports/previsions` Prévisions saisonnières + facteurs Madagascar
+- `/rapports/fournisseurs` Volume, délai, conformité, alertes (sprint 21)
+- `/rapports/bilan` Compte de résultat mensuel + export CSV (sprint 22)
+- `/rapports/livraisons` Ponctualité chauffeur, motifs échec (sprint 23)
+- `/rapports/panier` Distribution montants + market basket (sprint 24)
 - `/admin` Paramètres entreprise
 - `/admin/promotions` Gestion promotions (CRUD)
+- `/admin/depots` CRUD dépôts + stock consolidé + transferts inter-dépôts (sprint 18)
+- `/setup` Wizard 4 étapes + import CSV produits (sprint 29)
+- `/paiement/[id]` Confirmation Mobile Money simulé avec QR + polling (sprint 33)
 
 **Boutique B2B (e-commerce) :**
 - `/shop` Catalogue avec bannières animées, stock badge, suggestions
 - `/shop/categorie/[slug]` Page catégorie
 - `/produit/[slug]` Fiche produit avec suggestions similaires
-- `/panier` Panier avec checkout
+- `/panier` Panier avec checkout + codes promo réels (sprint 19)
 - `/compte` Espace client
 - `/compte/commandes` Mes commandes (avec lien PDF facture)
 - `/compte/factures` Mes factures
+- `/compte/listes` Listes d'achat récurrentes + commande rapide (sprint 20)
 - `/compte/fidelite` Programme fidélité (tier bronze→platine)
 - `/compte/equipe` Gestion équipe B2B
 - `/compte/adresses` Mes adresses
 - `/suivi/[id]` Suivi livraison public (timeline statuts)
 
-**PDF générés :** Factures, Devis, Bons de commande achats, Bons de livraison
+**PDF générés :** Factures, Devis, Bons de commande achats, Bons de livraison, Avoirs (sprint 16), Feuille de route tournée (sprint 17), Rapport mensuel comptable (sprint 34)
+
+**API publiques (avec X-API-Key + rate limit) :**
+- `/api/public/catalogue` — produits actifs
+- `/api/public/stock` — stock temps réel
+
+**Exports comptables (sprint 34) :**
+- `/api/export/fec` — FEC pipe-separated (411/707/44571)
+- `/api/export/sage` — CSV ; pour Sage
+- `/api/export/rapport-mensuel` — PDF couverture + résultat + TVA
+
+### Tables DB ajoutées (sprint 16)
+
+`retours`, `lignes_retour`, `avoirs` — nécessite `pnpm drizzle-kit push` sur le VPS lors du premier déploiement après le pull.
+
+### Tests
+
+`pnpm test` lance Vitest (17 tests OK : formatMGA, calcul TVA, scoring RFM).
 
 ---
 
