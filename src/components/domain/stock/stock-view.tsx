@@ -326,6 +326,12 @@ export function StockView() {
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
+            <Link href="/stock/ruptures">
+              <AlertTriangle className="w-4 h-4" />
+              Ruptures
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
             <Link href="/stock/inventaire">
               <ClipboardList className="w-4 h-4" />
               Inventaire

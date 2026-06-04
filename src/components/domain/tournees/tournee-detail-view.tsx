@@ -226,6 +226,16 @@ export function TourneeDetailView({ id }: { id: string }) {
         </div>
 
         <a
+          href={`/api/tournees/${id}/bordereau-chargement`}
+          target="_blank"
+          rel="noopener"
+          className="flex items-center gap-1.5 px-3 py-2 border border-[--border] text-sm rounded-lg hover:bg-[--muted] transition-colors"
+          title="Bordereau de chargement (consolidé pour le magasinier)"
+        >
+          <FileText className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Chargement</span>
+        </a>
+        <a
           href={`/api/tournees/${id}/feuille-route-pdf`}
           target="_blank"
           rel="noopener"

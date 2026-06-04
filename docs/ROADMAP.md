@@ -66,6 +66,12 @@
 - [x] Sprint 23 — Rapport livraisons (ponctualité chauffeur + km + motifs échec + coûts)
 - [x] Sprint 24 — Analyse panier moyen (distribution + market basket + suggestion cross-sell)
 
+### Hors-sprint — Pack PPN Madagascar (utilité terrain immédiate)
+- [x] **API `/api/pos/favoris`** — top 12 produits vendus par l'agent sur 30j (fallback global + récents)
+- [x] **API + page `/stock/ruptures`** — détection rupture imminente : jours_restants = stock ÷ vitesse_vente_30j, criticité critique/urgent/alerte
+- [x] **PDF bordereau de chargement** `/api/tournees/[id]/bordereau-chargement` — liste consolidée des produits à charger pour une tournée (groupé par produit, détail clients, checkboxes)
+- [x] **Composant `CompteurCoupures`** — décompte fond de caisse par coupure Ar (200/500/1k/2k/5k/10k/20k) avec calcul total + détection d'écart vs montant attendu
+
 ### Hors-sprint — Historique des articles
 - [x] Page globale `/stock/historique` avec filtres période/type/dépôt/recherche + export CSV
 - [x] Onglet "Historique" dans la fiche produit (4 sections : timeline, ventes, achats, évolution prix)
