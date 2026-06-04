@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 !.env.production.example
 .claude/
+
+# Skills locales (réinstallables via npx skills add)
+/.agents/
