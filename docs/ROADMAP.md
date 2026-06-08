@@ -53,9 +53,26 @@
 - [x] Prévisions saisonnières (ComposedChart, facteurs Madagascar, top produits)
 - [x] Suivi livraison public enrichi (timeline 5 étapes, infos transporteur)
 
+### Thème F — Extensions post-roadmap (sprints 36+)
+- [x] **Sprint 36 — Journal d'audit + RGPD** : table `journal_audit`, helper `logAudit()`, page `/admin/audit` (journal filtrable + export CSV), export données client JSON (droit d'accès), anonymisation client (droit à l'effacement), câblage logging réel sur les comptes utilisateurs
+
 ---
 
 ## 🗂 File d'attente — Sprints à venir
+
+### Thème F (suite) — Extensions demandées
+
+**Sprint 37 — Webhooks sortants + API publique partenaires**
+- `/admin/webhooks` : CRUD endpoints + secret HMAC
+- Déclencheurs sur événements (commande créée, livraison livrée, stock bas)
+- Journal des livraisons + retry backoff
+- Complète `/api/public/catalogue` et `/api/public/stock` (clé X-API-Key)
+
+**Sprint 38 — Intégration comptable réelle (FEC + Sage/EBP)**
+- Compte de résultat mensuel (rôle `comptable`)
+- Export FEC conforme + CSV Sage/EBP
+- Rapport mensuel PDF (couverture + résultat + TVA)
+
 
 ### Thème A — Workflows manquants
 
