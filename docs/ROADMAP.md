@@ -56,17 +56,14 @@
 ### Thème F — Extensions post-roadmap (sprints 36+)
 - [x] **Sprint 36 — Journal d'audit + RGPD** : table `journal_audit`, helper `logAudit()`, page `/admin/audit` (journal filtrable + export CSV), export données client JSON (droit d'accès), anonymisation client (droit à l'effacement), câblage logging réel sur les comptes utilisateurs
 - [x] **Sprint 37 — Webhooks sortants + API publique** : tables `webhooks`/`webhook_deliveries`/`api_keys`, helper `dispatchEvent()` + signature HMAC, page `/admin/webhooks` (CRUD + test ping + journal livraisons + clés API), routes publiques `/api/public/catalogue` et `/api/public/stock` (auth `X-API-Key`), déclencheur `commande.creee` câblé au POS
+- [x] **Sprint 38 — Intégration comptable (FEC + Sage/EBP)** : `lib/comptable` (plan PCG, FEC), page `/rapports/comptable` (compte de résultat mensuel + récap TVA), export FEC conforme DGFiP, export Sage/EBP CSV, rapport mensuel PDF (couverture + résultat + TVA), accès rôle `comptable`
 
 ---
 
 ## 🗂 File d'attente — Sprints à venir
 
-### Thème F (suite) — Extensions demandées
-
-**Sprint 38 — Intégration comptable réelle (FEC + Sage/EBP)**
-- Compte de résultat mensuel (rôle `comptable`)
-- Export FEC conforme + CSV Sage/EBP
-- Rapport mensuel PDF (couverture + résultat + TVA)
+> ✅ Les 3 extensions du Thème F (sprints 36-38) sont livrées. La file ci-dessous
+> (sprints 16-35) reste la priorité suivante demandée par l'utilisateur.
 
 
 ### Thème A — Workflows manquants
