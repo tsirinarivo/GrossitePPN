@@ -9,3 +9,4 @@ export * from "./achats";
 export * from "./xprint";
 export * from "./finances";
 export * from "./audit";
+export * from "./integrations";

@@ -161,6 +161,19 @@ export async function POST(req: NextRequest) {
       clientId: client?.id ?? null,
     });
 
+    // Webhooks sortants — notification partenaires (non bloquant en cas d'échec)
+    const { dispatchEvent } = await import("@/lib/webhooks");
+    await dispatchEvent("commande.creee", {
+      commandeId,
+      numero,
+      source: "pos_agent",
+      statut: "soumise",
+      totalTTC: Math.round(totalTTC ?? 0),
+      totalHT: Math.round(totalHT ?? 0),
+      clientId: client?.id ?? null,
+      creeLe: now.toISOString(),
+    });
+
     return NextResponse.json({ ok: true, commandeId, numero }, { status: 201 });
   } catch (e) {
     console.error("[api/pos/commandes POST]", e);

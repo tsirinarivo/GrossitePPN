@@ -24,6 +24,9 @@ export type AuditEntite =
   | "stock"
   | "utilisateur"
   | "promotion"
+  | "webhook"
+  | "api_key"
+  | "configuration"
   | "rgpd"
   | "auth";
 
