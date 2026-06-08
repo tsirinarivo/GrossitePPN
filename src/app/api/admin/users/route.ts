@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,14 @@ export async function POST(req: NextRequest) {
         .set({ role: role as Role })
         .where(eq(schema.users.id, userId));
     }
+
+    await logAudit({
+      action: "creation",
+      entite: "utilisateur",
+      entiteId: userId,
+      description: `Création du compte ${name} (${email})`,
+      metadata: { role },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (e) {

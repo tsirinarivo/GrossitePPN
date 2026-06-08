@@ -6,6 +6,7 @@ import { z } from "zod";
 import { hashPassword } from "better-auth/crypto";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,21 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         )
       );
   }
+
+  const changes: string[] = [];
+  if (role !== undefined) changes.push(`rôle → ${role}`);
+  if (actif !== undefined) changes.push(actif ? "activé" : "désactivé");
+  if (name !== undefined) changes.push("nom modifié");
+  if (password) changes.push("mot de passe réinitialisé");
+
+  await logAudit({
+    action: "modification",
+    entite: "utilisateur",
+    entiteId: id,
+    description: `Modification du compte (${changes.join(", ") || "aucun changement"})`,
+    metadata: { role, actif, name },
+    actor: { id: session.user.id, nom: session.user.name, role: callerRole },
+  });
 
   return NextResponse.json({ ok: true });
 }

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, Users, Wallet, Warehouse, Settings as SettingsIcon,
   ShieldCheck, Receipt, Smartphone, Check, Printer, Loader2,
-  Plus, X, Eye, EyeOff, Pencil, Tag,
+  Plus, X, Eye, EyeOff, Pencil, Tag, ScrollText,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -257,6 +257,11 @@ export function AdminView() {
             className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0 lg:w-full text-[--foreground-muted] hover:bg-[--accent] hover:text-[--foreground]"
           >
             <Tag className="w-4 h-4" />Promotions
+          </Link>
+          <Link href="/admin/audit"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0 lg:w-full text-[--foreground-muted] hover:bg-[--accent] hover:text-[--foreground]"
+          >
+            <ScrollText className="w-4 h-4" />Audit &amp; RGPD
           </Link>
         </nav>
 
