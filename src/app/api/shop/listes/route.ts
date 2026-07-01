@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, or, inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
@@ -104,18 +104,58 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
-    // Si lignes fournies (depuis le panier), les insérer
+    // Si lignes fournies (depuis le panier), les insérer.
+    // On résout chaque produitId contre un produit réel (id/code/nom) et on
+    // ignore silencieusement les articles obsolètes (évite la violation FK).
     if (Array.isArray(body.lignes) && body.lignes.length > 0) {
-      type LigneInput = { produitId?: string; uniteVenteId?: string; quantite?: number };
-      const lignes = (body.lignes as LigneInput[])
-        .filter((l) => l.produitId && Number(l.quantite) > 0)
-        .map((l) => ({
-          id: crypto.randomUUID(),
-          listeId: id,
-          produitId: String(l.produitId),
-          uniteVenteId: l.uniteVenteId ?? null,
-          quantite: Number(l.quantite),
-        }));
+      type LigneInput = { produitId?: string; uniteVenteId?: string; quantite?: number; nom?: string };
+      const raw = (body.lignes as LigneInput[]).filter(
+        (l) => l.produitId && Number(l.quantite) > 0
+      );
+      const ids = raw.map((l) => String(l.produitId));
+      const noms = raw.map((l) => String(l.nom ?? ""));
+      let prodRows: { id: string; nom: string; code: string }[] = [];
+      try {
+        prodRows = await db
+          .select({ id: schema.produits.id, nom: schema.produits.nom, code: schema.produits.code })
+          .from(schema.produits)
+          .where(
+            or(
+              inArray(schema.produits.id, ids),
+              inArray(schema.produits.code, ids),
+              inArray(schema.produits.nom, noms)
+            )
+          );
+      } catch (e) {
+        console.error("[POST /api/shop/listes] résolution produits", e);
+      }
+      const idSet = new Set(prodRows.map((p) => p.id));
+      const byCode = new Map(prodRows.map((p) => [p.code, p.id]));
+      const byNom = new Map(prodRows.map((p) => [p.nom.toLowerCase(), p.id]));
+
+      const lignes = raw
+        .map((l) => {
+          const pid = String(l.produitId);
+          const rid = idSet.has(pid)
+            ? pid
+            : byCode.get(pid) ?? byNom.get(String(l.nom ?? "").toLowerCase()) ?? null;
+          if (!rid) return null;
+          return {
+            id: crypto.randomUUID(),
+            listeId: id,
+            produitId: rid,
+            uniteVenteId: l.uniteVenteId ?? null,
+            quantite: Number(l.quantite),
+          };
+        })
+        .filter(Boolean) as {
+        id: string;
+        listeId: string;
+        produitId: string;
+        uniteVenteId: string | null;
+        quantite: number;
+      }[];
+
       if (lignes.length > 0) {
         await db.insert(schema.lignesListeAchat).values(lignes);
       }

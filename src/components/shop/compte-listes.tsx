@@ -75,6 +75,7 @@ function CreateListeDrawer({
       if (importPanier && cartLignes.length > 0) {
         payload.lignes = cartLignes.map((l) => ({
           produitId: l.produitId,
+          nom: l.nom,
           quantite: l.qte,
         }));
       }

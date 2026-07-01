@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { eq, desc, inArray, sql } from "drizzle-orm";
+import { eq, desc, inArray, or, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
@@ -36,21 +36,34 @@ export async function GET(req: NextRequest) {
       .orderBy(desc(schema.commandes.createdAt))
       .limit(20);
 
-    // Get lines for summary
-    const lignes = await db
-      .select({
-        commandeId: schema.lignesCommande.commandeId,
-        nomProduit: schema.lignesCommande.nomProduit,
-        quantite: schema.lignesCommande.quantite,
-        nomUnite: schema.lignesCommande.nomUnite,
-      })
-      .from(schema.lignesCommande)
-      .where(
-        inArray(
-          schema.lignesCommande.commandeId,
-          commandes.map((c) => c.id)
-        )
-      );
+    const commandeIdsAll = commandes.map((c) => c.id);
+
+    // Get lines for summary + réassort ("Recommander")
+    const lignes = commandeIdsAll.length > 0
+      ? await db
+          .select({
+            commandeId: schema.lignesCommande.commandeId,
+            produitId: schema.lignesCommande.produitId,
+            nomProduit: schema.lignesCommande.nomProduit,
+            quantite: schema.lignesCommande.quantite,
+            nomUnite: schema.lignesCommande.nomUnite,
+            prixUnitaire: schema.lignesCommande.prixUnitaire,
+          })
+          .from(schema.lignesCommande)
+          .where(inArray(schema.lignesCommande.commandeId, commandeIdsAll))
+      : [];
+
+    // Token public de suivi (depuis la livraison associée)
+    const livRows = commandeIdsAll.length > 0
+      ? await db
+          .select({
+            commandeId: schema.livraisons.commandeId,
+            token: schema.livraisons.tokenPublic,
+          })
+          .from(schema.livraisons)
+          .where(inArray(schema.livraisons.commandeId, commandeIdsAll))
+      : [];
+    const suiviMap = new Map(livRows.map((l) => [l.commandeId, l.token]));
 
     const lignesMap = new Map<string, typeof lignes>();
     for (const l of lignes) {
@@ -81,9 +94,17 @@ export async function GET(req: NextRequest) {
         nbArticles: ls.length,
         statut: c.statut,
         factureId: factureMap.get(c.id) ?? null,
+        suiviToken: suiviMap.get(c.id) ?? null,
         produits: ls.slice(0, 3).map(
           (l) => `${l.nomProduit} ×${l.quantite} ${l.nomUnite}`
         ),
+        lignes: ls.map((l) => ({
+          produitId: l.produitId,
+          nom: l.nomProduit,
+          unite: l.nomUnite,
+          qte: l.quantite,
+          prixUnit: l.prixUnitaire,
+        })),
       };
     });
 
@@ -176,6 +197,40 @@ export async function POST(req: NextRequest) {
   }
   if (totalHT <= 0) {
     return NextResponse.json({ error: "Montant total invalide" }, { status: 400 });
+  }
+
+  // Résolution des produitId réels (filet de sécurité : un panier mis en cache
+  // avant migration peut contenir des IDs obsolètes → violation de clé étrangère).
+  const wantedIds = body.lignes.map((l) => String(l.produitId ?? ""));
+  const wantedNoms = body.lignes.map((l) => String(l.nom ?? ""));
+  let prodRows: { id: string; nom: string; code: string }[] = [];
+  try {
+    prodRows = await db
+      .select({ id: schema.produits.id, nom: schema.produits.nom, code: schema.produits.code })
+      .from(schema.produits)
+      .where(
+        or(
+          inArray(schema.produits.id, wantedIds),
+          inArray(schema.produits.code, wantedIds),
+          inArray(schema.produits.nom, wantedNoms)
+        )
+      );
+  } catch (e) {
+    console.error("[POST /api/shop/commandes] résolution produits", e);
+  }
+  const idSet = new Set(prodRows.map((p) => p.id));
+  const byCode = new Map(prodRows.map((p) => [p.code, p.id]));
+  const byNom = new Map(prodRows.map((p) => [p.nom.toLowerCase(), p.id]));
+  const resolvedIds = body.lignes.map((l) => {
+    const pid = String(l.produitId ?? "");
+    if (idSet.has(pid)) return pid;
+    return byCode.get(pid) ?? byNom.get(String(l.nom ?? "").toLowerCase()) ?? null;
+  });
+  if (resolvedIds.some((x) => x === null)) {
+    return NextResponse.json(
+      { error: "Certains articles de votre panier ne sont plus disponibles. Videz le panier et réessayez." },
+      { status: 409 }
+    );
   }
 
   // Application code promo serveur-side
@@ -277,14 +332,14 @@ export async function POST(req: NextRequest) {
       soumiseAt: now,
     });
 
-    const lignesValues = body.lignes.map((l) => {
+    const lignesValues = body.lignes.map((l, idx) => {
       const qte = Number(l.qte) || 0;
       const pu = Math.round(Number(l.prixUnit) || 0);
       const ht = qte * pu;
       return {
         id: crypto.randomUUID(),
         commandeId,
-        produitId: l.produitId,
+        produitId: resolvedIds[idx]!,
         uniteVenteId: null,
         nomProduit: l.nom,
         nomUnite: l.unite ?? "unité",

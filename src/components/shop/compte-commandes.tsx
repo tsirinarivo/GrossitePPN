@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
+import { useShopCart } from "@/store/shop-cart.store";
 import {
   Package,
   Clock,
@@ -27,6 +30,16 @@ const STATUTS: Record<string, { label: string; icon: typeof Clock; couleur: stri
   en_livraison: { label: "En livraison", icon: Truck, couleur: "text-[--primary]", bg: "bg-[--primary]/10" },
   livree: { label: "Livrée", icon: CheckCircle2, couleur: "text-[--success]", bg: "bg-[--success]/15" },
   annulee: { label: "Annulée", icon: RotateCcw, couleur: "text-[--foreground-muted]", bg: "bg-[--border]" },
+  refusee: { label: "Refusée", icon: RotateCcw, couleur: "text-[--destructive]", bg: "bg-[--destructive]/10" },
+  brouillon: { label: "Brouillon", icon: Clock, couleur: "text-[--foreground-muted]", bg: "bg-[--border]" },
+};
+
+type LigneCommande = {
+  produitId: string;
+  nom: string;
+  unite: string;
+  qte: number;
+  prixUnit: number;
 };
 
 type Commande = {
@@ -37,20 +50,45 @@ type Commande = {
   nbArticles: number;
   statut: string;
   factureId: string | null;
+  suiviToken: string | null;
   produits: string[];
+  lignes: LigneCommande[];
 };
 
 export function CompteCommandes() {
   const [commandes, setCommandes] = useState<Commande[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const { ajouterArticle } = useShopCart();
 
   useEffect(() => {
+    useShopCart.persist.rehydrate();
     fetch("/api/shop/commandes")
       .then((r) => r.json())
       .then((data: Commande[]) => setCommandes(data ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const recommander = (cmd: Commande) => {
+    const lignes = (cmd.lignes ?? []).filter((l) => l.produitId && l.qte > 0);
+    if (lignes.length === 0) {
+      toast.error("Impossible de recharger cette commande");
+      return;
+    }
+    for (const l of lignes) {
+      ajouterArticle({
+        produitId: l.produitId,
+        nom: l.nom,
+        unite: l.unite,
+        emoji: "📦",
+        prixUnit: l.prixUnit,
+        qte: l.qte,
+      });
+    }
+    toast.success("Articles ajoutés au panier");
+    router.push("/panier");
+  };
 
   if (loading) {
     return (
@@ -134,16 +172,17 @@ export function CompteCommandes() {
                     </div>
 
                     <div className="flex items-center gap-2 mt-4 pt-4 border-t border-[--border]">
-                      {cmd.statut === "en_livraison" && (
-                        <Button size="sm" variant="outline" asChild>
-                          <Link href={`/suivi/${cmd.id}`}>
-                            <MapPin className="w-3.5 h-3.5" />
-                            Suivre
-                          </Link>
-                        </Button>
-                      )}
-                      {cmd.statut === "livree" && (
-                        <Button size="sm" variant="outline">
+                      {cmd.suiviToken &&
+                        ["preparee", "en_livraison", "livree"].includes(cmd.statut) && (
+                          <Button size="sm" variant="outline" asChild>
+                            <Link href={`/suivi/${cmd.suiviToken}`}>
+                              <MapPin className="w-3.5 h-3.5" />
+                              Suivre
+                            </Link>
+                          </Button>
+                        )}
+                      {(cmd.statut === "livree" || cmd.statut === "annulee") && (
+                        <Button size="sm" variant="outline" onClick={() => recommander(cmd)}>
                           <RotateCcw className="w-3.5 h-3.5" />
                           Recommander
                         </Button>

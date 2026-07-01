@@ -3,6 +3,11 @@ import { FicheProduit } from "@/components/shop/fiche-produit";
 
 export const metadata: Metadata = { title: "Fiche produit" };
 
-export default function ProduitPage({ params }: { params: { slug: string } }) {
-  return <FicheProduit slug={params.slug} />;
+export default async function ProduitPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  return <FicheProduit slug={decodeURIComponent(slug)} />;
 }

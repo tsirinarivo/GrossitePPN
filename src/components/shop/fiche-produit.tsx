@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { useShopCart } from "@/store/shop-cart.store";
 import { motion } from "framer-motion";
 import {
   ShoppingCart,
@@ -21,76 +22,121 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 
-// Catalogue local (source de vérité pour les suggestions similaires)
-const CATALOGUE_ALL = [
-  { id: "1", slug: "riz-makalioka", nom: "Riz Makalioka", nomMG: "Vary Makalioka", cat: "riz", prix: 3200, unite: "kg", emoji: "🌾" },
-  { id: "2", slug: "riz-tsipala", nom: "Riz Tsipala", nomMG: "Vary Tsipala", cat: "riz", prix: 2800, unite: "kg", emoji: "🌾" },
-  { id: "3", slug: "riz-saonjo", nom: "Riz Saonjo", nomMG: "Vary Saonjo", cat: "riz", prix: 2600, unite: "kg", emoji: "🌾" },
-  { id: "4", slug: "huile-tiko-1l", nom: "Huile Tiko 1L", nomMG: "Menaka Tiko 1L", cat: "huile", prix: 12000, unite: "btl", emoji: "🫙" },
-  { id: "5", slug: "huile-tiko-5l", nom: "Huile Tiko 5L", nomMG: "Menaka Tiko 5L", cat: "huile", prix: 55000, unite: "btl", emoji: "🫙" },
-  { id: "6", slug: "sucre-blanc", nom: "Sucre Blanc", nomMG: "Siramamy Fotsy", cat: "sucre", prix: 4800, unite: "kg", emoji: "🍬" },
-  { id: "7", slug: "sucre-roux", nom: "Sucre Roux", nomMG: "Siramamy Mena", cat: "sucre", prix: 5200, unite: "kg", emoji: "🍬" },
-  { id: "8", slug: "savon-madar", nom: "Savon Madar", nomMG: "Savony Madar", cat: "savon", prix: 800, unite: "pce", emoji: "🧼" },
-  { id: "9", slug: "savon-doux", nom: "Savon Doux", nomMG: "Savony Malemy", cat: "savon", prix: 1200, unite: "pce", emoji: "🧼" },
-  { id: "10", slug: "lait-gloria", nom: "Lait Gloria concentré", nomMG: "Ronono Gloria", cat: "lait", prix: 4500, unite: "bte", emoji: "🥛" },
-  { id: "11", slug: "lait-kiri", nom: "Lait Kiri", nomMG: "Ronono Kiri", cat: "lait", prix: 3800, unite: "bte", emoji: "🥛" },
-  { id: "12", slug: "farine-mixa", nom: "Farine Mixa 1kg", nomMG: "Harina Mixa 1kg", cat: "farine", prix: 4200, unite: "pct", emoji: "🌾" },
-  { id: "13", slug: "sel-marin", nom: "Sel marin 1kg", nomMG: "Sira anaty 1kg", cat: "sel", prix: 700, unite: "pct", emoji: "🧂" },
-  { id: "14", slug: "haricot-blanc", nom: "Haricots blancs", nomMG: "Tsaramaso fotsy", cat: "legumes", prix: 5500, unite: "kg", emoji: "🫘" },
-  { id: "15", slug: "tomate-boite", nom: "Tomates concentrées 400g", nomMG: "Voatabia boaty", cat: "conserves", prix: 3500, unite: "bte", emoji: "🥫" },
-  { id: "16", slug: "sardines-boite", nom: "Sardines huile 250g", nomMG: "Trozona menaka", cat: "conserves", prix: 4800, unite: "bte", emoji: "🐟" },
-  { id: "17", slug: "savon-protex", nom: "Savon Protex", nomMG: "Savony Protex", cat: "savon", prix: 2500, unite: "pce", emoji: "🧼" },
-];
+// Item de catalogue tel que renvoyé par /api/shop/catalogue
+type CatItem = {
+  id: string;
+  slug: string;
+  nom: string;
+  nomMG: string | null;
+  cat: string;
+  catLabel?: string;
+  prix: number;
+  unite: string;
+  stock: string;
+  stockQte: number;
+  emoji: string;
+  description: string | null;
+  marque: string | null;
+};
 
-// Données de démo de la fiche Riz Makalioka
+const PALIER_LABELS = { gros: "Gros", semi_gros: "Semi-gros", detail: "Détail" };
+
+// Produit de démonstration (affiché uniquement si la DB ne renvoie aucun produit)
 const PRODUIT_DEMO = {
+  id: "demo-riz",
   nom: "Riz Makalioka",
   nomMG: "Vary Makalioka",
   emoji: "🌾",
   description:
-    "Le Riz Makalioka est une variété de riz premium cultivée dans les Hauts Plateaux de Madagascar. Grain long, translucide, saveur délicate et cuisson parfaite. Idéal pour la consommation quotidienne et les événements.",
+    "Riz premium cultivé dans les Hauts Plateaux de Madagascar. Grain long, saveur délicate, cuisson parfaite.",
   categorie: "Riz & Céréales",
   marque: "Producteurs des Hautes Terres",
   uniteBase: "kg",
   uniteesVente: [
     { id: "kg", nom: "kg (vrac)", facteur: 1, prixDetail: 3200, prixSemiGros: 3000, prixGros: 2800 },
-    { id: "sac25", nom: "Sac 25 kg", facteur: 25, prixDetail: 76000, prixSemiGros: 72000, prixGros: 67000 },
     { id: "sac50", nom: "Sac 50 kg", facteur: 50, prixDetail: 145000, prixSemiGros: 138000, prixGros: 130000 },
   ],
   stockBase: 2500,
-  palier: "gros" as const,
+  palier: "detail" as "gros" | "semi_gros" | "detail",
   note: 4.8,
   nbAvis: 23,
-  tags: ["Sans OGM", "Récolte 2026", "Hautes Terres"],
-  related: [
-    { slug: "riz-tsipala", nom: "Riz Tsipala", emoji: "🌾", prix: 2800 },
-    { slug: "riz-saonjo", nom: "Riz Saonjo", emoji: "🌾", prix: 2600 },
-  ],
+  tags: ["Riz & Céréales"],
 };
 
-const PALIER_LABELS = { gros: "Gros", semi_gros: "Semi-gros", detail: "Détail" };
+type DisplayProduit = typeof PRODUIT_DEMO;
+
+function buildFromItem(item: CatItem): DisplayProduit {
+  return {
+    id: item.id,
+    nom: item.nom,
+    nomMG: item.nomMG ?? "",
+    emoji: item.emoji,
+    description:
+      item.description ??
+      `${item.nom} — disponible en gros et demi-gros chez GrossistePPN Madagascar.`,
+    categorie: item.catLabel ?? item.cat ?? "Produits",
+    marque: item.marque ?? "—",
+    uniteBase: item.unite,
+    uniteesVente: [
+      {
+        id: item.unite,
+        nom: item.unite,
+        facteur: 1,
+        prixDetail: item.prix,
+        prixSemiGros: item.prix,
+        prixGros: item.prix,
+      },
+    ],
+    stockBase: item.stockQte,
+    palier: "detail",
+    note: 4.7,
+    nbAvis: 12,
+    tags: [item.catLabel ?? item.cat].filter(Boolean) as string[],
+  };
+}
 
 export function FicheProduit({ slug }: { slug: string }) {
-  const p = PRODUIT_DEMO; // en prod: fetch par slug
-  const [uniteId, setUniteId] = useState(p.uniteesVente[0]!.id);
+  const { ajouterArticle } = useShopCart();
+  const [catalogue, setCatalogue] = useState<CatItem[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [quantite, setQuantite] = useState(1);
 
-  // Suggestions produits similaires : même catégorie, exclu le produit courant, max 4, mélangés
+  useEffect(() => {
+    useShopCart.persist.rehydrate();
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/shop/catalogue");
+        if (res.ok) {
+          const d = await res.json();
+          if (alive && Array.isArray(d.produits)) setCatalogue(d.produits as CatItem[]);
+        }
+      } catch {
+        /* fallback démo */
+      } finally {
+        if (alive) setLoaded(true);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const item = catalogue.find((x) => x.slug === slug) ?? null;
+  const notFound = loaded && catalogue.length > 0 && !item;
+  const p: DisplayProduit = item ? buildFromItem(item) : PRODUIT_DEMO;
+
   const produitsSimilaires = useMemo(() => {
-    // Déduire la catégorie du slug courant (simplification de démo)
-    const entree = CATALOGUE_ALL.find((x) => x.slug === slug);
-    const cat = entree?.cat ?? "riz";
-    const similaires = CATALOGUE_ALL.filter(
-      (x) => x.cat === cat && x.slug !== slug
-    );
-    // Mélange pseudo-aléatoire reproductible (Fisher-Yates avec seed fixe par slug)
-    const copy = [...similaires];
-    for (let i = copy.length - 1; i > 0; i--) {
-      const j = Math.floor(((i * 7 + slug.length * 3) % (i + 1)));
-      [copy[i], copy[j]] = [copy[j]!, copy[i]!];
-    }
-    return copy.slice(0, 4);
-  }, [slug]);
+    if (!item) return [] as CatItem[];
+    return catalogue.filter((x) => x.cat === item.cat && x.slug !== slug).slice(0, 4);
+  }, [catalogue, item, slug]);
+
+  const [uniteId, setUniteId] = useState(p.uniteesVente[0]!.id);
+  useEffect(() => {
+    setUniteId(p.uniteesVente[0]!.id);
+    setQuantite(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id]);
 
   const unite = p.uniteesVente.find((u) => u.id === uniteId) ?? p.uniteesVente[0]!;
   const prix = p.palier === "gros"
@@ -103,10 +149,33 @@ export function FicheProduit({ slug }: { slug: string }) {
   const stockVracRestant = p.stockBase % unite.facteur;
 
   const handleAjouterPanier = () => {
+    ajouterArticle({
+      produitId: p.id,
+      nom: p.nom,
+      unite: unite.nom,
+      emoji: p.emoji,
+      prixUnit: prix,
+      qte: quantite,
+    });
     toast.success(`${quantite}× ${unite.nom} de ${p.nom} ajouté(s) au panier`, {
       description: `Total : ${formatMGA(prix * quantite)}`,
     });
   };
+
+  if (notFound) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-24 text-center">
+        <div className="text-5xl mb-4">🔍</div>
+        <h1 className="text-lg font-semibold text-[--foreground] mb-1">Produit introuvable</h1>
+        <p className="text-sm text-[--foreground-muted] mb-6">
+          Ce produit n&apos;existe pas ou n&apos;est plus disponible.
+        </p>
+        <Button asChild>
+          <Link href="/shop">Retour au catalogue</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">

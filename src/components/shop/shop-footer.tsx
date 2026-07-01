@@ -60,10 +60,16 @@ export function ShopFooter() {
           <div>
             <h3 className="text-sm font-semibold text-[--foreground] mb-4">Catalogue</h3>
             <ul className="space-y-2 text-sm text-[--foreground-muted]">
-              {["Riz & Céréales", "Huiles", "Sucre & Sel", "Savon & Hygiène", "Lait & Conserves"].map((l) => (
-                <li key={l}>
-                  <Link href="/shop" className="hover:text-[--foreground] transition-colors">
-                    {l}
+              {[
+                { label: "Riz & Céréales", cat: "riz" },
+                { label: "Huiles", cat: "huile" },
+                { label: "Sucre & Sel", cat: "sucre" },
+                { label: "Savon & Hygiène", cat: "savon" },
+                { label: "Lait & Conserves", cat: "lait" },
+              ].map((l) => (
+                <li key={l.cat}>
+                  <Link href={`/shop?cat=${l.cat}`} className="hover:text-[--foreground] transition-colors">
+                    {l.label}
                   </Link>
                 </li>
               ))}

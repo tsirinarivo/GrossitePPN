@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -27,8 +28,39 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useShopCart } from "@/store/shop-cart.store";
 
-// Données de démo complètes
-const CATALOGUE = [
+// Type d'un article de catalogue (identique côté API /api/shop/catalogue)
+type Produit = {
+  id: string;
+  slug: string;
+  nom: string;
+  nomMG: string | null;
+  cat: string;
+  catLabel?: string;
+  prix: number;
+  unite: string;
+  prixCarton: number | null;
+  uniteCarton: string | null;
+  stock: string;
+  qteMinCommande: number;
+  emoji: string;
+  vedette?: boolean;
+};
+
+// Libellés/emoji des catégories connues (fallback si l'API n'en fournit pas)
+const CAT_META: Record<string, { label: string; emoji: string }> = {
+  riz: { label: "Riz", emoji: "🌾" },
+  huile: { label: "Huile", emoji: "🫙" },
+  sucre: { label: "Sucre", emoji: "🍬" },
+  savon: { label: "Savon", emoji: "🧼" },
+  lait: { label: "Lait", emoji: "🥛" },
+  farine: { label: "Farine", emoji: "🌾" },
+  sel: { label: "Sel", emoji: "🧂" },
+  conserves: { label: "Conserves", emoji: "🥫" },
+  legumes: { label: "Légumes secs", emoji: "🫘" },
+};
+
+// Jeu de démonstration (utilisé uniquement si la DB ne renvoie aucun produit)
+const CATALOGUE_DEMO: Produit[] = [
   { id: "1", slug: "riz-makalioka", nom: "Riz Makalioka", nomMG: "Vary Makalioka", cat: "riz", prix: 3200, unite: "kg", prixCarton: 145000, uniteCarton: "Sac 50kg", stock: "ok", qteMinCommande: 50, emoji: "🌾", vedette: true },
   { id: "2", slug: "riz-tsipala", nom: "Riz Tsipala", nomMG: "Vary Tsipala", cat: "riz", prix: 2800, unite: "kg", prixCarton: 125000, uniteCarton: "Sac 50kg", stock: "ok", qteMinCommande: 1, emoji: "🌾", vedette: false },
   { id: "3", slug: "riz-saonjo", nom: "Riz Saonjo", nomMG: "Vary Saonjo", cat: "riz", prix: 2600, unite: "kg", prixCarton: 115000, uniteCarton: "Sac 50kg", stock: "limite", qteMinCommande: 25, emoji: "🌾", vedette: false },
@@ -46,19 +78,6 @@ const CATALOGUE = [
   { id: "15", slug: "tomate-boite", nom: "Tomates concentrées 400g", nomMG: "Voatabia boaty", cat: "conserves", prix: 3500, unite: "bte", prixCarton: 156000, uniteCarton: "Carton 48", stock: "ok", qteMinCommande: 1, emoji: "🥫", vedette: false },
   { id: "16", slug: "sardines-boite", nom: "Sardines huile 250g", nomMG: "Trozona menaka", cat: "conserves", prix: 4800, unite: "bte", prixCarton: 216000, uniteCarton: "Carton 48", stock: "limite", qteMinCommande: 1, emoji: "🐟", vedette: false },
   { id: "17", slug: "savon-protex", nom: "Savon Protex", nomMG: "Savony Protex", cat: "savon", prix: 2500, unite: "pce", prixCarton: 220000, uniteCarton: "Carton 100", stock: "ok", qteMinCommande: 12, emoji: "🧼", vedette: true },
-];
-
-const CATEGORIES = [
-  { id: null, label: "Tout", emoji: "🛒" },
-  { id: "riz", label: "Riz", emoji: "🌾" },
-  { id: "huile", label: "Huile", emoji: "🫙" },
-  { id: "sucre", label: "Sucre", emoji: "🍬" },
-  { id: "savon", label: "Savon", emoji: "🧼" },
-  { id: "lait", label: "Lait", emoji: "🥛" },
-  { id: "farine", label: "Farine", emoji: "🌾" },
-  { id: "sel", label: "Sel", emoji: "🧂" },
-  { id: "conserves", label: "Conserves", emoji: "🥫" },
-  { id: "legumes", label: "Légumes secs", emoji: "🫘" },
 ];
 
 // ── Bannières promotionnelles ──────────────────────────
@@ -206,28 +225,71 @@ function BanniereCarousel() {
 type ViewMode = "grid" | "list" | "quick";
 
 export function ShopCatalogue() {
-  const [recherche, setRecherche] = useState("");
-  const [catActive, setCatActive] = useState<string | null>(null);
-  const [view, setView] = useState<ViewMode>("grid");
+  const searchParams = useSearchParams();
+  const [recherche, setRecherche] = useState(
+    () => searchParams.get("search") ?? searchParams.get("q") ?? ""
+  );
+  const [catActive, setCatActive] = useState<string | null>(
+    () => searchParams.get("cat")
+  );
+  const [view, setView] = useState<ViewMode>(
+    () => (searchParams.get("mode") === "quick" ? "quick" : "grid")
+  );
+  const [catalogue, setCatalogue] = useState<Produit[]>(CATALOGUE_DEMO);
 
   const { lignes, ajouterArticle } = useShopCart();
 
   useEffect(() => {
     useShopCart.persist.rehydrate();
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/shop/catalogue");
+        if (res.ok) {
+          const data = await res.json();
+          if (alive && Array.isArray(data.produits) && data.produits.length > 0) {
+            setCatalogue(data.produits as Produit[]);
+          }
+        }
+      } catch {
+        /* garde le jeu de démonstration en cas d'erreur réseau */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
   }, []);
+
+  // Catégories dérivées du catalogue courant (DB ou démo)
+  const CATEGORIES = useMemo(() => {
+    const m = new Map<string, { id: string; label: string; emoji: string }>();
+    for (const p of catalogue) {
+      if (!p.cat || m.has(p.cat)) continue;
+      const meta = CAT_META[p.cat];
+      m.set(p.cat, {
+        id: p.cat,
+        label: p.catLabel ?? meta?.label ?? p.cat,
+        emoji: meta?.emoji ?? p.emoji,
+      });
+    }
+    return [
+      { id: null as string | null, label: "Tout", emoji: "🛒" },
+      ...m.values(),
+    ];
+  }, [catalogue]);
 
   const produitsFiltres = useMemo(
     () =>
-      CATALOGUE.filter((p) => {
+      catalogue.filter((p) => {
         const q = recherche.toLowerCase();
         const matchQ =
           !q ||
           p.nom.toLowerCase().includes(q) ||
-          p.nomMG.toLowerCase().includes(q);
+          (p.nomMG ?? "").toLowerCase().includes(q);
         const matchCat = !catActive || p.cat === catActive;
         return matchQ && matchCat;
       }),
-    [recherche, catActive]
+    [catalogue, recherche, catActive]
   );
 
   const panier: Record<string, number> = Object.fromEntries(
@@ -236,7 +298,7 @@ export function ShopCatalogue() {
   const nbPanier = lignes.reduce((s, l) => s + l.qte, 0);
 
   const addToCart = (id: string, nom: string) => {
-    const produit = CATALOGUE.find((p) => p.id === id);
+    const produit = catalogue.find((p) => p.id === id);
     if (!produit) return;
     ajouterArticle({
       produitId: id,
@@ -364,7 +426,7 @@ export function ShopCatalogue() {
               produits={produitsFiltres}
               panier={panier}
               onChange={(id, q) => {
-                const produit = CATALOGUE.find((p) => p.id === id);
+                const produit = catalogue.find((p) => p.id === id);
                 if (!produit) return;
                 if (q <= 0) {
                   useShopCart.getState().supprimer(id);
@@ -475,8 +537,7 @@ function StockBadge({ stock }: { stock: string }) {
 }
 
 // ── Carte grille ──────────────────────────────────────
-
-type Produit = (typeof CATALOGUE)[0];
+// (le type Produit est défini en haut du fichier)
 
 function ProduitGridCard({
   produit: p,
