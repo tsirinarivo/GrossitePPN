@@ -349,7 +349,7 @@ export function LivraisonsView() {
                             initial={{ opacity: 0, y: -4 }}
                             animate={{ opacity: 1, y: 0 }}
                             className="absolute top-full mt-1 left-1/2 -translate-x-1/2 px-2 py-1 rounded-lg text-[10px] whitespace-nowrap font-medium text-white border border-brand-border shadow-xl"
-                            style={{ backgroundColor: "#050508" }}
+                            style={{ backgroundColor: "#14161B" }}
                           >
                             {l.ville}
                           </motion.div>

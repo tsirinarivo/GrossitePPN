@@ -20,7 +20,7 @@ import { toast } from "sonner";
 
 // Palette fixe — indépendante des variables CSS
 const C = {
-  bg:       "#0d1117",
+  bg:       "#1B1D24",
   surface:  "#161b22",
   hover:    "#1e2530",
   border:   "#30363d",

@@ -97,8 +97,8 @@ export function NotificationBell() {
         right: panelPos.right,
         zIndex: 9999,
         width: 320,
-        backgroundColor: "#111118",
-        border: "1px solid #1E1E2E",
+        backgroundColor: "#232630",
+        border: "1px solid #333744",
         borderRadius: 12,
         boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
         overflow: "hidden",
@@ -111,7 +111,7 @@ export function NotificationBell() {
           alignItems: "center",
           justifyContent: "space-between",
           padding: "12px 16px",
-          borderBottom: "1px solid #1E1E2E",
+          borderBottom: "1px solid #333744",
         }}
       >
         <span style={{ color: "#E5E7EB", fontWeight: 600, fontSize: 14 }}>
@@ -208,7 +208,7 @@ export function NotificationBell() {
       <div
         style={{
           padding: "8px 16px",
-          borderTop: "1px solid #1E1E2E",
+          borderTop: "1px solid #333744",
           textAlign: "center",
         }}
       >

@@ -660,12 +660,12 @@ function ProduitAnalyticsPanel({ analytics, loading, uniteBase }: { analytics: A
           <CardContent>
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={chartData} barSize={20}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E1E2E" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#333744" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#666" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: "#666" }} axisLine={false} tickLine={false} width={40} />
                 <Tooltip
                   formatter={(v) => [`${Number(v).toLocaleString("fr-FR")} ${uniteBase}`, "Qté"]}
-                  contentStyle={{ backgroundColor: "#111118", border: "1px solid #1E1E2E", borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{ backgroundColor: "#232630", border: "1px solid #333744", borderRadius: 8, fontSize: 12 }}
                 />
                 <Bar dataKey="qteBase" fill="#3B82F6" radius={[4, 4, 0, 0]} />
               </BarChart>

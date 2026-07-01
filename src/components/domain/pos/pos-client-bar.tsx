@@ -211,7 +211,7 @@ export function POSClientBar() {
             {mounted && dropdownOpen && (clientsFiltres.length > 0 || aucunResultat) && createPortal(
               <div
                 className="border border-[--pos-border] rounded-xl shadow-2xl overflow-hidden"
-                style={{ ...dropdownStyle, backgroundColor: "#111118" }}
+                style={{ ...dropdownStyle, backgroundColor: "#232630" }}
               >
                 {/* Résultats */}
                 {clientsFiltres.length > 0 && (
@@ -222,7 +222,7 @@ export function POSClientBar() {
                         onMouseDown={(e) => { e.preventDefault(); handleSelect(c); }}
                         className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-left"
                         style={{ backgroundColor: "transparent" }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#1E1E2E")}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#333744")}
                         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                       >
                         <div className="w-7 h-7 rounded-full bg-[--pos-primary]/20 flex items-center justify-center shrink-0">
@@ -252,7 +252,7 @@ export function POSClientBar() {
                   <button
                     onMouseDown={(e) => { e.preventDefault(); openNewClientForm(); }}
                     className="w-full flex items-center gap-3 px-4 py-3 border-t transition-colors text-left"
-                    style={{ borderColor: "#1E1E2E", backgroundColor: "transparent" }}
+                    style={{ borderColor: "#333744", backgroundColor: "transparent" }}
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#1a2a1a")}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                   >
@@ -284,7 +284,7 @@ export function POSClientBar() {
           />
           <div
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm rounded-2xl border shadow-2xl p-6 space-y-4"
-            style={{ zIndex: 10001, backgroundColor: "#111118", borderColor: "#1E1E2E" }}
+            style={{ zIndex: 10001, backgroundColor: "#232630", borderColor: "#333744" }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">

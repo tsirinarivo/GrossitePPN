@@ -474,7 +474,7 @@ export function FinancesView() {
                           {val >= 0 ? "+" : "−"}{formatMGA(abs)}
                         </span>
                       </div>
-                      <div className="h-2 rounded-full" style={{ backgroundColor: "#1E1E2E" }}>
+                      <div className="h-2 rounded-full" style={{ backgroundColor: "#333744" }}>
                         <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
                       </div>
                     </div>
@@ -507,7 +507,7 @@ export function FinancesView() {
                         <span className="text-xs text-[--foreground-muted]">Avancement du mois</span>
                         <span className="text-xs font-mono text-[--foreground]">{joursEcoules}j / {joursTotal}j</span>
                       </div>
-                      <div className="h-2 rounded-full" style={{ backgroundColor: "#1E1E2E" }}>
+                      <div className="h-2 rounded-full" style={{ backgroundColor: "#333744" }}>
                         <div className="h-full rounded-full bg-[--primary]" style={{ width: `${avancement}%` }} />
                       </div>
                     </div>

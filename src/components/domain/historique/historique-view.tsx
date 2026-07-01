@@ -252,7 +252,7 @@ export function HistoriqueView() {
                   <YAxis hide />
                   <Tooltip
                     formatter={(v) => [formatMGA(Number(v)), "CA"]}
-                    contentStyle={{ backgroundColor: "#111118", border: "1px solid #1E1E2E", borderRadius: 8, fontSize: 12 }}
+                    contentStyle={{ backgroundColor: "#232630", border: "1px solid #333744", borderRadius: 8, fontSize: 12 }}
                     labelStyle={{ color: "#888" }}
                   />
                   <Bar dataKey="ca" radius={[4, 4, 0, 0]}>

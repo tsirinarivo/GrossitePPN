@@ -198,10 +198,10 @@ export function CommandesView() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "#1E1E2E" }}>
+      <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "#333744" }}>
         <table className="w-full text-sm">
           <thead>
-            <tr style={{ backgroundColor: "#111118", borderBottom: "1px solid #1E1E2E" }}>
+            <tr style={{ backgroundColor: "#232630", borderBottom: "1px solid #333744" }}>
               {["Référence", "Client", "Zone", "Agent", "Total TTC", "Statut", "Source", "Date", "Actions"].map((h) => (
                 <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold text-brand-muted uppercase tracking-wide whitespace-nowrap">
                   {h}
@@ -221,7 +221,7 @@ export function CommandesView() {
                     exit={{ opacity: 0 }}
                     transition={{ delay: i * 0.02 }}
                     className="border-b transition-colors hover:bg-white/3"
-                    style={{ borderColor: "#1E1E2E" }}
+                    style={{ borderColor: "#333744" }}
                   >
                     <td className="px-3 py-2.5 font-mono text-xs font-semibold" style={{ color: "#FF4D00" }}>
                       {c.reference}
@@ -243,7 +243,7 @@ export function CommandesView() {
                           <button
                             onClick={() => window.open(`/api/commandes/${c.id}/devis-pdf`, "_blank")}
                             className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors"
-                            style={{ backgroundColor: "#1E1E2E", color: "#9CA3AF" }}
+                            style={{ backgroundColor: "#333744", color: "#9CA3AF" }}
                             title="PDF Devis"
                           >
                             <FileText className="w-3 h-3" />
@@ -294,7 +294,7 @@ export function CommandesView() {
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
               className="p-2 rounded-lg disabled:opacity-30 transition-opacity"
-              style={{ backgroundColor: "#1E1E2E" }}
+              style={{ backgroundColor: "#333744" }}
             >
               <ChevronLeft className="w-4 h-4 text-white" />
             </button>
@@ -302,7 +302,7 @@ export function CommandesView() {
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages}
               className="p-2 rounded-lg disabled:opacity-30 transition-opacity"
-              style={{ backgroundColor: "#1E1E2E" }}
+              style={{ backgroundColor: "#333744" }}
             >
               <ChevronRight className="w-4 h-4 text-white" />
             </button>
@@ -330,7 +330,7 @@ export function CommandesView() {
             <div
               key={col}
               className="shrink-0 w-64 flex flex-col rounded-xl overflow-hidden"
-              style={{ backgroundColor: "#111118", border: "1px solid #1E1E2E", borderTop: `3px solid ${m.color}` }}
+              style={{ backgroundColor: "#232630", border: "1px solid #333744", borderTop: `3px solid ${m.color}` }}
             >
               {/* Column header */}
               <div className="px-3 py-2.5 flex items-center gap-2">
@@ -348,7 +348,7 @@ export function CommandesView() {
                   <div
                     key={c.id}
                     className="rounded-lg p-3 space-y-2"
-                    style={{ backgroundColor: "#0D0D15", border: "1px solid #1E1E2E" }}
+                    style={{ backgroundColor: "#1B1D24", border: "1px solid #333744" }}
                   >
                     <div className="flex items-start justify-between gap-1">
                       <span className="font-mono text-xs font-semibold" style={{ color: "#FF4D00" }}>
@@ -399,12 +399,12 @@ export function CommandesView() {
         </div>
         <div className="flex items-center gap-2">
           {/* View toggle */}
-          <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: "#1E1E2E" }}>
+          <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: "#333744" }}>
             <button
               onClick={() => setView("list")}
               className="px-3 py-2 flex items-center gap-1.5 text-sm transition-colors"
               style={{
-                backgroundColor: view === "list" ? "#1E1E2E" : "transparent",
+                backgroundColor: view === "list" ? "#333744" : "transparent",
                 color: view === "list" ? "white" : "#6B7280",
               }}
             >
@@ -415,7 +415,7 @@ export function CommandesView() {
               onClick={() => setView("kanban")}
               className="px-3 py-2 flex items-center gap-1.5 text-sm transition-colors"
               style={{
-                backgroundColor: view === "kanban" ? "#1E1E2E" : "transparent",
+                backgroundColor: view === "kanban" ? "#333744" : "transparent",
                 color: view === "kanban" ? "white" : "#6B7280",
               }}
             >
@@ -427,7 +427,7 @@ export function CommandesView() {
             onClick={fetchCommandes}
             disabled={loading}
             className="p-2 rounded-lg transition-opacity disabled:opacity-50"
-            style={{ backgroundColor: "#1E1E2E" }}
+            style={{ backgroundColor: "#333744" }}
             title="Rafraîchir"
           >
             <RefreshCw className={`w-4 h-4 text-white ${loading ? "animate-spin" : ""}`} />
@@ -446,7 +446,7 @@ export function CommandesView() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 rounded-lg text-sm text-white placeholder-brand-muted bg-transparent border focus:outline-none"
-            style={{ borderColor: "#1E1E2E", backgroundColor: "#111118" }}
+            style={{ borderColor: "#333744", backgroundColor: "#232630" }}
           />
         </div>
 
@@ -466,7 +466,7 @@ export function CommandesView() {
               onClick={() => setStatutFilter(key)}
               className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
               style={{
-                backgroundColor: statutFilter === key ? "#FF4D00" : "#1E1E2E",
+                backgroundColor: statutFilter === key ? "#FF4D00" : "#333744",
                 color: statutFilter === key ? "white" : "#9CA3AF",
               }}
             >
@@ -488,7 +488,7 @@ export function CommandesView() {
               onClick={() => setSourceFilter(key)}
               className="px-3 py-1.5 rounded-full text-xs font-semibold transition-colors"
               style={{
-                backgroundColor: sourceFilter === key ? "#8B5CF6" : "#1E1E2E",
+                backgroundColor: sourceFilter === key ? "#8B5CF6" : "#333744",
                 color: sourceFilter === key ? "white" : "#9CA3AF",
               }}
             >
