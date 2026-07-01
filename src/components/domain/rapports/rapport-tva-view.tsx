@@ -64,7 +64,7 @@ function KPICard({
   return (
     <div
       className="rounded-xl p-4 flex flex-col gap-1"
-      style={{ backgroundColor: "var(--card, #161622)", border: "1px solid #1E1E2E" }}
+      style={{ backgroundColor: "var(--card, #161622)", border: "1px solid #333744" }}
     >
       <span className="text-xs font-medium" style={{ color: "#6B7280" }}>
         {label}
@@ -91,7 +91,7 @@ function CustomTooltip({
   return (
     <div
       className="rounded-lg p-3 text-sm shadow-xl"
-      style={{ backgroundColor: "#1A1A28", border: "1px solid #2E2E3E", color: "#E5E7EB" }}
+      style={{ backgroundColor: "#1A1A28", border: "1px solid #414553", color: "#E5E7EB" }}
     >
       <p className="font-semibold mb-2">{label}</p>
       {payload.map((entry, i) => (
@@ -147,7 +147,7 @@ export function RapportTVAView() {
   return (
     <div
       className="min-h-screen p-4 md:p-8"
-      style={{ backgroundColor: "#0A0A0F", color: "var(--foreground, #E5E7EB)" }}
+      style={{ backgroundColor: "#1B1D24", color: "var(--foreground, #E5E7EB)" }}
     >
       {/* En-tête */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
@@ -163,7 +163,7 @@ export function RapportTVAView() {
           onClick={() => lignes.length && exportCSV(lignes, annee, trimestre)}
           disabled={!lignes.length}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-40"
-          style={{ backgroundColor: "#1E1E2E", color: "#A0AEC0", border: "1px solid #2E2E3E" }}
+          style={{ backgroundColor: "#333744", color: "#A0AEC0", border: "1px solid #414553" }}
         >
           ↓ Export CSV
         </button>
@@ -176,7 +176,7 @@ export function RapportTVAView() {
           value={annee}
           onChange={(e) => setAnnee(Number(e.target.value))}
           className="rounded-lg px-3 py-2 text-sm font-medium"
-          style={{ backgroundColor: "#1E1E2E", color: "#E5E7EB", border: "1px solid #2E2E3E" }}
+          style={{ backgroundColor: "#333744", color: "#E5E7EB", border: "1px solid #414553" }}
         >
           {[2024, 2025, 2026].map((y) => (
             <option key={y} value={y}>
@@ -192,9 +192,9 @@ export function RapportTVAView() {
             onClick={() => setTrimestre(t)}
             className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
             style={{
-              backgroundColor: trimestre === t ? "#FF4D00" : "#1E1E2E",
+              backgroundColor: trimestre === t ? "#FF4D00" : "#333744",
               color: trimestre === t ? "#fff" : "#A0AEC0",
-              border: `1px solid ${trimestre === t ? "#FF4D00" : "#2E2E3E"}`,
+              border: `1px solid ${trimestre === t ? "#FF4D00" : "#414553"}`,
             }}
           >
             {t === null ? "Tout" : `T${t}`}
@@ -236,7 +236,7 @@ export function RapportTVAView() {
       {/* Graphique */}
       <div
         className="rounded-xl p-4 mb-6"
-        style={{ backgroundColor: "var(--card, #161622)", border: "1px solid #1E1E2E" }}
+        style={{ backgroundColor: "var(--card, #161622)", border: "1px solid #333744" }}
       >
         <h2 className="text-sm font-semibold text-white mb-4">
           Base HT et TVA par mois
@@ -252,7 +252,7 @@ export function RapportTVAView() {
         ) : (
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={chartData} margin={{ top: 4, right: 8, left: 8, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1E1E2E" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#333744" />
               <XAxis dataKey="name" tick={{ fill: "#6B7280", fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis
                 tick={{ fill: "#6B7280", fontSize: 11 }}
@@ -272,12 +272,12 @@ export function RapportTVAView() {
       {/* Tableau */}
       <div
         className="rounded-xl overflow-hidden"
-        style={{ backgroundColor: "var(--card, #161622)", border: "1px solid #1E1E2E" }}
+        style={{ backgroundColor: "var(--card, #161622)", border: "1px solid #333744" }}
       >
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ borderBottom: "1px solid #1E1E2E" }}>
+              <tr style={{ borderBottom: "1px solid #333744" }}>
                 {["Mois", "Nb commandes", "Base HT", "TVA (20 %)", "Total TTC"].map(
                   (h) => (
                     <th
@@ -309,7 +309,7 @@ export function RapportTVAView() {
                   <tr
                     key={l.mois}
                     className="transition-colors hover:bg-white/5"
-                    style={{ borderBottom: "1px solid #1E1E2E" }}
+                    style={{ borderBottom: "1px solid #333744" }}
                   >
                     <td className="px-4 py-3 font-medium text-white">{l.label}</td>
                     <td className="px-4 py-3" style={{ color: "#9CA3AF" }}>{l.nbCommandes}</td>
@@ -328,7 +328,7 @@ export function RapportTVAView() {
             </tbody>
             {totaux && lignes.length > 0 && (
               <tfoot>
-                <tr style={{ borderTop: "2px solid #2E2E3E" }}>
+                <tr style={{ borderTop: "2px solid #414553" }}>
                   <td className="px-4 py-3 font-bold text-white">Total</td>
                   <td className="px-4 py-3 font-bold" style={{ color: "#9CA3AF" }}>
                     {totaux.nbCommandes}

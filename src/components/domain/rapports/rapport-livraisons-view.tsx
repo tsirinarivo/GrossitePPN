@@ -193,8 +193,8 @@ export function RapportLivraisonsView() {
                           <YAxis tick={{ fontSize: 10 }} domain={[0, 100]} tickFormatter={(v: number) => `${v}%`} />
                           <Tooltip
                             contentStyle={{
-                              backgroundColor: "#1E1E2E",
-                              border: "1px solid #2E2E3E",
+                              backgroundColor: "#333744",
+                              border: "1px solid #414553",
                               borderRadius: 8,
                               fontSize: 11,
                             }}
@@ -243,8 +243,8 @@ export function RapportLivraisonsView() {
                             </Pie>
                             <Tooltip
                               contentStyle={{
-                                backgroundColor: "#1E1E2E",
-                                border: "1px solid #2E2E3E",
+                                backgroundColor: "#333744",
+                                border: "1px solid #414553",
                                 borderRadius: 8,
                                 fontSize: 11,
                               }}

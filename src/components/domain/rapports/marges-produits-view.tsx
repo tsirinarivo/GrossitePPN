@@ -43,7 +43,7 @@ function MargeBar({ taux }: { taux: number }) {
   const color = clamped >= 30 ? "#22C55E" : clamped >= 15 ? "#F59E0B" : "#EF4444";
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 rounded-full" style={{ backgroundColor: "#1E1E2E" }}>
+      <div className="flex-1 h-1.5 rounded-full" style={{ backgroundColor: "#333744" }}>
         <div className="h-full rounded-full transition-all" style={{ width: `${clamped}%`, backgroundColor: color }} />
       </div>
       <span className="text-xs w-10 text-right font-mono" style={{ color }}>{taux}%</span>
@@ -53,7 +53,7 @@ function MargeBar({ taux }: { taux: number }) {
 
 function KpiCard({ label, value, sub, icon: Icon, color }: { label: string; value: string; sub?: string; icon: React.ElementType; color: string }) {
   return (
-    <div className="rounded-xl border p-4 flex gap-3 items-start" style={{ backgroundColor: "#111118", borderColor: "#1E1E2E" }}>
+    <div className="rounded-xl border p-4 flex gap-3 items-start" style={{ backgroundColor: "#232630", borderColor: "#333744" }}>
       <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: color + "20" }}>
         <Icon className="w-4 h-4" style={{ color }} />
       </div>
@@ -126,14 +126,14 @@ export function MargesProduits() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Période pills */}
-          <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: "#1E1E2E" }}>
+          <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: "#333744" }}>
             {PERIODES.map((p) => (
               <button
                 key={p.value}
                 onClick={() => setPeriode(p.value)}
                 className="px-3 py-1.5 text-xs font-medium transition-colors"
                 style={{
-                  backgroundColor: periode === p.value ? "#FF4D00" : "#111118",
+                  backgroundColor: periode === p.value ? "#FF4D00" : "#232630",
                   color: periode === p.value ? "#fff" : "#888",
                 }}
               >{p.label}</button>
@@ -142,12 +142,12 @@ export function MargesProduits() {
           <button
             onClick={fetchData}
             className="p-2 rounded-lg border transition-colors hover:border-[#FF4D00]/50"
-            style={{ backgroundColor: "#111118", borderColor: "#1E1E2E", color: "#666" }}
+            style={{ backgroundColor: "#232630", borderColor: "#333744", color: "#666" }}
           ><RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} /></button>
           <button
             onClick={exportCSV}
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors hover:border-[#FF4D00]/50"
-            style={{ backgroundColor: "#111118", borderColor: "#1E1E2E", color: "#888" }}
+            style={{ backgroundColor: "#232630", borderColor: "#333744", color: "#888" }}
           ><Download className="w-3.5 h-3.5" /> CSV</button>
         </div>
       </div>
@@ -166,7 +166,7 @@ export function MargesProduits() {
       {data && (
         <div className="grid lg:grid-cols-2 gap-4">
           {/* Top 5 */}
-          <div className="rounded-xl border p-4" style={{ backgroundColor: "#111118", borderColor: "#1E1E2E" }}>
+          <div className="rounded-xl border p-4" style={{ backgroundColor: "#232630", borderColor: "#333744" }}>
             <div className="flex items-center gap-2 mb-3">
               <TrendingUp className="w-4 h-4" style={{ color: "#22C55E" }} />
               <span className="text-sm font-semibold text-white">Top 5 meilleures marges</span>
@@ -185,7 +185,7 @@ export function MargesProduits() {
             </div>
           </div>
           {/* Flop 5 */}
-          <div className="rounded-xl border p-4" style={{ backgroundColor: "#111118", borderColor: "#1E1E2E" }}>
+          <div className="rounded-xl border p-4" style={{ backgroundColor: "#232630", borderColor: "#333744" }}>
             <div className="flex items-center gap-2 mb-3">
               <TrendingDown className="w-4 h-4" style={{ color: "#EF4444" }} />
               <span className="text-sm font-semibold text-white">Flop 5 marges les plus faibles</span>
@@ -207,22 +207,22 @@ export function MargesProduits() {
       )}
 
       {/* Table complète */}
-      <div className="rounded-xl border overflow-hidden" style={{ backgroundColor: "#111118", borderColor: "#1E1E2E" }}>
+      <div className="rounded-xl border overflow-hidden" style={{ backgroundColor: "#232630", borderColor: "#333744" }}>
         {/* Search */}
-        <div className="p-3 border-b" style={{ borderColor: "#1E1E2E" }}>
+        <div className="p-3 border-b" style={{ borderColor: "#333744" }}>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filtrer par produit ou catégorie…"
             className="w-full max-w-xs bg-transparent text-sm outline-none placeholder:text-[#555] text-white px-3 py-1.5 rounded-lg border"
-            style={{ borderColor: "#1E1E2E" }}
+            style={{ borderColor: "#333744" }}
           />
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-[10px] uppercase tracking-wider" style={{ color: "#555", backgroundColor: "#0d0d14" }}>
+              <tr className="text-[10px] uppercase tracking-wider" style={{ color: "#555", backgroundColor: "#1B1D24" }}>
                 {([
                   ["nom",       "Produit"],
                   ["ca",        "CA HT"],
@@ -248,7 +248,7 @@ export function MargesProduits() {
                     animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.02 }}
                     className="border-t hover:bg-white/[0.02] transition-colors"
-                    style={{ borderColor: "#1E1E2E" }}
+                    style={{ borderColor: "#333744" }}
                   >
                     <td className="px-4 py-3">
                       <div className="font-medium text-white">{p.nom}</div>

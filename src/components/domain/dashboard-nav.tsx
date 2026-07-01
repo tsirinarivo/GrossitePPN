@@ -89,15 +89,15 @@ export function DashboardNav({ role, collapsed, onToggle, onClose }: Props) {
       transition={{ duration: 0.2, ease: "easeInOut" }}
       className="h-screen flex flex-col shrink-0 overflow-hidden relative"
       style={{
-        backgroundColor: "#111118",
-        borderRight: "1px solid #1E1E2E",
+        backgroundColor: "#232630",
+        borderRight: "1px solid #333744",
         minWidth: collapsed ? 72 : 240,
       }}
     >
       {/* ── Logo ── */}
       <div
         className="h-14 flex items-center px-4 shrink-0"
-        style={{ borderBottom: "1px solid #1E1E2E" }}
+        style={{ borderBottom: "1px solid #333744" }}
       >
         <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
           {/* Logo icon avec gradient */}
@@ -187,9 +187,9 @@ export function DashboardNav({ role, collapsed, onToggle, onClose }: Props) {
               {collapsed && (
                 <div className="pointer-events-none absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity shadow-xl"
                   style={{
-                    backgroundColor: "#050508",
+                    backgroundColor: "#14161B",
                     color: "white",
-                    border: "1px solid #1E1E2E",
+                    border: "1px solid #333744",
                   }}
                 >
                   {item.label}
@@ -201,7 +201,7 @@ export function DashboardNav({ role, collapsed, onToggle, onClose }: Props) {
       </div>
 
       {/* ── Toggle collapse (desktop) ── */}
-      <div className="hidden lg:flex justify-center py-2 px-2" style={{ borderTop: "1px solid #1E1E2E" }}>
+      <div className="hidden lg:flex justify-center py-2 px-2" style={{ borderTop: "1px solid #333744" }}>
         <button
           onClick={onToggle}
           className="flex items-center justify-center w-8 h-8 rounded-lg text-brand-muted hover:text-white hover:bg-white/5 transition-colors"
@@ -228,7 +228,7 @@ export function DashboardNav({ role, collapsed, onToggle, onClose }: Props) {
       </AnimatePresence>
 
       {/* ── Connexion ── */}
-      <div className="px-3 py-2" style={{ borderTop: "1px solid #1E1E2E" }}>
+      <div className="px-3 py-2" style={{ borderTop: "1px solid #333744" }}>
         <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium">
           {connexion === "offline" ? (
             <WifiOff className="w-4 h-4 shrink-0 text-red-400" />
@@ -257,7 +257,7 @@ export function DashboardNav({ role, collapsed, onToggle, onClose }: Props) {
       </div>
 
       {/* ── Profil ── */}
-      <div className="p-3" style={{ borderTop: "1px solid #1E1E2E" }}>
+      <div className="p-3" style={{ borderTop: "1px solid #333744" }}>
         <div className="flex items-center gap-2.5 min-w-0">
           {/* Avatar */}
           <div
@@ -296,7 +296,7 @@ export function DashboardNav({ role, collapsed, onToggle, onClose }: Props) {
             <LogOut className="w-4 h-4" />
             {collapsed && (
               <div className="pointer-events-none absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap z-50 opacity-0 group-hover:opacity-100 transition-opacity shadow-xl"
-                style={{ backgroundColor: "#050508", color: "white", border: "1px solid #1E1E2E" }}
+                style={{ backgroundColor: "#14161B", color: "white", border: "1px solid #333744" }}
               >
                 Se déconnecter
               </div>

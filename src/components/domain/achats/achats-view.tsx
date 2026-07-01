@@ -633,9 +633,9 @@ export function AchatsView() {
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
               className="fixed right-0 inset-y-0 z-50 w-full max-w-md flex flex-col shadow-2xl overflow-hidden"
-              style={{ backgroundColor: "#111118", borderLeft: "1px solid #1E1E2E" }}
+              style={{ backgroundColor: "#232630", borderLeft: "1px solid #333744" }}
             >
-              <div className="flex items-center gap-3 p-4 border-b shrink-0" style={{ borderColor: "#1E1E2E" }}>
+              <div className="flex items-center gap-3 p-4 border-b shrink-0" style={{ borderColor: "#333744" }}>
                 <div className="w-9 h-9 rounded-full bg-[--primary]/10 text-[--primary] flex items-center justify-center font-bold text-sm shrink-0">
                   {fournisseurDetail.nomCourt?.slice(0, 2).toUpperCase() ?? fournisseurDetail.nom.slice(0, 2).toUpperCase()}
                 </div>
@@ -661,7 +661,7 @@ export function AchatsView() {
                         { label: "Délai moyen", value: fournisseurStats.delaiMoyen !== null ? `${fournisseurStats.delaiMoyen}j` : "—", color: "#F59E0B" },
                         { label: "Dette en cours", value: formatMGA(fournisseurDetail.detteEnCours, { compact: true }), color: fournisseurDetail.detteEnCours > 0 ? "#EF4444" : "#22C55E" },
                       ].map((k) => (
-                        <div key={k.label} className="rounded-xl p-3" style={{ backgroundColor: "#0d0d14", border: "1px solid #1E1E2E" }}>
+                        <div key={k.label} className="rounded-xl p-3" style={{ backgroundColor: "#1B1D24", border: "1px solid #333744" }}>
                           <p className="text-[10px] mb-1" style={{ color: "#666" }}>{k.label}</p>
                           <p className="text-lg font-bold" style={{ color: k.color }}>{k.value}</p>
                         </div>
@@ -670,7 +670,7 @@ export function AchatsView() {
 
                     {/* Coordonnées */}
                     {(fournisseurDetail.contact || fournisseurDetail.telephone || fournisseurDetail.email) && (
-                      <div className="rounded-xl p-3 space-y-1 text-sm" style={{ backgroundColor: "#0d0d14", border: "1px solid #1E1E2E" }}>
+                      <div className="rounded-xl p-3 space-y-1 text-sm" style={{ backgroundColor: "#1B1D24", border: "1px solid #333744" }}>
                         {fournisseurDetail.contact && <p style={{ color: "#888" }}><span style={{ color: "#555" }}>Contact : </span>{fournisseurDetail.contact}</p>}
                         {fournisseurDetail.telephone && <p style={{ color: "#888" }}><span style={{ color: "#555" }}>Tél : </span>{fournisseurDetail.telephone}</p>}
                         {fournisseurDetail.email && <p style={{ color: "#888" }}><span style={{ color: "#555" }}>Email : </span>{fournisseurDetail.email}</p>}
@@ -688,7 +688,7 @@ export function AchatsView() {
                           {fournisseurStats.bons.slice(0, 8).map((b) => {
                             const conf = STATUT_CONF[b.statut as Statut];
                             return (
-                              <div key={b.id} className="flex items-center gap-3 rounded-lg p-2.5" style={{ backgroundColor: "#0d0d14", border: "1px solid #1E1E2E" }}>
+                              <div key={b.id} className="flex items-center gap-3 rounded-lg p-2.5" style={{ backgroundColor: "#1B1D24", border: "1px solid #333744" }}>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium text-white font-mono">{b.numero}</p>
                                   {b.dateCommande && (
@@ -700,7 +700,7 @@ export function AchatsView() {
                                 </div>
                                 <span className="text-xs font-mono text-white">{formatMGA(b.totalTTC, { compact: true })}</span>
                                 {conf && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#1E1E2E", color: "#888" }}>
+                                  <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: "#333744", color: "#888" }}>
                                     {conf.label}
                                   </span>
                                 )}

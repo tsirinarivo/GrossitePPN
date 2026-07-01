@@ -236,8 +236,8 @@ export function BilanView() {
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: "#1E1E2E",
-                        border: "1px solid #2E2E3E",
+                        backgroundColor: "#333744",
+                        border: "1px solid #414553",
                         borderRadius: 8,
                         fontSize: 11,
                       }}

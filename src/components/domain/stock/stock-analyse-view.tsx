@@ -29,7 +29,7 @@ type Filtre = "tous" | "alerte" | "reappro" | "rupture";
 
 function KpiCard({ label, value, sub, icon: Icon, color }: { label: string; value: string; sub?: string; icon: React.ElementType; color: string }) {
   return (
-    <div className="rounded-xl border p-4 flex gap-3 items-start" style={{ backgroundColor: "#111118", borderColor: "#1E1E2E" }}>
+    <div className="rounded-xl border p-4 flex gap-3 items-start" style={{ backgroundColor: "#232630", borderColor: "#333744" }}>
       <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: color + "20" }}>
         <Icon className="w-4 h-4" style={{ color }} />
       </div>
@@ -48,7 +48,7 @@ function JoursBar({ jours }: { jours: number | null }) {
   const width = Math.min(100, (jours / 30) * 100);
   return (
     <div className="flex items-center gap-2">
-      <div className="w-16 h-1.5 rounded-full" style={{ backgroundColor: "#1E1E2E" }}>
+      <div className="w-16 h-1.5 rounded-full" style={{ backgroundColor: "#333744" }}>
         <div className="h-full rounded-full" style={{ width: `${width}%`, backgroundColor: color }} />
       </div>
       <span className="text-xs font-mono" style={{ color }}>{jours}j</span>
@@ -131,10 +131,10 @@ export function StockAnalyse() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={fetchData} className="p-2 rounded-lg border transition-colors" style={{ backgroundColor: "#111118", borderColor: "#1E1E2E", color: "#666" }}>
+          <button onClick={fetchData} className="p-2 rounded-lg border transition-colors" style={{ backgroundColor: "#232630", borderColor: "#333744", color: "#666" }}>
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
-          <button onClick={exportCSV} className="flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium" style={{ backgroundColor: "#111118", borderColor: "#1E1E2E", color: "#888" }}>
+          <button onClick={exportCSV} className="flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium" style={{ backgroundColor: "#232630", borderColor: "#333744", color: "#888" }}>
             <Download className="w-3.5 h-3.5" /> CSV
           </button>
         </div>
@@ -152,11 +152,11 @@ export function StockAnalyse() {
 
       {/* Valeur par dépôt */}
       {data && data.stockParDepot.length > 0 && (
-        <div className="rounded-xl border p-4" style={{ backgroundColor: "#111118", borderColor: "#1E1E2E" }}>
+        <div className="rounded-xl border p-4" style={{ backgroundColor: "#232630", borderColor: "#333744" }}>
           <p className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: "#555" }}>Valeur stock par dépôt</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {data.stockParDepot.map((d) => (
-              <div key={d.depotId} className="rounded-lg p-3" style={{ backgroundColor: "#0d0d14" }}>
+              <div key={d.depotId} className="rounded-lg p-3" style={{ backgroundColor: "#1B1D24" }}>
                 <p className="text-xs font-medium text-white truncate">{d.nomDepot}</p>
                 <p className="text-lg font-bold mt-1" style={{ color: "#3B82F6" }}>{formatMGA(d.valeur, { compact: true })}</p>
                 <p className="text-[10px] mt-0.5" style={{ color: "#555" }}>{d.qteTotale.toLocaleString("fr-FR")} unités</p>
@@ -167,21 +167,21 @@ export function StockAnalyse() {
       )}
 
       {/* Table */}
-      <div className="rounded-xl border overflow-hidden" style={{ backgroundColor: "#111118", borderColor: "#1E1E2E" }}>
+      <div className="rounded-xl border overflow-hidden" style={{ backgroundColor: "#232630", borderColor: "#333744" }}>
         {/* Toolbar */}
-        <div className="p-3 border-b flex gap-3 flex-wrap" style={{ borderColor: "#1E1E2E" }}>
+        <div className="p-3 border-b flex gap-3 flex-wrap" style={{ borderColor: "#333744" }}>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filtrer…"
             className="bg-transparent text-sm outline-none placeholder:text-[#555] text-white px-3 py-1.5 rounded-lg border w-44"
-            style={{ borderColor: "#1E1E2E" }}
+            style={{ borderColor: "#333744" }}
           />
-          <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: "#1E1E2E" }}>
+          <div className="flex rounded-lg border overflow-hidden" style={{ borderColor: "#333744" }}>
             {([["tous", "Tous"], ["alerte", "Alerte"], ["reappro", "Réappro"], ["rupture", "Rupture"]] as const).map(([k, label]) => (
               <button key={k} onClick={() => setFiltre(k)}
                 className="px-3 py-1.5 text-xs font-medium transition-colors"
-                style={{ backgroundColor: filtre === k ? "#FF4D00" : "#111118", color: filtre === k ? "#fff" : "#888" }}
+                style={{ backgroundColor: filtre === k ? "#FF4D00" : "#232630", color: filtre === k ? "#fff" : "#888" }}
               >{label}</button>
             ))}
           </div>
@@ -190,7 +190,7 @@ export function StockAnalyse() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-[10px] uppercase tracking-wider" style={{ color: "#555", backgroundColor: "#0d0d14" }}>
+              <tr className="text-[10px] uppercase tracking-wider" style={{ color: "#555", backgroundColor: "#1B1D24" }}>
                 <th className="px-4 py-2.5 text-left cursor-pointer" onClick={() => toggleSort("nom")}>
                   <span className="flex items-center gap-1">Produit <SortIcon k="nom" /></span>
                 </th>
@@ -220,7 +220,7 @@ export function StockAnalyse() {
                     animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.01 }}
                     className="border-t hover:bg-white/[0.02] transition-colors"
-                    style={{ borderColor: "#1E1E2E" }}
+                    style={{ borderColor: "#333744" }}
                   >
                     <td className="px-4 py-3">
                       <Link href={`/stock/produits/${p.produitId}`} className="hover:text-[#FF4D00] transition-colors">

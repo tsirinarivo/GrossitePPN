@@ -15,10 +15,10 @@
   /* Marque */
   --color-brand-orange:  #FF4D00;
   --color-brand-gold:    #FFB800;
-  --color-brand-darker:  #050508;
-  --color-brand-dark:    #0A0A0F;
-  --color-brand-card:    #111118;
-  --color-brand-border:  #1E1E2E;
+  --color-brand-darker:  #14161B;
+  --color-brand-dark:    #1B1D24;
+  --color-brand-card:    #232630;
+  --color-brand-border:  #333744;
   --color-brand-muted:   #6B7280;
 
   /* Sémantique — states */
@@ -36,7 +36,7 @@
 
   /* Dégradés */
   --background-image-gradient-brand: linear-gradient(135deg, #FF4D00 0%, #FFB800 100%);
-  --background-image-gradient-dark:  linear-gradient(180deg, #111118 0%, #0A0A0F 100%);
+  --background-image-gradient-dark:  linear-gradient(180deg, #232630 0%, #1B1D24 100%);
   --background-image-glass:          linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
 
   /* Animations */
@@ -80,16 +80,16 @@
   }
 
   body {
-    background-color: #0A0A0F;
+    background-color: #1B1D24;
     color: #FFFFFF;
     font-family: var(--font-sans);
   }
 
   /* ── Scrollbar ── */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: #050508; }
+  ::-webkit-scrollbar-track { background: #14161B; }
   ::-webkit-scrollbar-thumb {
-    background: #1E1E2E;
+    background: #333744;
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover { background: #6B7280; }
@@ -102,9 +102,9 @@
 @layer base {
   :root {
     /* Backgrounds dashboard */
-    --background:        #0A0A0F;
-    --background-subtle: #111118;
-    --background-muted:  #1E1E2E;
+    --background:        #1B1D24;
+    --background-subtle: #232630;
+    --background-muted:  #333744;
 
     /* Foregrounds */
     --foreground:        #FFFFFF;
@@ -112,14 +112,14 @@
     --foreground-subtle: #6B7280;
 
     /* Cards */
-    --card:              #111118;
+    --card:              #232630;
     --card-foreground:   #FFFFFF;
-    --card-border:       #1E1E2E;
+    --card-border:       #333744;
 
     /* Borders */
-    --border:            #1E1E2E;
-    --border-strong:     #2D2D3F;
-    --input:             #050508;
+    --border:            #333744;
+    --border-strong:     #414553;
+    --input:             #14161B;
 
     /* Primary = brand orange */
     --primary:           #FF4D00;
@@ -132,11 +132,11 @@
     --secondary-foreground: #000000;
 
     /* Accent */
-    --accent:            #1E1E2E;
+    --accent:            #333744;
     --accent-foreground: #FFFFFF;
 
     /* Muted */
-    --muted:             #1E1E2E;
+    --muted:             #333744;
     --muted-foreground:  #6B7280;
 
     /* Sémantique */
@@ -157,20 +157,20 @@
     --shadow-xl:  0 20px 60px rgba(0,0,0,0.7);
 
     /* Sidebar */
-    --sidebar:          #111118;
-    --sidebar-deeper:   #050508;
+    --sidebar:          #232630;
+    --sidebar-deeper:   #14161B;
     --sidebar-fg:       #FFFFFF;
     --sidebar-muted:    #6B7280;
-    --sidebar-border:   #1E1E2E;
+    --sidebar-border:   #333744;
     --sidebar-accent:   rgba(255,255,255,0.05);
     --sidebar-accent-fg:#FFFFFF;
     --sidebar-primary:  #FF4D00;
 
     /* POS — dark unifié avec le design system */
-    --pos-bg:           #050508;
-    --pos-surface:      #111118;
-    --pos-surface-hover:#1E1E2E;
-    --pos-border:       #1E1E2E;
+    --pos-bg:           #14161B;
+    --pos-surface:      #232630;
+    --pos-surface-hover:#333744;
+    --pos-border:       #333744;
     --pos-text:         #FFFFFF;
     --pos-text-muted:   #6B7280;
     --pos-primary:      #FF4D00;
@@ -209,13 +209,13 @@
   /* Glass card */
   .glass-card {
     background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
-    border: 1px solid #1E1E2E;
+    border: 1px solid #333744;
     border-radius: 1rem;
     backdrop-filter: blur(10px);
   }
   .glass-card-interactive {
     background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
-    border: 1px solid #1E1E2E;
+    border: 1px solid #333744;
     border-radius: 1rem;
     backdrop-filter: blur(10px);
     transition: all 300ms ease;
@@ -253,8 +253,8 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    background: #111118;
-    border: 1px solid #1E1E2E;
+    background: #232630;
+    border: 1px solid #333744;
     border-radius: 0.75rem;
     padding: 0.5rem 1rem;
     font-weight: 600;
@@ -271,8 +271,8 @@
   /* Input */
   .input-field {
     width: 100%;
-    background: #050508;
-    border: 1px solid #1E1E2E;
+    background: #14161B;
+    border: 1px solid #333744;
     border-radius: 0.75rem;
     padding: 0.625rem 0.75rem;
     font-size: 0.875rem;
@@ -288,7 +288,7 @@
 
   /* Skeleton */
   .skeleton {
-    background: linear-gradient(90deg, #111118 25%, #1a1a25 50%, #111118 75%);
+    background: linear-gradient(90deg, #232630 25%, #2C2F3A 50%, #232630 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s ease infinite;
     border-radius: 0.5rem;
@@ -340,7 +340,7 @@
   /* KPI card */
   .kpi-card {
     background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
-    border: 1px solid #1E1E2E;
+    border: 1px solid #333744;
     border-radius: 1rem;
     padding: 1.5rem;
     overflow: hidden;

@@ -18,7 +18,7 @@ export function DashboardShell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: "#0A0A0F" }}>
+    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: "#1B1D24" }}>
 
       {/* ── Overlay mobile ── */}
       <AnimatePresence>
@@ -65,7 +65,7 @@ export function DashboardShell({
       {/* ── Topbar mobile ── */}
       <div
         className="fixed top-0 left-0 right-0 z-30 lg:hidden h-14 flex items-center gap-3 px-4"
-        style={{ backgroundColor: "#111118", borderBottom: "1px solid #1E1E2E" }}
+        style={{ backgroundColor: "#232630", borderBottom: "1px solid #333744" }}
       >
         <button
           onClick={() => setMobileNavOpen(true)}

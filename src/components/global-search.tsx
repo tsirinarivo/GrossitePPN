@@ -107,10 +107,10 @@ export function GlobalSearch() {
           {/* Panel */}
           <div
             className="relative w-full max-w-xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col"
-            style={{ backgroundColor: "#0d0d14", borderColor: "#1E1E2E", maxHeight: "60vh" }}
+            style={{ backgroundColor: "#1B1D24", borderColor: "#333744", maxHeight: "60vh" }}
           >
             {/* Input */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "#1E1E2E" }}>
+            <div className="flex items-center gap-3 px-4 py-3 border-b" style={{ borderColor: "#333744" }}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin shrink-0" style={{ color: "#FF4D00" }} /> :
                          <Search className="w-4 h-4 shrink-0" style={{ color: "#666" }} />}
               <input
@@ -191,7 +191,7 @@ export function GlobalSearch() {
             </div>
 
             {/* Footer */}
-            <div className="px-4 py-2 border-t flex items-center gap-4 text-[10px]" style={{ borderColor: "#1E1E2E", color: "#555" }}>
+            <div className="px-4 py-2 border-t flex items-center gap-4 text-[10px]" style={{ borderColor: "#333744", color: "#555" }}>
               <span><kbd className="font-mono">↑↓</kbd> Naviguer</span>
               <span><kbd className="font-mono">↵</kbd> Ouvrir</span>
               <span><kbd className="font-mono">Esc</kbd> Fermer</span>
