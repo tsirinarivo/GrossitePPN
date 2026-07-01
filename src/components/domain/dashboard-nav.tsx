@@ -17,7 +17,15 @@ import { toast } from "sonner";
 import { canAccess, ROLE_LABELS, type AppRole } from "@/lib/permissions";
 import { useEffect, useState } from "react";
 
-const ALL_NAV_ITEMS = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  color: string;
+  newTab?: boolean;
+};
+
+const ALL_NAV_ITEMS: NavItem[] = [
   { href: "/pos/agent",  label: "Point de vente",   icon: ShoppingCart, color: "#FF4D00" },
   { href: "/pos/caisse", label: "Caisse",            icon: Receipt,      color: "#8B5CF6" },
   { href: "/historique", label: "Historique",        icon: History,      color: "#6B7280" },
@@ -30,7 +38,7 @@ const ALL_NAV_ITEMS = [
   { href: "/tournees",   label: "Tournées",          icon: Route,        color: "#3B82F6" },
   { href: "/achats",     label: "Achats",            icon: ShoppingBag,  color: "#6B7280" },
   { href: "/rapports",   label: "Rapports",          icon: BarChart3,    color: "#6B7280" },
-  { href: "/shop",       label: "Boutique",          icon: Store,        color: "#6B7280" },
+  { href: "/shop",       label: "Boutique",          icon: Store,        color: "#6B7280", newTab: true },
   { href: "/admin",      label: "Admin",             icon: Settings,     color: "#6B7280" },
 ];
 
@@ -146,6 +154,8 @@ export function DashboardNav({ role, collapsed, onToggle, onClose }: Props) {
             <Link
               key={item.href}
               href={item.href}
+              target={item.newTab ? "_blank" : undefined}
+              rel={item.newTab ? "noopener noreferrer" : undefined}
               className={cn(
                 "sidebar-item relative group",
                 isActive && "active"
