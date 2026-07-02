@@ -10,3 +10,4 @@ export * from "./xprint";
 export * from "./finances";
 export * from "./retours";
 export * from "./audit";
+export * from "./tenants";
