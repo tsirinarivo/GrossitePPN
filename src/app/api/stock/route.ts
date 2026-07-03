@@ -4,12 +4,14 @@ import * as schema from "@/lib/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, scopeTenant, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = await getSessionTenantId();
 
   try {
     const { searchParams } = new URL(req.url);
@@ -35,11 +37,14 @@ export async function GET(req: NextRequest) {
       })
       .from(schema.produits)
       .leftJoin(schema.stocks, stockJoinCond)
-      .where(eq(schema.produits.actif, true))
+      .where(scopeTenant(schema.produits.tenantId, tid, eq(schema.produits.actif, true)))
       .groupBy(schema.produits.id);
 
     // Categories map
-    const categories = await db.select().from(schema.categories);
+    const categories = await db
+      .select()
+      .from(schema.categories)
+      .where(tenantFilter(schema.categories.tenantId, tid));
     const catMap = new Map(categories.map((c) => [c.id, c.nom]));
 
     // Today's movements (filtered by depot if provided)
@@ -56,7 +61,7 @@ export async function GET(req: NextRequest) {
         type: schema.mouvementsStock.type,
       })
       .from(schema.mouvementsStock)
-      .where(mvtWhere);
+      .where(and(tenantFilter(schema.mouvementsStock.tenantId, tid), mvtWhere));
 
     const mvtMap = new Map<string, { entrees: number; sorties: number }>();
     for (const m of mouvements) {

@@ -173,6 +173,7 @@ export async function POST(req: NextRequest) {
 
     await db.insert(schema.livraisons).values({
       id,
+      tenantId: (session.user as { tenantId?: string | null }).tenantId ?? null,
       tokenPublic,
       commandeId,
       tourneeId: tourneeId ?? null,

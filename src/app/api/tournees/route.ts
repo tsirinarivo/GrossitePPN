@@ -112,6 +112,7 @@ export async function POST(req: NextRequest) {
       .insert(schema.tournees)
       .values({
         id,
+        tenantId: (session.user as { tenantId?: string | null }).tenantId ?? null,
         date: dateObj,
         chauffeurId: chauffeurId ?? null,
         vehiculeId: vehiculeId ?? null,

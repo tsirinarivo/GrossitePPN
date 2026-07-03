@@ -4,11 +4,13 @@ import * as schema from "@/lib/db/schema";
 import { eq, sql, count, sum } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    const tid = await getSessionTenantId();
     const rows = await db
       .select({
         id: schema.fournisseurs.id,
@@ -34,6 +36,7 @@ export async function GET() {
         schema.bonsCommande,
         eq(schema.bonsCommande.fournisseurId, schema.fournisseurs.id)
       )
+      .where(tenantFilter(schema.fournisseurs.tenantId, tid))
       .groupBy(schema.fournisseurs.id)
       .orderBy(schema.fournisseurs.nom);
 
@@ -76,6 +79,7 @@ export async function POST(req: NextRequest) {
       .insert(schema.fournisseurs)
       .values({
         id,
+        tenantId: (session.user as { tenantId?: string | null }).tenantId ?? null,
         nom: nom.trim(),
         nomCourt: nomCourt ?? null,
         nif: nif ?? null,

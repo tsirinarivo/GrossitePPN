@@ -133,6 +133,7 @@ export async function POST(req: NextRequest) {
       .insert(schema.bonsCommande)
       .values({
         id: bcId,
+        tenantId: (session.user as { tenantId?: string | null }).tenantId ?? null,
         numero,
         fournisseurId,
         depotId: depotId ?? null,
