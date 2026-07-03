@@ -330,7 +330,7 @@ export function ClientsView() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelection(null)}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40"
             />
             <motion.aside
               initial={{ x: "100%" }}
@@ -539,7 +539,7 @@ function ClientFormDrawer({ editClient, onClose, onSuccess }: ClientFormDrawerPr
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40"
       />
       <motion.aside
         initial={{ x: "100%" }}

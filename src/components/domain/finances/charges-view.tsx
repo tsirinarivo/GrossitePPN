@@ -153,7 +153,7 @@ function ChargesDrawer({ moisActif, onClose, onSaved }: {
       exit={{ opacity: 0 }}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 
       {/* Drawer */}
       <motion.aside

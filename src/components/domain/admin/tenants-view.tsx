@@ -290,7 +290,7 @@ export function TenantsView() {
         {drawerOpen && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/50" onClick={() => setDrawerOpen(false)} />
+              className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm" onClick={() => setDrawerOpen(false)} />
             <motion.aside initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="fixed right-0 top-0 h-full z-50 w-full max-w-md bg-[--background] border-l border-[--border] flex flex-col shadow-2xl"

@@ -410,7 +410,7 @@ export function AchatsView() {
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => { setSelectionBC(null); }}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40"
             />
             <motion.aside
               initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
@@ -626,7 +626,7 @@ export function AchatsView() {
           <>
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/70 z-40 backdrop-blur-sm"
               onClick={() => setFournisseurDetail(null)}
             />
             <motion.aside
@@ -786,7 +786,7 @@ function NouveauBCModal({ fournisseurs, onClose, onCreated }: {
   return (
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose} className="fixed inset-0 bg-black/50 z-50" />
+        onClick={onClose} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" />
       <motion.div
         initial={{ opacity: 0, scale: 0.97, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -955,7 +955,7 @@ function FournisseurModal({ fournisseur, onClose, onSaved }: {
   return (
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose} className="fixed inset-0 bg-black/50 z-50" />
+        onClick={onClose} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" />
       <motion.div
         initial={{ opacity: 0, scale: 0.97, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1102,7 +1102,7 @@ function ReceptionModal({ bc, onClose, onSaved }: {
   return (
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onClose} className="fixed inset-0 bg-black/50 z-50" />
+        onClick={onClose} className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50" />
       <motion.div
         initial={{ opacity: 0, scale: 0.97, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}

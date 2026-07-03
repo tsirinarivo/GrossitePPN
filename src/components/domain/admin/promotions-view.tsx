@@ -377,7 +377,7 @@ export function PromotionsView() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/50"
+              className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
               onClick={() => setDrawerOpen(false)}
             />
             <motion.aside

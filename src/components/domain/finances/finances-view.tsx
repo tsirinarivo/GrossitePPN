@@ -121,7 +121,7 @@ function ChargeModal({ mois, charge, onSave, onClose }: {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-[--card] border border-[--border] rounded-2xl w-full max-w-md p-6 flex flex-col gap-4">
         <h3 className="font-bold text-base">{charge ? "Modifier la charge" : "Ajouter une charge"}</h3>
 
