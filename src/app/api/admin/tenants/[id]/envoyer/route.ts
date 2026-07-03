@@ -1,0 +1,73 @@
+import { NextRequest, NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { logAudit } from "@/lib/audit";
+import { buildTenantEmail } from "@/lib/tenant-email";
+import { sendMail, isMailConfigured } from "@/lib/mailer";
+
+export const dynamic = "force-dynamic";
+
+async function requireAdmin() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) return false;
+  const role = (session.user as { role?: string }).role ?? "agent";
+  return role === "admin";
+}
+
+/** Renvoie les informations d'accès d'un tenant à son contact par email. */
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!(await requireAdmin())) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const [tenant] = await db
+    .select()
+    .from(schema.tenants)
+    .where(eq(schema.tenants.id, id))
+    .limit(1);
+
+  if (!tenant) {
+    return NextResponse.json({ error: "Tenant introuvable" }, { status: 404 });
+  }
+
+  // Email destinataire : celui du tenant, ou un override transmis dans le body
+  const body = await req.json().catch(() => null);
+  const to = (body?.email as string | undefined)?.trim() || tenant.contactEmail;
+
+  if (!to) {
+    return NextResponse.json(
+      { error: "Aucun email de contact pour ce tenant" },
+      { status: 400 }
+    );
+  }
+  if (!isMailConfigured()) {
+    return NextResponse.json(
+      { sent: false, error: "SMTP non configuré sur le serveur (variables SMTP_*)" },
+      { status: 503 }
+    );
+  }
+
+  const content = buildTenantEmail(tenant);
+  const result = await sendMail({ to, ...content });
+
+  if (result.sent) {
+    await logAudit({
+      action: "tenant.envoi_infos",
+      entite: "tenant",
+      entiteId: id,
+      details: { to },
+    });
+    return NextResponse.json({ sent: true, to });
+  }
+  return NextResponse.json(
+    { sent: false, error: result.reason ?? "Échec de l'envoi" },
+    { status: 502 }
+  );
+}

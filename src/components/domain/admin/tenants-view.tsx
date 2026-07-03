@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building, Plus, X, Check, Trash2, Loader2, Search, Info,
-  Pause, Play, Pencil, Users, Warehouse, Mail, Phone, CalendarClock,
+  Pause, Play, Pencil, Users, Warehouse, Mail, Phone, CalendarClock, Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -141,7 +141,18 @@ export function TenantsView() {
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        toast.success(editId ? "Tenant mis à jour" : "Tenant créé");
+        const data = await res.json().catch(() => ({}));
+        if (editId) {
+          toast.success("Tenant mis à jour");
+        } else if (data.email?.sent) {
+          toast.success("Tenant créé", { description: `Infos envoyées à ${data.tenant?.contactEmail}` });
+        } else if (data.tenant?.contactEmail) {
+          toast.warning("Tenant créé — email non envoyé", {
+            description: data.email?.reason ?? "SMTP non configuré",
+          });
+        } else {
+          toast.success("Tenant créé");
+        }
         setDrawerOpen(false);
         await load();
       } else {
@@ -174,6 +185,25 @@ export function TenantsView() {
       setDeleteId(null);
       toast.success("Tenant supprimé");
     } else toast.error("Suppression impossible");
+  }
+
+  async function renvoyer(t: Tenant) {
+    if (!t.contactEmail) {
+      toast.error("Aucun email de contact pour ce tenant");
+      return;
+    }
+    setBusy(t.id);
+    try {
+      const res = await fetch(`/api/admin/tenants/${t.id}/envoyer`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.sent) {
+        toast.success(`Infos renvoyées à ${data.to}`);
+      } else {
+        toast.error(data.error ?? "Envoi impossible");
+      }
+    } finally {
+      setBusy(null);
+    }
   }
 
   const selectCls = "w-full h-10 px-3 text-sm rounded-lg border border-[--border] bg-[--background] text-[--foreground] focus:outline-none focus:ring-2 focus:ring-[--primary]/40";
@@ -263,6 +293,10 @@ export function TenantsView() {
                           <Play className="w-3.5 h-3.5" /> Activer
                         </Button>
                       )}
+                      <Button variant="ghost" size="sm" className="h-8 text-xs" disabled={busy === t.id || !t.contactEmail}
+                        onClick={() => renvoyer(t)} title={t.contactEmail ? `Renvoyer les infos à ${t.contactEmail}` : "Aucun email de contact"}>
+                        <Send className="w-3.5 h-3.5" /> Renvoyer
+                      </Button>
                       <Button variant="ghost" size="icon-sm" onClick={() => openEdit(t)}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>

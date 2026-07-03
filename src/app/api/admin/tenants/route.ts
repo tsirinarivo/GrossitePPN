@@ -101,7 +101,24 @@ export async function POST(req: NextRequest) {
       details: { nom: body.nom.trim(), slug, plan, statut },
     });
 
-    return NextResponse.json({ tenant }, { status: 201 });
+    // Envoi automatique des informations d'accès au contact (si email + SMTP)
+    let email: { sent: boolean; reason?: string } = { sent: false, reason: "Aucun email de contact" };
+    if (tenant?.contactEmail) {
+      const { buildTenantEmail } = await import("@/lib/tenant-email");
+      const { sendMail } = await import("@/lib/mailer");
+      const content = buildTenantEmail(tenant);
+      email = await sendMail({ to: tenant.contactEmail, ...content });
+      if (email.sent) {
+        await logAudit({
+          action: "tenant.envoi_infos",
+          entite: "tenant",
+          entiteId: id,
+          details: { to: tenant.contactEmail },
+        });
+      }
+    }
+
+    return NextResponse.json({ tenant, email }, { status: 201 });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (/unique|duplicate/i.test(msg)) {
