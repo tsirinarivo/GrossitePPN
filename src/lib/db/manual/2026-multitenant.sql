@@ -8,6 +8,11 @@
 DO $$ BEGIN CREATE TYPE "tenant_statut" AS ENUM ('essai','actif','suspendu','resilie'); EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN CREATE TYPE "tenant_plan"   AS ENUM ('essai','standard','pro','entreprise'); EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN CREATE TYPE "mode_remboursement" AS ENUM ('avoir_credit','remboursement_especes','remboursement_virement','remboursement_mobile'); EXCEPTION WHEN duplicate_object THEN null; END $$;
+-- Si le type existait déjà avec d'autres valeurs (drift historique), on garantit les valeurs attendues :
+ALTER TYPE "mode_remboursement" ADD VALUE IF NOT EXISTS 'avoir_credit';
+ALTER TYPE "mode_remboursement" ADD VALUE IF NOT EXISTS 'remboursement_especes';
+ALTER TYPE "mode_remboursement" ADD VALUE IF NOT EXISTS 'remboursement_virement';
+ALTER TYPE "mode_remboursement" ADD VALUE IF NOT EXISTS 'remboursement_mobile';
 
 -- ── 2. Table tenants (idempotent) ───────────────────────────────────────
 CREATE TABLE IF NOT EXISTS "tenants" (
