@@ -5,12 +5,15 @@ import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, scopeTenant } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 /** Returns products in ProduitPOS shape for the POS agent */
 export async function GET() {
   try {
+    const tid = await getSessionTenantId();
+
     const produits = await db
       .select({
         id: schema.produits.id,
@@ -23,7 +26,7 @@ export async function GET() {
         photos: schema.produits.photos,
       })
       .from(schema.produits)
-      .where(eq(schema.produits.actif, true));
+      .where(scopeTenant(schema.produits.tenantId, tid, eq(schema.produits.actif, true)));
 
     const categories = await db
       .select({
@@ -34,7 +37,7 @@ export async function GET() {
         icone: schema.categories.icone,
       })
       .from(schema.categories)
-      .where(eq(schema.categories.actif, true));
+      .where(scopeTenant(schema.categories.tenantId, tid, eq(schema.categories.actif, true)));
 
     const unites = await db
       .select()
@@ -47,6 +50,7 @@ export async function GET() {
         total: sql<number>`SUM(${schema.stocks.quantiteBase})`.as("total"),
       })
       .from(schema.stocks)
+      .where(scopeTenant(schema.stocks.tenantId, tid))
       .groupBy(schema.stocks.produitId);
 
     const stockMap = new Map(stocks.map((s) => [s.produitId, s.total ?? 0]));
@@ -131,9 +135,11 @@ export async function POST(req: NextRequest) {
     const d = parsed.data;
     const produitId = crypto.randomUUID();
     const now = new Date();
+    const tid = await getSessionTenantId();
 
     await db.insert(schema.produits).values({
       id: produitId,
+      tenantId: tid,
       code: d.code,
       nom: d.nom,
       nomMG: d.nomMG ?? null,

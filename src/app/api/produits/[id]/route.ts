@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, scopeTenant } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ interface RouteContext {
 export async function GET(_req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = await params;
+    const tid = await getSessionTenantId();
 
     const rows = await db
       .select({
@@ -40,7 +42,7 @@ export async function GET(_req: NextRequest, { params }: RouteContext) {
       })
       .from(schema.produits)
       .leftJoin(schema.categories, eq(schema.produits.categorieId, schema.categories.id))
-      .where(eq(schema.produits.id, id))
+      .where(scopeTenant(schema.produits.tenantId, tid, eq(schema.produits.id, id)))
       .limit(1);
 
     if (rows.length === 0) {
@@ -89,6 +91,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
 
   try {
     const { id } = await params;
+    const tid = (session.user as { tenantId?: string | null }).tenantId ?? null;
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
       return NextResponse.json({ error: "Corps invalide" }, { status: 400 });
@@ -106,7 +109,7 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
     const rows = await db
       .update(schema.produits)
       .set(updates as Partial<typeof schema.produits.$inferInsert>)
-      .where(eq(schema.produits.id, id))
+      .where(scopeTenant(schema.produits.tenantId, tid, eq(schema.produits.id, id)))
       .returning();
 
     if (rows.length === 0) {

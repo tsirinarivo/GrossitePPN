@@ -12,12 +12,13 @@ type Role = (typeof schema.roleEnum.enumValues)[number];
 
 async function requireAdmin() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return false;
-  const user = await db.select({ role: schema.users.role })
+  if (!session?.user) return null;
+  const user = await db.select({ role: schema.users.role, tenantId: schema.users.tenantId })
     .from(schema.users)
     .where(eq(schema.users.id, session.user.id))
     .limit(1);
-  return user[0]?.role === "admin";
+  if (user[0]?.role !== "admin") return null;
+  return { id: session.user.id, tenantId: user[0].tenantId ?? null };
 }
 
 export async function GET() {
@@ -43,7 +44,8 @@ const createSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  if (!await requireAdmin()) {
+  const admin = await requireAdmin();
+  if (!admin) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const body = await req.json().catch(() => null);
@@ -63,11 +65,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Erreur création du compte" }, { status: 500 });
     }
 
-    if (role !== "agent") {
-      await db.update(schema.users)
-        .set({ role: role as Role })
-        .where(eq(schema.users.id, userId));
-    }
+    // Nouveau compte : rôle + rattachement au tenant du créateur
+    await db.update(schema.users)
+      .set({ role: role as Role, tenantId: admin.tenantId })
+      .where(eq(schema.users.id, userId));
 
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { and, eq, sql } from "drizzle-orm";
+import { getSessionTenantId, scopeTenant } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -49,11 +50,12 @@ function emojiFor(nom: string, catNom: string): string {
 
 export async function GET() {
   try {
+    const tid = await getSessionTenantId();
     // On privilégie les produits explicitement visibles en boutique ;
     // s'il n'y en a aucun, on retombe sur tous les produits actifs
     // (pour que la vitrine ne soit jamais vide quand la DB a des produits).
-    const rowsVisibles = await selectProduits(true);
-    const rows = rowsVisibles.length > 0 ? rowsVisibles : await selectProduits(false);
+    const rowsVisibles = await selectProduits(true, tid);
+    const rows = rowsVisibles.length > 0 ? rowsVisibles : await selectProduits(false, tid);
 
     if (rows.length === 0) {
       // DB sans produit → la boutique utilisera son jeu de démonstration.
@@ -106,10 +108,11 @@ export async function GET() {
   }
 }
 
-function selectProduits(visiblesSeulement: boolean) {
-  const cond = visiblesSeulement
+function selectProduits(visiblesSeulement: boolean, tid: string | null) {
+  const base = visiblesSeulement
     ? and(eq(schema.produits.actif, true), eq(schema.produits.visibleEcommerce, true))
     : eq(schema.produits.actif, true);
+  const cond = scopeTenant(schema.produits.tenantId, tid, base);
   return db
     .select({
       id: schema.produits.id,
