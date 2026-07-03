@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, and, gte, sql, desc, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = await getSessionTenantId();
 
   const url = new URL(req.url);
   const seuil = Math.max(1, Math.min(60, Number(url.searchParams.get("seuil") ?? "7")));
@@ -84,6 +86,7 @@ export async function GET(req: NextRequest) {
       .from(schema.produits)
       .where(
         and(
+          tenantFilter(schema.produits.tenantId, tid),
           inArray(schema.produits.id, produitIds),
           eq(schema.produits.actif, true)
         )

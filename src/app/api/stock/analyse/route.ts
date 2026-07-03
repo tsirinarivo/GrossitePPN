@@ -4,12 +4,14 @@ import * as schema from "@/lib/db/schema";
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = await getSessionTenantId();
 
   try {
     // Stock total par produit (somme tous dépôts)
@@ -46,7 +48,7 @@ export async function GET(_req: NextRequest) {
             seuilAlerte: schema.produits.seuilAlerte,
             prixAchatMoyenPondere: schema.produits.prixAchatMoyenPondere,
             categorieId: schema.produits.categorieId,
-          }).from(schema.produits).where(inArray(schema.produits.id, produitIds))
+          }).from(schema.produits).where(and(tenantFilter(schema.produits.tenantId, tid), inArray(schema.produits.id, produitIds)))
         : [],
       db.select({ id: schema.categories.id, nom: schema.categories.nom }).from(schema.categories),
     ]);

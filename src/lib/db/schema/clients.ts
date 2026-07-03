@@ -7,6 +7,7 @@ import {
   real,
   pgEnum,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { users } from "./auth";
 
@@ -28,7 +29,7 @@ export const clients = pgTable(
   {
     id: text("id").primaryKey(),
     tenantId: text("tenant_id"),
-    code: text("code").notNull().unique(),
+    code: text("code").notNull(),
     raisonSociale: text("raison_sociale").notNull(),
     nif: text("nif"),
     stat: text("stat"),
@@ -71,6 +72,8 @@ export const clients = pgTable(
   (t) => [
     index("clients_agent_idx").on(t.agentId),
     index("clients_zone_idx").on(t.zoneTournee),
+    // Code unique PAR tenant
+    uniqueIndex("clients_tenant_code_uidx").on(t.tenantId, t.code),
   ]
 );
 

@@ -47,7 +47,7 @@ export const produits = pgTable(
   {
     id: text("id").primaryKey(),
     tenantId: text("tenant_id"),
-    code: text("code").notNull().unique(),
+    code: text("code").notNull(),
     nom: text("nom").notNull(),
     nomMG: text("nom_mg"),
     description: text("description"),
@@ -88,7 +88,11 @@ export const produits = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (t) => [index("produits_categorie_idx").on(t.categorieId)]
+  (t) => [
+    index("produits_categorie_idx").on(t.categorieId),
+    // Code unique PAR tenant (permet à chaque tenant de réutiliser ses codes)
+    uniqueIndex("produits_tenant_code_uidx").on(t.tenantId, t.code),
+  ]
 );
 
 /** Unités de vente — une par conditionnement (kg, sac 50kg, carton de 12…) */
