@@ -18,7 +18,10 @@ const PLAN_LABEL: Record<string, string> = {
 };
 
 /** Construit le sujet + corps (HTML & texte) de l'email d'accès d'un tenant. */
-export function buildTenantEmail(t: TenantEmailData) {
+export function buildTenantEmail(
+  t: TenantEmailData,
+  creds?: { email: string; password: string } | null
+) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://grossiste.dago-it.com";
   const plan = PLAN_LABEL[t.plan] ?? t.plan;
   const finEssai = t.finEssaiAt
@@ -51,11 +54,25 @@ export function buildTenantEmail(t: TenantEmailData) {
             ${finEssai ? row("Fin d'essai", e(finEssai)) : ""}
           </tbody>
         </table>
+        ${
+          creds
+            ? `<div style="margin:20px 0;padding:16px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;">
+                 <div style="font-size:13px;font-weight:700;color:#9a3412;margin-bottom:10px;">🔑 Vos identifiants de connexion</div>
+                 <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                   <tbody>
+                     <tr><td style="padding:4px 0;color:#8a8f99;width:110px;">Email</td><td style="padding:4px 0;font-weight:600;">${e(creds.email)}</td></tr>
+                     <tr><td style="padding:4px 0;color:#8a8f99;">Mot de passe</td><td style="padding:4px 0;"><code style="font-family:monospace;background:#fff;border:1px solid #fed7aa;padding:3px 8px;border-radius:4px;font-weight:700;">${e(creds.password)}</code></td></tr>
+                   </tbody>
+                 </table>
+                 <div style="font-size:11px;color:#9a3412;margin-top:8px;">Par sécurité, changez ce mot de passe après votre première connexion.</div>
+               </div>`
+            : ""
+        }
         <div style="margin:24px 0 8px;">
           <a href="${e(appUrl)}" style="display:inline-block;background:#FF4D00;color:#fff;text-decoration:none;font-weight:600;padding:12px 22px;border-radius:10px;font-size:14px;">Accéder à la plateforme</a>
         </div>
         <p style="font-size:12px;color:#8a8f99;line-height:1.6;margin:20px 0 0;">
-          Un administrateur vous communiquera vos identifiants de connexion personnels.
+          ${creds ? "Conservez ces identifiants en lieu sûr." : "Un administrateur vous communiquera vos identifiants de connexion personnels."}
           Pour toute question, répondez simplement à cet email.
         </p>
       </div>
@@ -76,8 +93,13 @@ export function buildTenantEmail(t: TenantEmailData) {
     `Quotas        : ${t.maxUtilisateurs} utilisateurs, ${t.maxDepots} dépôt(s)`,
     finEssai ? `Fin d'essai   : ${finEssai}` : ``,
     ``,
+    creds ? `--- Identifiants de connexion ---` : ``,
+    creds ? `Email         : ${creds.email}` : ``,
+    creds ? `Mot de passe  : ${creds.password}` : ``,
+    creds ? `(à changer après la première connexion)` : ``,
+    ``,
     `Accédez à la plateforme : ${appUrl}`,
-    `Un administrateur vous communiquera vos identifiants de connexion.`,
+    creds ? `` : `Un administrateur vous communiquera vos identifiants de connexion.`,
     ``,
     `GrossistePPN — Madagascar`,
   ].filter((l) => l !== null).join("\n");

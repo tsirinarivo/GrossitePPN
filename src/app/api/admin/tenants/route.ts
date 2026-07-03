@@ -101,19 +101,23 @@ export async function POST(req: NextRequest) {
       details: { nom: body.nom.trim(), slug, plan, statut },
     });
 
-    // Envoi automatique des informations d'accès au contact (si email + SMTP)
+    // Création du compte administrateur du tenant + envoi des accès (si email + SMTP)
     let email: { sent: boolean; reason?: string } = { sent: false, reason: "Aucun email de contact" };
     if (tenant?.contactEmail) {
+      const { ensureTenantAdmin } = await import("@/lib/tenant-account");
+      const admin = await ensureTenantAdmin(tenant);
+      const creds = admin?.password ? { email: admin.email, password: admin.password } : null;
+
       const { buildTenantEmail } = await import("@/lib/tenant-email");
       const { sendMail } = await import("@/lib/mailer");
-      const content = buildTenantEmail(tenant);
+      const content = buildTenantEmail(tenant, creds);
       email = await sendMail({ to: tenant.contactEmail, ...content });
       if (email.sent) {
         await logAudit({
-          action: "tenant.envoi_infos",
+          action: creds ? "tenant.envoi_identifiants" : "tenant.envoi_infos",
           entite: "tenant",
           entiteId: id,
-          details: { to: tenant.contactEmail },
+          details: { to: tenant.contactEmail, compteCree: !!creds },
         });
       }
     }

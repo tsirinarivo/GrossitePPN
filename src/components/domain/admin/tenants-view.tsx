@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building, Plus, X, Check, Trash2, Loader2, Search, Info,
-  Pause, Play, Pencil, Users, Warehouse, Mail, Phone, CalendarClock, Send,
+  Pause, Play, Pencil, Users, Warehouse, Mail, Phone, CalendarClock, Send, KeyRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -206,6 +206,32 @@ export function TenantsView() {
     }
   }
 
+  async function renvoyerIdentifiants(t: Tenant) {
+    if (!t.contactEmail) {
+      toast.error("Aucun email de contact pour ce tenant");
+      return;
+    }
+    if (!window.confirm(`Réinitialiser le mot de passe du compte de « ${t.nom} » et l'envoyer à ${t.contactEmail} ?`)) {
+      return;
+    }
+    setBusy(t.id);
+    try {
+      const res = await fetch(`/api/admin/tenants/${t.id}/envoyer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resetPassword: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.sent) {
+        toast.success(`Identifiants (nouveau mot de passe) envoyés à ${data.to}`);
+      } else {
+        toast.error(data.error ?? "Envoi impossible");
+      }
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const selectCls = "w-full h-10 px-3 text-sm rounded-lg border border-[--border] bg-[--background] text-[--foreground] focus:outline-none focus:ring-2 focus:ring-[--primary]/40";
 
   return (
@@ -296,6 +322,10 @@ export function TenantsView() {
                       <Button variant="ghost" size="sm" className="h-8 text-xs" disabled={busy === t.id || !t.contactEmail}
                         onClick={() => renvoyer(t)} title={t.contactEmail ? `Renvoyer les infos à ${t.contactEmail}` : "Aucun email de contact"}>
                         <Send className="w-3.5 h-3.5" /> Renvoyer
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-8 text-xs text-[--foreground-muted] hover:text-[--primary]" disabled={busy === t.id || !t.contactEmail}
+                        onClick={() => renvoyerIdentifiants(t)} title={t.contactEmail ? "Réinitialiser et envoyer les identifiants" : "Aucun email de contact"}>
+                        <KeyRound className="w-3.5 h-3.5" /> Identifiants
                       </Button>
                       <Button variant="ghost" size="icon-sm" onClick={() => openEdit(t)}>
                         <Pencil className="w-3.5 h-3.5" />

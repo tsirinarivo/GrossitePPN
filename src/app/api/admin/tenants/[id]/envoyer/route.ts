@@ -54,17 +54,30 @@ export async function POST(
     );
   }
 
-  const content = buildTenantEmail(tenant);
+  // Option : réinitialiser le mot de passe du compte tenant et l'inclure
+  let creds: { email: string; password: string } | null = null;
+  if (body?.resetPassword) {
+    const { resetTenantAdminPassword } = await import("@/lib/tenant-account");
+    creds = await resetTenantAdminPassword(tenant);
+    if (!creds) {
+      return NextResponse.json(
+        { error: "Impossible de générer les identifiants (email de contact requis)" },
+        { status: 400 }
+      );
+    }
+  }
+
+  const content = buildTenantEmail(tenant, creds);
   const result = await sendMail({ to, ...content });
 
   if (result.sent) {
     await logAudit({
-      action: "tenant.envoi_infos",
+      action: creds ? "tenant.envoi_identifiants" : "tenant.envoi_infos",
       entite: "tenant",
       entiteId: id,
-      details: { to },
+      details: { to, motDePasseReinitialise: !!creds },
     });
-    return NextResponse.json({ sent: true, to });
+    return NextResponse.json({ sent: true, to, credentials: !!creds });
   }
   return NextResponse.json(
     { sent: false, error: result.reason ?? "Échec de l'envoi" },
