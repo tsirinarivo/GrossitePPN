@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, Users, Wallet, Warehouse, Settings as SettingsIcon,
   ShieldCheck, Receipt, Smartphone, Check, Printer, Loader2,
-  Plus, X, Eye, EyeOff, Pencil, Tag, Building,
+  Plus, X, Eye, EyeOff, Pencil, Tag, Building, Mail,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -272,6 +272,11 @@ export function AdminView() {
             className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0 lg:w-full text-[--foreground-muted] hover:bg-[--accent] hover:text-[--foreground]"
           >
             <Building className="w-4 h-4" />Tenants
+          </Link>
+          <Link href="/admin/smtp"
+            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0 lg:w-full text-[--foreground-muted] hover:bg-[--accent] hover:text-[--foreground]"
+          >
+            <Mail className="w-4 h-4" />Email / SMTP
           </Link>
         </nav>
 

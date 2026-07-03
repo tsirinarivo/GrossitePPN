@@ -47,9 +47,9 @@ export async function POST(
       { status: 400 }
     );
   }
-  if (!isMailConfigured()) {
+  if (!(await isMailConfigured())) {
     return NextResponse.json(
-      { sent: false, error: "SMTP non configuré sur le serveur (variables SMTP_*)" },
+      { sent: false, error: "SMTP non configuré — renseignez-le dans Admin → Email/SMTP" },
       { status: 503 }
     );
   }

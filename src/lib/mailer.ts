@@ -1,57 +1,91 @@
-import nodemailer, { type Transporter } from "nodemailer";
+import nodemailer from "nodemailer";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/db/schema";
 
 /**
  * Envoi d'emails transactionnels via SMTP.
- * Configuré par variables d'environnement :
- *   SMTP_HOST, SMTP_PORT (def. 587), SMTP_SECURE ("true" pour 465),
- *   SMTP_USER, SMTP_PASS, SMTP_FROM (def. = SMTP_USER)
+ *
+ * La configuration provient EN PRIORITÉ de la base (table smtp_config, éditable
+ * via /admin/smtp), avec repli sur les variables d'environnement SMTP_*.
  *
  * Dégrade proprement : si non configuré, sendMail renvoie { sent:false } sans
  * jamais jeter — l'appelant décide quoi afficher.
  */
 
-export function isMailConfigured(): boolean {
-  return Boolean(
-    process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
-  );
+export interface ResolvedSmtp {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  from: string;
+  source: "db" | "env";
 }
 
-let cached: Transporter | null = null;
+/** Résout la config SMTP effective (DB puis env). */
+export async function getSmtpConfig(): Promise<ResolvedSmtp | null> {
+  // 1. Base de données
+  try {
+    const [row] = await db.select().from(schema.smtpConfig).limit(1);
+    if (row?.actif && row.host && row.username && row.password) {
+      const from = row.fromEmail
+        ? row.fromNom
+          ? `${row.fromNom} <${row.fromEmail}>`
+          : row.fromEmail
+        : row.username;
+      return {
+        host: row.host,
+        port: row.port ?? 587,
+        secure: row.secure ?? false,
+        user: row.username,
+        pass: row.password,
+        from,
+        source: "db",
+      };
+    }
+  } catch {
+    /* table absente ou DB indisponible → on tente l'env */
+  }
 
-function getTransporter(): Transporter | null {
-  if (!isMailConfigured()) return null;
-  if (!cached) {
+  // 2. Variables d'environnement
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
     const port = Number(process.env.SMTP_PORT ?? 587);
-    cached = nodemailer.createTransport({
+    return {
       host: process.env.SMTP_HOST,
       port,
       secure: process.env.SMTP_SECURE === "true" || port === 465,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+      from: process.env.SMTP_FROM ?? process.env.SMTP_USER,
+      source: "env",
+    };
   }
-  return cached;
+
+  return null;
 }
 
-export async function sendMail(opts: {
-  to: string;
-  subject: string;
-  html: string;
-  text?: string;
-}): Promise<{ sent: boolean; reason?: string }> {
-  const transporter = getTransporter();
-  if (!transporter) {
-    return { sent: false, reason: "SMTP non configuré" };
-  }
-  if (!opts.to?.trim()) {
-    return { sent: false, reason: "Destinataire manquant" };
-  }
+export async function isMailConfigured(): Promise<boolean> {
+  return (await getSmtpConfig()) !== null;
+}
+
+/** Envoie un email avec une config donnée (ou la config résolue). */
+export async function sendMail(
+  opts: { to: string; subject: string; html: string; text?: string },
+  override?: ResolvedSmtp
+): Promise<{ sent: boolean; reason?: string }> {
+  const cfg = override ?? (await getSmtpConfig());
+  if (!cfg) return { sent: false, reason: "SMTP non configuré" };
+  if (!opts.to?.trim()) return { sent: false, reason: "Destinataire manquant" };
+
   try {
-    const from = process.env.SMTP_FROM ?? process.env.SMTP_USER!;
+    const transporter = nodemailer.createTransport({
+      host: cfg.host,
+      port: cfg.port,
+      secure: cfg.secure,
+      auth: { user: cfg.user, pass: cfg.pass },
+    });
     await transporter.sendMail({
-      from,
+      from: cfg.from,
       to: opts.to,
       subject: opts.subject,
       html: opts.html,

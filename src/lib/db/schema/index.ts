@@ -11,3 +11,4 @@ export * from "./finances";
 export * from "./retours";
 export * from "./audit";
 export * from "./tenants";
+export * from "./settings";
