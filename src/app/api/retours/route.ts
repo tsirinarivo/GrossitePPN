@@ -5,6 +5,7 @@ import { eq, desc, and, inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { logAudit } from "@/lib/audit";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,7 @@ export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
+  const tid = await getSessionTenantId();
   const { searchParams } = new URL(req.url);
   const clientId = searchParams.get("clientId");
   const limit = Math.min(Number(searchParams.get("limit") ?? "200"), 500);
@@ -63,7 +65,7 @@ export async function GET(req: NextRequest) {
       .from(schema.retours)
       .leftJoin(schema.clients, eq(schema.retours.clientId, schema.clients.id))
       .leftJoin(schema.factures, eq(schema.retours.factureId, schema.factures.id))
-      .where(clientId ? eq(schema.retours.clientId, clientId) : undefined)
+      .where(and(tenantFilter(schema.retours.tenantId, tid), clientId ? eq(schema.retours.clientId, clientId) : undefined))
       .orderBy(desc(schema.retours.createdAt))
       .limit(limit);
 
@@ -193,10 +195,12 @@ export async function POST(req: NextRequest) {
     const retourId = crypto.randomUUID();
     const userId = (session.user as { id?: string })?.id ?? null;
 
+    const retourTid = (session.user as { tenantId?: string | null }).tenantId ?? null;
     const [retour] = await db
       .insert(schema.retours)
       .values({
         id: retourId,
+        tenantId: retourTid,
         numero,
         factureId: factureId ?? null,
         commandeId: commandeId ?? null,
@@ -245,6 +249,7 @@ export async function POST(req: NextRequest) {
         .insert(schema.avoirs)
         .values({
           id: crypto.randomUUID(),
+          tenantId: retourTid,
           numero: `AV-${year}-${avoirSeq}`,
           retourId,
           factureId: factureId ?? null,

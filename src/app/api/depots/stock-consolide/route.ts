@@ -4,20 +4,23 @@ import * as schema from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = await getSessionTenantId();
 
   try {
     const depots = await db
       .select()
       .from(schema.depots)
+      .where(tenantFilter(schema.depots.tenantId, tid))
       .orderBy(schema.depots.estPrincipal, schema.depots.nom);
 
-    // Agrégation par dépôt
+    // Agrégation par dépôt (filtrée par le tenant du produit)
     const stocksAgg = await db
       .select({
         depotId: schema.stocks.depotId,
@@ -27,6 +30,7 @@ export async function GET(_req: NextRequest) {
       })
       .from(schema.stocks)
       .innerJoin(schema.produits, eq(schema.stocks.produitId, schema.produits.id))
+      .where(tenantFilter(schema.produits.tenantId, tid))
       .groupBy(schema.stocks.depotId);
 
     const aggMap = new Map(stocksAgg.map((s) => [s.depotId, s]));

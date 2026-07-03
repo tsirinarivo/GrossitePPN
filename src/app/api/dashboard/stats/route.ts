@@ -4,12 +4,15 @@ import * as schema from "@/lib/db/schema";
 import { and, eq, gte, inArray, sql, desc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = await getSessionTenantId();
+  const tCmd = () => tenantFilter(schema.commandes.tenantId, tid);
 
   try {
     const now = new Date();
@@ -25,6 +28,7 @@ export async function GET() {
       .from(schema.commandes)
       .where(
         and(
+          tCmd(),
           eq(schema.commandes.statut, "validee"),
           gte(schema.commandes.valideeAt, debutJour)
         )
@@ -39,6 +43,7 @@ export async function GET() {
       .from(schema.commandes)
       .where(
         and(
+          tCmd(),
           eq(schema.commandes.statut, "validee"),
           gte(schema.commandes.valideeAt, debutHier),
           sql`${schema.commandes.valideeAt} < ${debutJour.toISOString()}`
@@ -51,6 +56,7 @@ export async function GET() {
       .from(schema.commandes)
       .where(
         and(
+          tCmd(),
           inArray(schema.commandes.statut, ["validee", "soumise"]),
           gte(schema.commandes.createdAt, debutMois),
           sql`${schema.commandes.clientId} IS NOT NULL`
@@ -67,7 +73,7 @@ export async function GET() {
       })
       .from(schema.produits)
       .leftJoin(schema.stocks, eq(schema.stocks.produitId, schema.produits.id))
-      .where(eq(schema.produits.actif, true))
+      .where(and(tenantFilter(schema.produits.tenantId, tid), eq(schema.produits.actif, true)))
       .groupBy(schema.produits.id);
 
     const nbAlertes = alertesRows.filter((p) => {
@@ -89,7 +95,7 @@ export async function GET() {
         valideeAt: schema.commandes.valideeAt,
       })
       .from(schema.commandes)
-      .where(gte(schema.commandes.createdAt, debutJour))
+      .where(and(tCmd(), gte(schema.commandes.createdAt, debutJour)))
       .orderBy(desc(schema.commandes.createdAt))
       .limit(10);
 
@@ -118,7 +124,7 @@ export async function GET() {
     const enAttenteRows = await db
       .select({ nbEnAttente: sql<number>`COUNT(*)` })
       .from(schema.commandes)
-      .where(eq(schema.commandes.statut, "soumise"));
+      .where(and(tCmd(), eq(schema.commandes.statut, "soumise")));
     const nbEnAttente = enAttenteRows[0]?.nbEnAttente ?? 0;
 
     const caJour = Number(statsJour?.caJour ?? 0);

@@ -4,12 +4,14 @@ import * as schema from "@/lib/db/schema";
 import { ilike, or, eq, and, desc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = await getSessionTenantId();
 
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q")?.trim() ?? "";
@@ -27,6 +29,7 @@ export async function GET(req: NextRequest) {
       })
         .from(schema.produits)
         .where(and(
+          tenantFilter(schema.produits.tenantId, tid),
           or(ilike(schema.produits.nom, pattern), ilike(schema.produits.code, pattern)),
           eq(schema.produits.actif, true)
         ))
@@ -40,7 +43,10 @@ export async function GET(req: NextRequest) {
         palier: schema.clients.palier,
       })
         .from(schema.clients)
-        .where(or(ilike(schema.clients.raisonSociale, pattern), ilike(schema.clients.code, pattern)))
+        .where(and(
+          tenantFilter(schema.clients.tenantId, tid),
+          or(ilike(schema.clients.raisonSociale, pattern), ilike(schema.clients.code, pattern))
+        ))
         .limit(5),
 
       db.select({
@@ -51,7 +57,10 @@ export async function GET(req: NextRequest) {
         createdAt: schema.commandes.createdAt,
       })
         .from(schema.commandes)
-        .where(ilike(schema.commandes.numero, pattern))
+        .where(and(
+          tenantFilter(schema.commandes.tenantId, tid),
+          ilike(schema.commandes.numero, pattern)
+        ))
         .orderBy(desc(schema.commandes.createdAt))
         .limit(5),
     ]);

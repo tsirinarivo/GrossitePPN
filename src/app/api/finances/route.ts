@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, and, gte, lte, inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ function getPeriodRange(searchParams: URLSearchParams): { from: Date; to: Date; 
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = await getSessionTenantId();
 
   const { from, to, mois } = getPeriodRange(new URL(req.url).searchParams);
 
@@ -61,6 +63,7 @@ export async function GET(req: NextRequest) {
       .from(schema.commandes)
       .where(
         and(
+          tenantFilter(schema.commandes.tenantId, tid),
           eq(schema.commandes.statut, "validee"),
           gte(schema.commandes.soumiseAt, from),
           lte(schema.commandes.soumiseAt, to)
@@ -97,7 +100,7 @@ export async function GET(req: NextRequest) {
       charges = await db
         .select()
         .from(schema.chargesOperationnelles)
-        .where(eq(schema.chargesOperationnelles.mois, mois));
+        .where(and(tenantFilter(schema.chargesOperationnelles.tenantId, tid), eq(schema.chargesOperationnelles.mois, mois)));
     } catch {
       // Table absente — retourner des charges vides jusqu'à ce que drizzle-kit push soit exécuté
     }
