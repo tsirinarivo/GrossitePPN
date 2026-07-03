@@ -255,6 +255,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     await db.insert(schema.factures).values({
       id: factureId,
+      tenantId: (session.user as { tenantId?: string | null }).tenantId ?? null,
       numero: factureNumero,
       commandeId: id,
       clientId: updated.clientId ?? null,

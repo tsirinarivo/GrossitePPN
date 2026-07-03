@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, scopeTenant } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -13,10 +14,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const tid = await getSessionTenantId();
     const [client] = await db
       .select()
       .from(schema.clients)
-      .where(eq(schema.clients.id, id))
+      .where(scopeTenant(schema.clients.tenantId, tid, eq(schema.clients.id, id)))
       .limit(1);
 
     if (!client) {
@@ -97,10 +99,11 @@ export async function PATCH(
 
     patch.updatedAt = new Date();
 
+    const tid = (session.user as { tenantId?: string | null }).tenantId ?? null;
     const [updated] = await db
       .update(schema.clients)
       .set(patch)
-      .where(eq(schema.clients.id, id))
+      .where(scopeTenant(schema.clients.tenantId, tid, eq(schema.clients.id, id)))
       .returning();
 
     if (!updated) {

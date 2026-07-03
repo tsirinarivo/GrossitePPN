@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, desc, and, gte, lte, sql, inArray, like, or } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +34,13 @@ export async function GET(req: NextRequest) {
   const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10)));
   const offset = (page - 1) * limit;
 
+  const tid = await getSessionTenantId();
+
   // Build where conditions
   const conditions = [];
+
+  const tenantCond = tenantFilter(schema.commandes.tenantId, tid);
+  if (tenantCond) conditions.push(tenantCond);
 
   if (statut && VALID_STATUTS.includes(statut as (typeof VALID_STATUTS)[number])) {
     conditions.push(
@@ -95,6 +101,7 @@ export async function GET(req: NextRequest) {
       count: sql<number>`cast(count(*) as integer)`,
     })
     .from(schema.commandes)
+    .where(tenantFilter(schema.commandes.tenantId, tid))
     .groupBy(schema.commandes.statut);
 
   const counts: Record<string, number> = {

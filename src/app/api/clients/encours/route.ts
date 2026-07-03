@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { and, gt, sql, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, scopeTenant } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ export async function GET() {
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   try {
+    const tid = await getSessionTenantId();
     const clients = await db
       .select({
         id: schema.clients.id,
@@ -28,9 +30,13 @@ export async function GET() {
       })
       .from(schema.clients)
       .where(
-        and(
-          eq(schema.clients.creditAutorise, true),
-          gt(schema.clients.encoursCourant, 0)
+        scopeTenant(
+          schema.clients.tenantId,
+          tid,
+          and(
+            eq(schema.clients.creditAutorise, true),
+            gt(schema.clients.encoursCourant, 0)
+          )
         )
       )
       .orderBy(sql`${schema.clients.encoursCourant} DESC`);

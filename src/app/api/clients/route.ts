@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, desc, or, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, scopeTenant } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -41,15 +42,24 @@ export async function GET(req: NextRequest) {
         createdAt: schema.clients.createdAt,
     };
 
+    const tid = await getSessionTenantId();
     const clients = isManager
-      ? await db.select(baseSelect).from(schema.clients).orderBy(desc(schema.clients.totalAchats))
+      ? await db
+          .select(baseSelect)
+          .from(schema.clients)
+          .where(scopeTenant(schema.clients.tenantId, tid))
+          .orderBy(desc(schema.clients.totalAchats))
       : await db
           .select(baseSelect)
           .from(schema.clients)
           .where(
-            or(
-              eq(schema.clients.agentId, session.user.id),
-              isNull(schema.clients.agentId)
+            scopeTenant(
+              schema.clients.tenantId,
+              tid,
+              or(
+                eq(schema.clients.agentId, session.user.id),
+                isNull(schema.clients.agentId)
+              )
             )
           )
           .orderBy(desc(schema.clients.totalAchats));
@@ -81,9 +91,11 @@ export async function POST(req: NextRequest) {
     }
 
     const id = crypto.randomUUID();
+    const tid = await getSessionTenantId();
 
     const [inserted] = await db.insert(schema.clients).values({
       id,
+      tenantId: tid,
       code: codeTrim,
       raisonSociale: raisonTrim,
       nif: nif?.trim() || null,

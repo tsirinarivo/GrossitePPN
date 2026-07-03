@@ -316,6 +316,7 @@ export async function POST(req: NextRequest) {
 
     await db.insert(schema.commandes).values({
       id: commandeId,
+      tenantId: client.tenantId ?? (session.user as { tenantId?: string | null }).tenantId ?? null,
       numero,
       clientId: client.id,
       agentId: session.user.id,

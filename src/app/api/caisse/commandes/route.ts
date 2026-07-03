@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { inArray, desc, sql } from "drizzle-orm";
+import { inArray, desc, sql, and } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { broadcastCommande } from "@/lib/sse/broadcast";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = await getSessionTenantId();
   try {
     // Fetch commandes in queue: soumise uniquement (validee = déjà encaissée)
     const commandes = await db
@@ -25,7 +27,7 @@ export async function GET() {
         agentId: schema.commandes.agentId,
       })
       .from(schema.commandes)
-      .where(inArray(schema.commandes.statut, ["soumise"]))
+      .where(and(tenantFilter(schema.commandes.tenantId, tid), inArray(schema.commandes.statut, ["soumise"])))
       .orderBy(desc(schema.commandes.soumiseAt))
       .limit(50);
 
@@ -107,6 +109,7 @@ export async function POST(req: NextRequest) {
 
     await db.insert(schema.commandes).values({
       id: commandeId,
+      tenantId: (session.user as { tenantId?: string | null }).tenantId ?? null,
       numero,
       clientId: client?.id || null,
       agentId: agentId || session.user.id,
