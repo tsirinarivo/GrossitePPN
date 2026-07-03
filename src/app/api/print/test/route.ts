@@ -3,12 +3,14 @@ import { loadXprintConfig, sendPrintAndLog } from "@/lib/xprint/service";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { formatFactureTicket } from "@/lib/xprint/format";
+import { getSessionTenantId } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
   try {
-    const cfg = await loadXprintConfig();
+    const tid = await getSessionTenantId();
+    const cfg = await loadXprintConfig(tid);
     if (!cfg) {
       return NextResponse.json(
         { ok: false, errorMessage: "Imprimante non configurée — renseigne User, UserKEY et SN dans les paramètres." },
@@ -38,7 +40,7 @@ export async function POST() {
       footer: cfg.footer,
     });
 
-    const result = await sendPrintAndLog(content, { kind: "test" });
+    const result = await sendPrintAndLog(content, { kind: "test" }, tid);
 
     if (!result.ok) {
       // Log côté serveur pour diagnostic

@@ -15,32 +15,68 @@ import {
   type FicheInventaireOpts,
 } from "./format";
 
-export async function loadXprintConfig(): Promise<XprintConfig | null> {
-  const rows = await db.select().from(schema.entreprise).limit(1);
-  const e = rows[0];
-  if (!e) return null;
+const DEFAULT_TENANT_ID = "default";
 
-  const p = (e.parametres ?? {}) as Record<string, unknown>;
-  if (!p["xprintEnabled"]) return null;
+/**
+ * Charge la config imprimante du tenant donné.
+ * Priorité : table printer_config (par tenant). Repli : entreprise.parametres
+ * (legacy) uniquement pour le tenant par défaut, pour ne pas casser l'existant.
+ */
+export async function loadXprintConfig(
+  tenantId: string | null | undefined
+): Promise<XprintConfig | null> {
+  // 1. Config dédiée au tenant
+  if (tenantId) {
+    const [row] = await db
+      .select()
+      .from(schema.printerConfig)
+      .where(eq(schema.printerConfig.tenantId, tenantId))
+      .limit(1);
+    if (row) {
+      if (!row.enabled || !row.xUser || !row.xKey || !row.sn) return null;
+      return buildDefaultConfig({
+        user: row.xUser,
+        key: row.xKey,
+        baseUrl: row.baseUrl ?? undefined,
+        sn: row.sn,
+        copies: row.copies ?? 1,
+        voice: row.voice ?? 0,
+        header: row.header ?? null,
+        footer: row.footer ?? null,
+        autoOnFacture: row.autoOnFacture !== false,
+        autoOnBonLivraison: row.autoOnBonLivraison === true,
+        autoOnReceptionStock: row.autoOnReceptionStock === true,
+      });
+    }
+  }
 
-  const user = String(p["xprintUser"] ?? "");
-  const key = String(p["xprintKey"] ?? "");
-  const sn = String(p["xprintSn"] ?? "");
-  if (!user || !key || !sn) return null;
+  // 2. Repli legacy (entreprise.parametres) — tenant par défaut uniquement
+  if (tenantId == null || tenantId === DEFAULT_TENANT_ID) {
+    const rows = await db.select().from(schema.entreprise).limit(1);
+    const e = rows[0];
+    if (!e) return null;
+    const p = (e.parametres ?? {}) as Record<string, unknown>;
+    if (!p["xprintEnabled"]) return null;
+    const user = String(p["xprintUser"] ?? "");
+    const key = String(p["xprintKey"] ?? "");
+    const sn = String(p["xprintSn"] ?? "");
+    if (!user || !key || !sn) return null;
+    return buildDefaultConfig({
+      user,
+      key,
+      baseUrl: p["xprintBaseUrl"] ? String(p["xprintBaseUrl"]) : undefined,
+      sn,
+      copies: typeof p["xprintCopies"] === "number" ? p["xprintCopies"] : 1,
+      voice: typeof p["xprintVoice"] === "number" ? p["xprintVoice"] : 0,
+      header: p["xprintHeader"] ? String(p["xprintHeader"]) : null,
+      footer: p["xprintFooter"] ? String(p["xprintFooter"]) : null,
+      autoOnFacture: p["xprintAutoOnFacture"] !== false,
+      autoOnBonLivraison: p["xprintAutoOnBonLivraison"] === true,
+      autoOnReceptionStock: p["xprintAutoOnReceptionStock"] === true,
+    });
+  }
 
-  return buildDefaultConfig({
-    user,
-    key,
-    baseUrl: p["xprintBaseUrl"] ? String(p["xprintBaseUrl"]) : undefined,
-    sn,
-    copies: typeof p["xprintCopies"] === "number" ? p["xprintCopies"] : 1,
-    voice: typeof p["xprintVoice"] === "number" ? p["xprintVoice"] : 0,
-    header: p["xprintHeader"] ? String(p["xprintHeader"]) : null,
-    footer: p["xprintFooter"] ? String(p["xprintFooter"]) : null,
-    autoOnFacture: p["xprintAutoOnFacture"] !== false,
-    autoOnBonLivraison: p["xprintAutoOnBonLivraison"] === true,
-    autoOnReceptionStock: p["xprintAutoOnReceptionStock"] === true,
-  });
+  return null;
 }
 
 function generateId(): string {
@@ -50,8 +86,9 @@ function generateId(): string {
 export async function sendPrintAndLog(
   content: string,
   meta: { kind: string; relatedId?: string | null; copies?: number },
+  tenantId: string | null,
 ): Promise<{ ok: boolean; orderId?: string; errorMessage?: string }> {
-  const cfg = await loadXprintConfig();
+  const cfg = await loadXprintConfig(tenantId);
   if (!cfg) return { ok: false, errorMessage: "Imprimante non configurée" };
 
   if (Buffer.byteLength(content, "utf-8") > 4096) {
@@ -64,6 +101,7 @@ export async function sendPrintAndLog(
   const logId = generateId();
   await db.insert(schema.printLogs).values({
     id: logId,
+    tenantId: tenantId ?? null,
     sn: cfg.sn,
     kind: meta.kind,
     relatedId: meta.relatedId ?? null,
@@ -100,14 +138,20 @@ export async function sendPrintAndLog(
 }
 
 /** Rafraîchit les statuts "pending" (bouton manuel UI, spec §6.3) */
-export async function refreshPendingLogs(): Promise<{ checked: number; updated: number }> {
-  const cfg = await loadXprintConfig();
+export async function refreshPendingLogs(
+  tenantId: string | null,
+): Promise<{ checked: number; updated: number }> {
+  const cfg = await loadXprintConfig(tenantId);
   if (!cfg) return { checked: 0, updated: 0 };
 
   const pending = await db
     .select({ id: schema.printLogs.id, orderId: schema.printLogs.orderId })
     .from(schema.printLogs)
-    .where(eq(schema.printLogs.status, "pending"))
+    .where(
+      tenantId
+        ? and(eq(schema.printLogs.status, "pending"), eq(schema.printLogs.tenantId, tenantId))
+        : eq(schema.printLogs.status, "pending")
+    )
     .limit(100);
 
   const withOrderId = pending.filter((l) => l.orderId);
@@ -128,12 +172,18 @@ export async function refreshPendingLogs(): Promise<{ checked: number; updated: 
   return { checked: withOrderId.length, updated };
 }
 
-/** Auto-impression après validation d'une facture */
+/** Auto-impression après validation d'une facture (tenant résolu depuis la facture). */
 export async function autoPrintFacture(factureId: string, content: string): Promise<void> {
   try {
-    const cfg = await loadXprintConfig();
+    const [fac] = await db
+      .select({ tenantId: schema.factures.tenantId })
+      .from(schema.factures)
+      .where(eq(schema.factures.id, factureId))
+      .limit(1);
+    const tenantId = fac?.tenantId ?? null;
+    const cfg = await loadXprintConfig(tenantId);
     if (!cfg?.autoOnFacture) return;
-    await sendPrintAndLog(content, { kind: "facture", relatedId: factureId, copies: cfg.copies });
+    await sendPrintAndLog(content, { kind: "facture", relatedId: factureId, copies: cfg.copies }, tenantId);
   } catch (e) {
     console.warn("[xprint] autoPrintFacture failed:", e);
   }
@@ -143,12 +193,14 @@ export async function autoPrintFacture(factureId: string, content: string): Prom
 export async function autoPrintBonLivraison(opts: {
   bonId: string;
   bonOpts: BonLivraisonOpts;
+  tenantId?: string | null;
 }): Promise<void> {
   try {
-    const cfg = await loadXprintConfig();
+    const tenantId = opts.tenantId ?? null;
+    const cfg = await loadXprintConfig(tenantId);
     if (!cfg?.autoOnBonLivraison) return;
     const content = formatBonLivraison(opts.bonOpts);
-    await sendPrintAndLog(content, { kind: "bon_livraison", relatedId: opts.bonId, copies: cfg.copies });
+    await sendPrintAndLog(content, { kind: "bon_livraison", relatedId: opts.bonId, copies: cfg.copies }, tenantId);
   } catch (e) {
     console.warn("[xprint] autoPrintBonLivraison failed:", e);
   }
@@ -158,12 +210,14 @@ export async function autoPrintBonLivraison(opts: {
 export async function autoPrintFicheInventaire(opts: {
   ficheId: string;
   ficheOpts: FicheInventaireOpts;
+  tenantId?: string | null;
 }): Promise<void> {
   try {
-    const cfg = await loadXprintConfig();
+    const tenantId = opts.tenantId ?? null;
+    const cfg = await loadXprintConfig(tenantId);
     if (!cfg?.autoOnReceptionStock) return;
     const content = formatFicheInventaire(opts.ficheOpts);
-    await sendPrintAndLog(content, { kind: "inventaire", relatedId: opts.ficheId, copies: 1 });
+    await sendPrintAndLog(content, { kind: "inventaire", relatedId: opts.ficheId, copies: 1 }, tenantId);
   } catch (e) {
     console.warn("[xprint] autoPrintFicheInventaire failed:", e);
   }

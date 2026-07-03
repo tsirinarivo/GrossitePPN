@@ -4,6 +4,7 @@ export const printLogs = pgTable(
   "print_logs",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     sn: text("sn").notNull(),
     kind: text("kind").notNull(), // facture | test | manual
     relatedId: text("related_id"),

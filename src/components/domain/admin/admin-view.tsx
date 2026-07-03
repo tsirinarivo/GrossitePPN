@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PrinterSettings } from "./printer-settings";
+import { useSession } from "@/lib/auth/client";
 import { toast } from "sonner";
 
 type Section = "entreprise" | "depots" | "utilisateurs" | "paiements" | "imprimante";
@@ -65,6 +66,9 @@ function Toggle({ active, onClick, label, description }: {
 
 export function AdminView() {
   const [section, setSection] = useState<Section>("entreprise");
+  const { data: session } = useSession();
+  // Surfaces plateforme (multi-tenant) réservées au super-admin.
+  const isSuperAdmin = ((session?.user as { role?: string } | undefined)?.role ?? "") === "admin";
 
   // ── Entreprise ────────────────────────────────────────────────────────────
   const [ent, setEnt] = useState<Entreprise>({
@@ -268,16 +272,20 @@ export function AdminView() {
           >
             <ShieldCheck className="w-4 h-4" />Audit
           </Link>
-          <Link href="/admin/tenants"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0 lg:w-full text-[--foreground-muted] hover:bg-[--accent] hover:text-[--foreground]"
-          >
-            <Building className="w-4 h-4" />Tenants
-          </Link>
-          <Link href="/admin/smtp"
-            className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0 lg:w-full text-[--foreground-muted] hover:bg-[--accent] hover:text-[--foreground]"
-          >
-            <Mail className="w-4 h-4" />Email / SMTP
-          </Link>
+          {isSuperAdmin && (
+            <>
+              <Link href="/admin/tenants"
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0 lg:w-full text-[--foreground-muted] hover:bg-[--accent] hover:text-[--foreground]"
+              >
+                <Building className="w-4 h-4" />Tenants
+              </Link>
+              <Link href="/admin/smtp"
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0 lg:w-full text-[--foreground-muted] hover:bg-[--accent] hover:text-[--foreground]"
+              >
+                <Mail className="w-4 h-4" />Email / SMTP
+              </Link>
+            </>
+          )}
         </nav>
 
         <div className="lg:col-span-3 space-y-4">

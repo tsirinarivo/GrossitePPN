@@ -3,6 +3,7 @@ import { loadXprintConfig, sendPrintAndLog } from "@/lib/xprint/service";
 import { formatFactureTicket } from "@/lib/xprint/format";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { getSessionTenantId } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,8 @@ function buildQrPayload(opts: {
 
 export async function POST(req: NextRequest) {
   try {
-    const cfg = await loadXprintConfig();
+    const tid = await getSessionTenantId();
+    const cfg = await loadXprintConfig(tid);
     if (!cfg) {
       return NextResponse.json(
         { ok: false, errorMessage: "Imprimante non configurée" },
@@ -85,7 +87,7 @@ export async function POST(req: NextRequest) {
       kind: "facture",
       relatedId: commandeId ?? null,
       copies: cfg.copies,
-    });
+    }, tid);
 
     return NextResponse.json(result);
   } catch (e) {
