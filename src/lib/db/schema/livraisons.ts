@@ -24,6 +24,7 @@ export const statutLivraisonEnum = pgEnum("statut_livraison", [
 
 export const vehicules = pgTable("vehicules", {
   id: text("id").primaryKey(),
+  tenantId: text("tenant_id"),
   immatriculation: text("immatriculation").notNull().unique(),
   modele: text("modele"),
   capaciteKg: real("capacite_kg"),
@@ -34,6 +35,7 @@ export const tournees = pgTable(
   "tournees",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     date: timestamp("date").notNull(),
     chauffeurId: text("chauffeur_id").references(() => users.id),
     vehiculeId: text("vehicule_id").references(() => vehicules.id),
@@ -48,6 +50,7 @@ export const livraisons = pgTable(
   "livraisons",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     tokenPublic: text("token_public").notNull().unique(),
     commandeId: text("commande_id")
       .notNull()

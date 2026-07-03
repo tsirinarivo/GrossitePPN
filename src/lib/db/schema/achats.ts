@@ -24,6 +24,7 @@ export const statutBCEnum = pgEnum("statut_bon_commande", [
 
 export const fournisseurs = pgTable("fournisseurs", {
   id: text("id").primaryKey(),
+  tenantId: text("tenant_id"),
   nom: text("nom").notNull(),
   nomCourt: text("nom_court"),
   nif: text("nif"),
@@ -43,6 +44,7 @@ export const bonsCommande = pgTable(
   "bons_commande",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     numero: text("numero").notNull().unique(),
     fournisseurId: text("fournisseur_id")
       .notNull()
@@ -108,6 +110,7 @@ export const receptions = pgTable(
   "receptions",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     numero: text("numero").notNull().unique(),
     bonCommandeId: text("bon_commande_id")
       .notNull()

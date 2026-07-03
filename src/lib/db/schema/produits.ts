@@ -31,6 +31,7 @@ export const categorieEnum = pgEnum("categorie_produit", [
 
 export const categories = pgTable("categories", {
   id: text("id").primaryKey(),
+  tenantId: text("tenant_id"),
   nom: text("nom").notNull(),
   nomMG: text("nom_mg"),
   slug: text("slug").notNull().unique(),
@@ -45,6 +46,7 @@ export const produits = pgTable(
   "produits",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     code: text("code").notNull().unique(),
     nom: text("nom").notNull(),
     nomMG: text("nom_mg"),
@@ -120,6 +122,7 @@ export const stocks = pgTable(
   "stocks",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     produitId: text("produit_id")
       .notNull()
       .references(() => produits.id, { onDelete: "cascade" }),
@@ -158,6 +161,7 @@ export const mouvementsStock = pgTable(
   "mouvements_stock",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     produitId: text("produit_id")
       .notNull()
       .references(() => produits.id),

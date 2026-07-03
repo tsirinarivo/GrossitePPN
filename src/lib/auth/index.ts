@@ -39,6 +39,10 @@ export const auth = betterAuth({
         type: "string",
         defaultValue: "fr",
       },
+      tenantId: {
+        type: "string",
+        required: false,
+      },
     },
   },
   trustedOrigins: [

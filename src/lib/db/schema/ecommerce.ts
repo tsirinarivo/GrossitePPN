@@ -58,6 +58,7 @@ export const lignesPanier = pgTable(
 /** Promotions e-commerce */
 export const promotions = pgTable("promotions", {
   id: text("id").primaryKey(),
+  tenantId: text("tenant_id"),
   nom: text("nom").notNull(),
   code: text("code").unique(),
   type: text("type").notNull(), // code_promo, remise_palier, vente_flash
@@ -76,6 +77,7 @@ export const promotions = pgTable("promotions", {
 /** Bannières merchandising */
 export const bannieres = pgTable("bannieres", {
   id: text("id").primaryKey(),
+  tenantId: text("tenant_id"),
   titre: text("titre").notNull(),
   titreMG: text("titre_mg"),
   image: text("image").notNull(),
@@ -91,6 +93,7 @@ export const listesAchat = pgTable(
   "listes_achat",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     clientId: text("client_id")
       .notNull()
       .references(() => clients.id, { onDelete: "cascade" }),

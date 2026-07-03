@@ -9,6 +9,7 @@ import {
 
 export const entreprise = pgTable("entreprise", {
   id: text("id").primaryKey().default("singleton"),
+  tenantId: text("tenant_id"),
   nom: text("nom").notNull(),
   nif: text("nif"),
   stat: text("stat"),
@@ -43,6 +44,7 @@ export const entreprise = pgTable("entreprise", {
 
 export const depots = pgTable("depots", {
   id: text("id").primaryKey(),
+  tenantId: text("tenant_id"),
   nom: text("nom").notNull(),
   adresse: text("adresse"),
   telephone: text("telephone"),

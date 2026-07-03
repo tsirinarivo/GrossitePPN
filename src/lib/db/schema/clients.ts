@@ -27,6 +27,7 @@ export const clients = pgTable(
   "clients",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     code: text("code").notNull().unique(),
     raisonSociale: text("raison_sociale").notNull(),
     nif: text("nif"),

@@ -39,6 +39,7 @@ export const retours = pgTable(
   "retours",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     numero: text("numero").notNull().unique(),
 
     factureId: text("facture_id").references(() => factures.id),
@@ -99,6 +100,7 @@ export const avoirs = pgTable(
   "avoirs",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     numero: text("numero").notNull().unique(),
     retourId: text("retour_id")
       .notNull()

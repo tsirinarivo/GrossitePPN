@@ -31,6 +31,9 @@ export const users = pgTable("users", {
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
   actif: boolean("actif").default(true).notNull(),
   langue: text("langue").default("fr"),
+  // Multi-tenant : tenant d'appartenance de l'utilisateur (nullable durant la
+  // phase de transition ; backfillé puis rendu obligatoire).
+  tenantId: text("tenant_id"),
 });
 
 export const sessions = pgTable("sessions", {

@@ -4,6 +4,7 @@ export const chargesOperationnelles = pgTable(
   "charges_operationnelles",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     libelle: text("libelle").notNull(),
     categorie: text("categorie").notNull(), // personnel, loyer, energie, fournitures, marketing, maintenance, autre
     montant: integer("montant").notNull(),

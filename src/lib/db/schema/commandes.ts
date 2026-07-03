@@ -47,6 +47,7 @@ export const commandes = pgTable(
   "commandes",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     numero: text("numero").notNull().unique(),
     clientId: text("client_id").references(() => clients.id),
     depotId: text("depot_id").references(() => depots.id),
@@ -126,6 +127,7 @@ export const factures = pgTable(
   "factures",
   {
     id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
     numero: text("numero").notNull().unique(),
     commandeId: text("commande_id")
       .notNull()
@@ -184,6 +186,7 @@ export const paiements = pgTable(
 /** Sessions de caisse */
 export const sessionsCaisse = pgTable("sessions_caisse", {
   id: text("id").primaryKey(),
+  tenantId: text("tenant_id"),
   caissierID: text("caissier_id")
     .notNull()
     .references(() => users.id),

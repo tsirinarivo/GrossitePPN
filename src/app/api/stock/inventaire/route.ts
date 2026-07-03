@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
       depots = [
         {
           id: "demo-1",
+          tenantId: null,
           nom: "Tana-Centre",
           adresse: "Antananarivo Centre",
           telephone: null,
@@ -50,6 +51,7 @@ export async function GET(req: NextRequest) {
         },
         {
           id: "demo-2",
+          tenantId: null,
           nom: "Tamatave",
           adresse: "Toamasina",
           telephone: null,
@@ -60,6 +62,7 @@ export async function GET(req: NextRequest) {
         },
         {
           id: "demo-3",
+          tenantId: null,
           nom: "Antsirabe",
           adresse: "Antsirabe",
           telephone: null,
