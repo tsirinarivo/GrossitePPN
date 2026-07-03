@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { loadXprintConfig, sendPrintAndLog } from "@/lib/xprint/service";
-import { db } from "@/lib/db";
-import * as schema from "@/lib/db/schema";
 import { formatFactureTicket } from "@/lib/xprint/format";
 import { getSessionTenantId } from "@/lib/tenant";
+import { getEntrepriseFor } from "@/lib/entreprise";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +17,7 @@ export async function POST() {
       );
     }
 
-    const rows = await db.select().from(schema.entreprise).limit(1);
-    const e = rows[0];
+    const e = await getEntrepriseFor(tid);
 
     const content = formatFactureTicket({
       entrepriseNom: e?.nom ?? "Grossiste PPN",

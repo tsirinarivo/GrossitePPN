@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Package, MapPin, Phone, CheckCircle, Circle, XCircle, Truck, ShoppingBag, ClipboardCheck } from "lucide-react";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { getEntrepriseFor } from "@/lib/entreprise";
 import { eq } from "drizzle-orm";
 
 export const metadata: Metadata = { title: "Suivi de commande" };
@@ -43,6 +44,7 @@ export default async function SuiviPage({ params }: Props) {
       livraisonAt: schema.livraisons.livraisonAt,
       motifRefus: schema.livraisons.motifRefus,
       livraisonCreatedAt: schema.livraisons.createdAt,
+      tenantId: schema.livraisons.tenantId,
       commandeNumero: schema.commandes.numero,
       commandeCreatedAt: schema.commandes.createdAt,
       commandeStatut: schema.commandes.statut,
@@ -76,12 +78,8 @@ export default async function SuiviPage({ params }: Props) {
 
   const livraison = rows[0];
 
-  // Fetch entreprise for footer phone
-  const entrepriseRows = await db
-    .select({ nom: schema.entreprise.nom, telephone: schema.entreprise.telephone })
-    .from(schema.entreprise)
-    .limit(1);
-  const entreprise = entrepriseRows[0];
+  // Entreprise (pied de page) — celle du tenant de la livraison
+  const entreprise = await getEntrepriseFor(livraison?.tenantId ?? null);
 
   // Not found
   if (!livraison) {

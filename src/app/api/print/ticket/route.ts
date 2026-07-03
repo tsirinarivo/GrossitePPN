@@ -4,6 +4,7 @@ import { formatFactureTicket } from "@/lib/xprint/format";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { getSessionTenantId } from "@/lib/tenant";
+import { getEntrepriseFor } from "@/lib/entreprise";
 
 export const dynamic = "force-dynamic";
 
@@ -54,8 +55,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { numero, client, lignes, totalHT, totalTVA, totalTTC, modePaiement, assujettieTV, commandeId } = body;
 
-    const rows = await db.select().from(schema.entreprise).limit(1);
-    const e = rows[0];
+    const e = await getEntrepriseFor(tid);
 
     const content = formatFactureTicket({
       entrepriseNom: e?.nom ?? "Grossiste PPN",

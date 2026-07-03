@@ -94,6 +94,13 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
+    // Identité « entreprise » propre au tenant (utilisée sur ses factures/documents)
+    await db.insert(schema.entreprise).values({
+      id: crypto.randomUUID(),
+      tenantId: id,
+      nom: body.nom.trim(),
+    });
+
     await logAudit({
       action: "tenant.creer",
       entite: "tenant",

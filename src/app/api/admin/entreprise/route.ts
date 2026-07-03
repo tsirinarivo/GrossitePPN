@@ -5,25 +5,30 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId } from "@/lib/tenant";
+import { getEntrepriseFor } from "@/lib/entreprise";
 
 export const dynamic = "force-dynamic";
 
-async function requireAdminOrGerant() {
+const DEFAULT_TENANT_ID = "default";
+
+async function requireManager() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return false;
+  if (!session?.user) return null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const role = (session.user as any).role ?? "agent";
-  return role === "admin" || role === "gerant";
+  if (role !== "admin" && role !== "gerant") return null;
+  const tenantId = await getSessionTenantId();
+  return { tenantId };
 }
 
 export async function GET() {
-  if (!await requireAdminOrGerant()) {
+  const mgr = await requireManager();
+  if (!mgr) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
-  const rows = await db.select().from(schema.entreprise).limit(1);
-  const e = rows[0];
-  if (!e) return NextResponse.json({});
-  return NextResponse.json(e);
+  const e = await getEntrepriseFor(mgr.tenantId);
+  return NextResponse.json(e ?? {});
 }
 
 const entrepriseSchema = z.object({
@@ -43,7 +48,8 @@ const entrepriseSchema = z.object({
 });
 
 export async function PUT(req: NextRequest) {
-  if (!await requireAdminOrGerant()) {
+  const mgr = await requireManager();
+  if (!mgr) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const body = await req.json().catch(() => null);
@@ -52,12 +58,25 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
   const d = parsed.data;
-  await db
-    .insert(schema.entreprise)
-    .values({ id: "singleton", ...d, updatedAt: new Date() })
-    .onConflictDoUpdate({
-      target: schema.entreprise.id,
-      set: { ...d, updatedAt: new Date() },
-    });
+  const tid = mgr.tenantId;
+
+  // Ligne entreprise existante pour ce tenant ?
+  const existing = tid
+    ? (await db.select({ id: schema.entreprise.id }).from(schema.entreprise).where(eq(schema.entreprise.tenantId, tid)).limit(1))[0]
+    : undefined;
+
+  if (existing) {
+    await db.update(schema.entreprise).set({ ...d, updatedAt: new Date() }).where(eq(schema.entreprise.id, existing.id));
+  } else if (tid == null || tid === DEFAULT_TENANT_ID) {
+    // Tenant par défaut → ligne singleton legacy
+    await db
+      .insert(schema.entreprise)
+      .values({ id: "singleton", tenantId: tid ?? DEFAULT_TENANT_ID, ...d, updatedAt: new Date() })
+      .onConflictDoUpdate({ target: schema.entreprise.id, set: { ...d, updatedAt: new Date() } });
+  } else {
+    // Nouveau tenant → nouvelle ligne dédiée
+    await db.insert(schema.entreprise).values({ id: crypto.randomUUID(), tenantId: tid, ...d, updatedAt: new Date() });
+  }
+
   return NextResponse.json({ ok: true });
 }

@@ -5,24 +5,29 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 type Role = (typeof schema.roleEnum.enumValues)[number];
 
-async function requireAdmin() {
+// admin (super-admin plateforme) et gérant (propriétaire de tenant) gèrent
+// chacun les utilisateurs de LEUR tenant.
+async function requireManager() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return null;
   const user = await db.select({ role: schema.users.role, tenantId: schema.users.tenantId })
     .from(schema.users)
     .where(eq(schema.users.id, session.user.id))
     .limit(1);
-  if (user[0]?.role !== "admin") return null;
-  return { id: session.user.id, tenantId: user[0].tenantId ?? null };
+  const role = user[0]?.role;
+  if (role !== "admin" && role !== "gerant") return null;
+  return { id: session.user.id, tenantId: user[0]?.tenantId ?? null, role };
 }
 
 export async function GET() {
-  if (!await requireAdmin()) {
+  const mgr = await requireManager();
+  if (!mgr) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const users = await db.select({
@@ -32,7 +37,10 @@ export async function GET() {
     role: schema.users.role,
     actif: schema.users.actif,
     createdAt: schema.users.createdAt,
-  }).from(schema.users).orderBy(schema.users.createdAt);
+  })
+    .from(schema.users)
+    .where(tenantFilter(schema.users.tenantId, mgr.tenantId))
+    .orderBy(schema.users.createdAt);
   return NextResponse.json(users);
 }
 
@@ -44,7 +52,7 @@ const createSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const admin = await requireAdmin();
+  const admin = await requireManager();
   if (!admin) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }

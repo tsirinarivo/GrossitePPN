@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { getEntrepriseFor } from "@/lib/entreprise";
 import { eq, asc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -69,7 +70,7 @@ export async function GET(
     .where(eq(schema.livraisons.tourneeId, id))
     .orderBy(asc(schema.livraisons.ordre));
 
-  const [entreprise] = await db.select().from(schema.entreprise).limit(1);
+  const entreprise = await getEntrepriseFor(tournee.tenantId);
 
   const dateTournee = new Date(tournee.date).toLocaleDateString("fr-FR", {
     weekday: "long",

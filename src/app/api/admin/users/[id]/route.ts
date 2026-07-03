@@ -28,6 +28,21 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   const { id } = await params;
+
+  // Isolation tenant : on ne peut modifier qu'un utilisateur de son propre tenant.
+  const callerTenant = (session.user as { tenantId?: string | null }).tenantId ?? null;
+  const [target] = await db
+    .select({ tenantId: schema.users.tenantId })
+    .from(schema.users)
+    .where(eq(schema.users.id, id))
+    .limit(1);
+  if (!target) {
+    return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+  }
+  if (callerTenant && target.tenantId !== callerTenant) {
+    return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+  }
+
   const body = await req.json().catch(() => null);
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {

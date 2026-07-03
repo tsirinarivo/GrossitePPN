@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { getEntrepriseFor } from "@/lib/entreprise";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -72,7 +73,7 @@ export async function GET(
   }
 
   // Fetch entreprise
-  const [entreprise] = await db.select().from(schema.entreprise).limit(1);
+  const entreprise = await getEntrepriseFor(livraison.tenantId);
 
   const blRef = livraison.tokenPublic.slice(-8).toUpperCase();
   const dateLivraison = fmtDate(livraison.livraisonAt ?? livraison.createdAt);

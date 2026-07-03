@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { getEntrepriseFor } from "@/lib/entreprise";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -46,7 +47,7 @@ export async function GET(
     client = c ?? null;
   }
 
-  const [entreprise] = await db.select().from(schema.entreprise).limit(1);
+  const entreprise = await getEntrepriseFor(commande.tenantId);
 
   const dateDevis = new Date(commande.createdAt ?? Date.now()).toLocaleDateString(
     "fr-FR",

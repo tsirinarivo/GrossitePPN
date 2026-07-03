@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getEntrepriseFor } from "@/lib/entreprise";
 import { e } from "@/lib/escape";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export async function GET(
   const [bc] = await db
     .select({
       id: schema.bonsCommande.id,
+      tenantId: schema.bonsCommande.tenantId,
       numero: schema.bonsCommande.numero,
       statut: schema.bonsCommande.statut,
       totalHT: schema.bonsCommande.totalHT,
@@ -59,7 +61,7 @@ export async function GET(
     .from(schema.lignesBonCommande)
     .where(eq(schema.lignesBonCommande.bonCommandeId, id));
 
-  const [entreprise] = await db.select().from(schema.entreprise).limit(1);
+  const entreprise = await getEntrepriseFor(bc.tenantId);
 
   const dateBC = bc.dateCommande
     ? new Date(bc.dateCommande).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })
