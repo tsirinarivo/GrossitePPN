@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
         type: schema.mouvementsStock.type,
       })
       .from(schema.mouvementsStock)
-      .where(and(tenantFilter(schema.mouvementsStock.tenantId, tid), mvtWhere));
+      .where(mvtWhere);
 
     const mvtMap = new Map<string, { entrees: number; sorties: number }>();
     for (const m of mouvements) {

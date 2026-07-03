@@ -50,7 +50,6 @@ export async function GET() {
         total: sql<number>`SUM(${schema.stocks.quantiteBase})`.as("total"),
       })
       .from(schema.stocks)
-      .where(scopeTenant(schema.stocks.tenantId, tid))
       .groupBy(schema.stocks.produitId);
 
     const stockMap = new Map(stocks.map((s) => [s.produitId, s.total ?? 0]));
