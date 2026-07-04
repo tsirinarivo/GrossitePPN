@@ -30,8 +30,8 @@ export const ROLE_SECTIONS: Record<AppRole, string[] | "*"> = {
 
 /** Page d'accueil par défaut après login selon le rôle */
 export const ROLE_HOME: Record<AppRole, string> = {
-  admin:                  "/dashboard",
-  gerant:                 "/dashboard",
+  admin:                  "/rapports",
+  gerant:                 "/rapports",
   caissier:               "/pos/caisse",
   agent:                  "/pos/agent",
   magasinier:             "/stock",

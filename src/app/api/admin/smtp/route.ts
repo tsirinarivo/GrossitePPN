@@ -5,13 +5,16 @@ import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { logAudit } from "@/lib/audit";
+import { isMasterHost } from "@/lib/tenant-host";
 
 export const dynamic = "force-dynamic";
 
 const SINGLETON = "singleton";
 
 async function requireAdmin() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const h = await headers();
+  if (!isMasterHost(h.get("host"))) return false;
+  const session = await auth.api.getSession({ headers: h });
   if (!session?.user) return false;
   const role = (session.user as { role?: string }).role ?? "agent";
   return role === "admin";

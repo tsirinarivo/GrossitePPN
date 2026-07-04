@@ -3,26 +3,35 @@ import { Suspense } from "react";
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { LoginForm } from "@/components/domain/auth/login-form";
-import { parseTenantSlug } from "@/lib/tenant-host";
+import { parseHost } from "@/lib/tenant-host";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 
 export const metadata: Metadata = { title: "Connexion" };
 
 export default async function LoginPage() {
-  // Sur un sous-domaine tenant, on affiche le nom de l'entreprise.
-  const slug = parseTenantSlug((await headers()).get("host"));
-  let tenantNom: string | null = null;
-  if (slug) {
+  const { kind, slug } = parseHost((await headers()).get("host"));
+
+  // Titre affiché : console master, nom du tenant, ou générique.
+  let titre = "GrossistePPN";
+  let sousTitre = "Madagascar — Gestion PPN";
+
+  if (kind === "master") {
+    titre = "Console plateforme";
+    sousTitre = "Administration des tenants";
+  } else if (kind === "tenant" && slug) {
     try {
       const [t] = await db
         .select({ nom: schema.tenants.nom })
         .from(schema.tenants)
         .where(eq(schema.tenants.slug, slug))
         .limit(1);
-      tenantNom = t?.nom ?? null;
+      if (t?.nom) {
+        titre = t.nom;
+        sousTitre = "Espace professionnel";
+      }
     } catch {
-      tenantNom = null;
+      /* fallback générique */
     }
   }
 
@@ -46,10 +55,10 @@ export default async function LoginPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-[--foreground]">
-            {tenantNom ?? "GrossistePPN"}
+            {titre}
           </h1>
           <p className="text-sm text-[--foreground-muted] mt-1">
-            {tenantNom ? "Espace professionnel" : "Madagascar — Gestion PPN"}
+            {sousTitre}
           </p>
         </div>
         <Suspense>

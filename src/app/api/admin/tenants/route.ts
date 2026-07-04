@@ -5,11 +5,15 @@ import { desc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { logAudit } from "@/lib/audit";
+import { isMasterHost } from "@/lib/tenant-host";
 
 export const dynamic = "force-dynamic";
 
 async function requireAdmin() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const h = await headers();
+  // Isolation : la gestion des tenants n'existe que sur la console master.
+  if (!isMasterHost(h.get("host"))) return null;
+  const session = await auth.api.getSession({ headers: h });
   if (!session?.user) return null;
   const role = (session.user as { role?: string }).role ?? "agent";
   if (role !== "admin") return null;

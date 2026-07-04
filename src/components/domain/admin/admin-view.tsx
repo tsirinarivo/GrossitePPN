@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PrinterSettings } from "./printer-settings";
 import { useSession } from "@/lib/auth/client";
+import { isMasterHost } from "@/lib/tenant-host";
 import { toast } from "sonner";
 
 type Section = "entreprise" | "depots" | "utilisateurs" | "paiements" | "imprimante";
@@ -67,8 +68,11 @@ function Toggle({ active, onClick, label, description }: {
 export function AdminView() {
   const [section, setSection] = useState<Section>("entreprise");
   const { data: session } = useSession();
-  // Surfaces plateforme (multi-tenant) réservées au super-admin.
+  // Surfaces plateforme (multi-tenant) réservées au super-admin ET à la console master.
   const isSuperAdmin = ((session?.user as { role?: string } | undefined)?.role ?? "") === "admin";
+  const [isMaster, setIsMaster] = useState(false);
+  useEffect(() => { setIsMaster(isMasterHost(window.location.host)); }, []);
+  const showPlatform = isSuperAdmin && isMaster;
 
   // ── Entreprise ────────────────────────────────────────────────────────────
   const [ent, setEnt] = useState<Entreprise>({
@@ -299,7 +303,7 @@ export function AdminView() {
           >
             <ShieldCheck className="w-4 h-4" />Audit
           </Link>
-          {isSuperAdmin && (
+          {showPlatform && (
             <>
               <Link href="/admin/tenants"
                 className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap shrink-0 lg:w-full text-[--foreground-muted] hover:bg-[--accent] hover:text-[--foreground]"

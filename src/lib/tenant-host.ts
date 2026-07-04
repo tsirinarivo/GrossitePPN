@@ -1,16 +1,29 @@
 /**
- * Résolution du tenant à partir du nom d'hôte (multi-tenant par sous-domaine).
+ * Résolution de l'hôte (multi-tenant par sous-domaine + console master isolée).
  *
- *   grossiste.dago-it.com            → landing marketing (pas de tenant)
- *   www.grossiste.dago-it.com        → landing marketing (pas de tenant)
+ *   grossiste.dago-it.com            → apex : landing marketing (aucun login)
+ *   www.grossiste.dago-it.com        → apex
+ *   master.grossiste.dago-it.com     → console plateforme (gestion des tenants)
  *   angelos.grossiste.dago-it.com    → tenant slug "angelos"
  *
- * Le domaine racine est configurable via NEXT_PUBLIC_ROOT_DOMAIN.
+ * Domaine racine configurable via NEXT_PUBLIC_ROOT_DOMAIN.
+ * Sous-domaine master via NEXT_PUBLIC_MASTER_SUBDOMAIN (défaut "master").
+ * Slug de repli pour l'apex via NEXT_PUBLIC_DEFAULT_TENANT_SLUG (défaut "demo").
  */
 
 export const ROOT_DOMAIN = (
   process.env["NEXT_PUBLIC_ROOT_DOMAIN"] ?? "grossiste.dago-it.com"
 ).toLowerCase();
+
+export const MASTER_SUBDOMAIN = (
+  process.env["NEXT_PUBLIC_MASTER_SUBDOMAIN"] ?? "master"
+).toLowerCase();
+
+export const DEFAULT_TENANT_SLUG = (
+  process.env["NEXT_PUBLIC_DEFAULT_TENANT_SLUG"] ?? "demo"
+).toLowerCase();
+
+export type HostKind = "apex" | "master" | "tenant";
 
 /** Enlève le port et normalise. */
 function hostname(host: string | null | undefined): string {
@@ -18,14 +31,13 @@ function hostname(host: string | null | undefined): string {
 }
 
 /**
- * Extrait le slug tenant d'un host. Renvoie `null` pour l'apex, `www`,
+ * Renvoie le premier label de sous-domaine, ou `null` pour l'apex, `www`,
  * localhost, une IP, ou un host hors du domaine racine.
  */
-export function parseTenantSlug(host: string | null | undefined): string | null {
+function firstLabel(host: string | null | undefined): string | null {
   const h = hostname(host);
   if (!h) return null;
 
-  // localhost / IP → pas de tenant (mais on gère angelos.localhost en dev)
   if (h === "localhost" || /^\d{1,3}(\.\d{1,3}){3}$/.test(h)) return null;
   if (h.endsWith(".localhost")) {
     const label = h.slice(0, -".localhost".length).split(".")[0];
@@ -40,8 +52,26 @@ export function parseTenantSlug(host: string | null | undefined): string | null 
     return label && label !== "www" ? label : null;
   }
 
-  // Host inconnu (preview, custom domain non géré) → pas de tenant
-  return null;
+  return null; // host inconnu (preview, custom domain)
+}
+
+/** Classe un host en apex / master / tenant. */
+export function parseHost(host: string | null | undefined): { kind: HostKind; slug: string | null } {
+  const label = firstLabel(host);
+  if (!label) return { kind: "apex", slug: null };
+  if (label === MASTER_SUBDOMAIN) return { kind: "master", slug: null };
+  return { kind: "tenant", slug: label };
+}
+
+/** Slug tenant d'un host (null pour apex, www ET master). */
+export function parseTenantSlug(host: string | null | undefined): string | null {
+  const { kind, slug } = parseHost(host);
+  return kind === "tenant" ? slug : null;
+}
+
+/** Vrai si le host est la console master. */
+export function isMasterHost(host: string | null | undefined): boolean {
+  return parseHost(host).kind === "master";
 }
 
 /** Construit l'URL absolue de l'espace d'un tenant. */

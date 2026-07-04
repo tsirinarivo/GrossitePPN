@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { sendMail, getSmtpConfig, type ResolvedSmtp } from "@/lib/mailer";
+import { isMasterHost } from "@/lib/tenant-host";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,11 @@ export const dynamic = "force-dynamic";
  *   (permet de valider avant d'enregistrer). Sinon on utilise la config résolue.
  */
 export async function POST(req: NextRequest) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const h = await headers();
+  if (!isMasterHost(h.get("host"))) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  const session = await auth.api.getSession({ headers: h });
   const role = (session?.user as { role?: string } | undefined)?.role ?? "agent";
   if (!session?.user || role !== "admin") {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
