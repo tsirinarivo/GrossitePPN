@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { logAudit } from "@/lib/audit";
 import { isPlanKey, PLAN_MAP } from "@/lib/plans";
 
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Formule invalide" }, { status: 400 });
   }
   const entrepriseNom = String(body.entrepriseNom ?? "").trim();
-  const contactEmail = String(body.contactEmail ?? "").trim();
+  const contactEmail = String(body.contactEmail ?? "").trim().toLowerCase();
   const contactNom = String(body.contactNom ?? "").trim();
   const telephone = String(body.telephone ?? "").trim();
   const reference = String(body.reference ?? "").trim();
@@ -44,6 +44,34 @@ export async function POST(req: NextRequest) {
   }
   if (!reference) {
     return NextResponse.json({ error: "Référence de la transaction requise" }, { status: 400 });
+  }
+
+  // Email unique : pas de compte existant ni de demande déjà en cours.
+  try {
+    const [existingUser] = await db
+      .select({ id: schema.users.id })
+      .from(schema.users)
+      .where(eq(sql`lower(${schema.users.email})`, contactEmail))
+      .limit(1);
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "Un compte existe déjà avec cet email. Connectez-vous à votre espace ou utilisez une autre adresse." },
+        { status: 409 }
+      );
+    }
+    const [existingDemande] = await db
+      .select({ id: schema.abonnements.id })
+      .from(schema.abonnements)
+      .where(and(eq(sql`lower(${schema.abonnements.contactEmail})`, contactEmail), eq(schema.abonnements.statut, "en_attente")))
+      .limit(1);
+    if (existingDemande) {
+      return NextResponse.json(
+        { error: "Une demande de souscription est déjà en cours pour cet email. Nous la validons au plus vite." },
+        { status: 409 }
+      );
+    }
+  } catch (e) {
+    console.error("[api/souscription] vérif email", e);
   }
 
   const planDef = PLAN_MAP[plan];
