@@ -5,6 +5,7 @@ import { eq, desc, and, gte, sql, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { isDemoFallbackEnabled } from "@/lib/demo-mode";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +97,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
 
+  const tid = await getSessionTenantId();
+
   const { searchParams } = new URL(req.url);
   const periode = searchParams.get("periode") ?? "mois";
 
@@ -126,7 +129,8 @@ export async function GET(req: NextRequest) {
       .innerJoin(schema.clients, eq(schema.commandes.clientId, schema.clients.id))
       .where(and(
         inArray(schema.commandes.statut, ["validee", "preparee", "en_livraison", "livree"] as const),
-        gte(schema.commandes.createdAt, debutPeriode)
+        gte(schema.commandes.createdAt, debutPeriode),
+        tenantFilter(schema.commandes.tenantId, tid)
       ))
       .groupBy(schema.commandes.clientId, schema.clients.raisonSociale, schema.clients.code, schema.clients.palier, schema.clients.zoneTournee)
       .orderBy(desc(sql`COALESCE(SUM(${schema.commandes.totalTTC}), 0)`))

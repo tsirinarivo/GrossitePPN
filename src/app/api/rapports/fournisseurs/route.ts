@@ -5,6 +5,7 @@ import { eq, desc, and, gte, sql, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { isDemoFallbackEnabled } from "@/lib/demo-mode";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,8 @@ export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
+  const tid = await getSessionTenantId();
+
   const periode = new URL(req.url).searchParams.get("periode") ?? "3mois";
 
   const now = new Date();
@@ -113,7 +116,7 @@ export async function GET(req: NextRequest) {
         dateReceptionEffective: schema.bonsCommande.dateReceptionEffective,
       })
       .from(schema.bonsCommande)
-      .where(gte(schema.bonsCommande.createdAt, debut));
+      .where(and(gte(schema.bonsCommande.createdAt, debut), tenantFilter(schema.bonsCommande.tenantId, tid)));
 
     if (bcsRows.length === 0) {
       if (isDemoFallbackEnabled()) {
@@ -127,7 +130,7 @@ export async function GET(req: NextRequest) {
     const fournRows = await db
       .select()
       .from(schema.fournisseurs)
-      .where(inArray(schema.fournisseurs.id, fournIds));
+      .where(and(inArray(schema.fournisseurs.id, fournIds), tenantFilter(schema.fournisseurs.tenantId, tid)));
 
     const fournMap = new Map(fournRows.map((f) => [f.id, f]));
 
@@ -140,6 +143,7 @@ export async function GET(req: NextRequest) {
             qteCommandee: schema.lignesBonCommande.quantiteCommandee,
             qteRecue: schema.lignesBonCommande.quantiteRecue,
           })
+          // lignesBonCommande n'a pas de tenant_id : borné par bcIds (déjà filtrés tenant)
           .from(schema.lignesBonCommande)
           .where(inArray(schema.lignesBonCommande.bonCommandeId, bcIds))
       : [];

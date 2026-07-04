@@ -5,6 +5,7 @@ import { eq, gte, lte, and, sql, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { isDemoFallbackEnabled } from "@/lib/demo-mode";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,7 @@ const DEMO_MOTIFS: MotifEchec[] = [
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = await getSessionTenantId();
 
   const periode = new URL(req.url).searchParams.get("periode") ?? "mois";
 
@@ -74,7 +76,7 @@ export async function GET(req: NextRequest) {
       .from(schema.livraisons)
       .leftJoin(schema.tournees, eq(schema.livraisons.tourneeId, schema.tournees.id))
       .leftJoin(schema.users, eq(schema.tournees.chauffeurId, schema.users.id))
-      .where(gte(schema.livraisons.createdAt, debut));
+      .where(and(gte(schema.livraisons.createdAt, debut), tenantFilter(schema.livraisons.tenantId, tid)));
 
     if (livraisons.length === 0) {
       if (isDemoFallbackEnabled()) {

@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { broadcastCommande } from "@/lib/sse/broadcast";
 import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
+import { resolveProduitIds } from "@/lib/resolve-produits";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +102,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Panier vide" }, { status: 400 });
     }
 
+    // Résout les produitId réels (rejette les IDs de démonstration / caches obsolètes).
+    const resolved = await resolveProduitIds(
+      lignes.map((l: { produitId?: string; nomProduit?: string }) => ({ produitId: l.produitId, nom: l.nomProduit }))
+    );
+    if (!resolved.ok) {
+      return NextResponse.json(
+        { error: "Certains articles ne correspondent à aucun produit réel. Créez de vrais produits dans le stock avant d'encaisser (les données de démonstration ne peuvent pas être commandées)." },
+        { status: 409 }
+      );
+    }
+
     const now = new Date();
     const datePart = now.toISOString().slice(0, 10).replace(/-/g, "");
     const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -140,10 +152,10 @@ export async function POST(req: NextRequest) {
       totalTVA: number;
       totalTTC: number;
       notes?: string;
-    }) => ({
+    }, idx: number) => ({
       id: crypto.randomUUID(),
       commandeId,
-      produitId: l.produitId,
+      produitId: resolved.ids[idx],
       uniteVenteId: l.uniteId !== "default" ? l.uniteId : null,
       nomProduit: l.nomProduit,
       nomUnite: l.nomUnite,

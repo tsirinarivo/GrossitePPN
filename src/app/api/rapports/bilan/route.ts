@@ -5,6 +5,7 @@ import { and, gte, lte, inArray, sql, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { isDemoFallbackEnabled } from "@/lib/demo-mode";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,7 @@ function demoBilan(annee: number): MoisBilan[] {
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = await getSessionTenantId();
 
   const { searchParams } = new URL(req.url);
   const annee = Number(searchParams.get("annee") ?? new Date().getFullYear());
@@ -94,7 +96,8 @@ export async function GET(req: NextRequest) {
         and(
           inArray(schema.commandes.statut, STATUTS_CA),
           gte(schema.commandes.soumiseAt, debut),
-          lte(schema.commandes.soumiseAt, fin)
+          lte(schema.commandes.soumiseAt, fin),
+          tenantFilter(schema.commandes.tenantId, tid)
         )
       )
       .groupBy(sql`to_char(${schema.commandes.soumiseAt}, 'YYYY-MM')`);
@@ -111,7 +114,8 @@ export async function GET(req: NextRequest) {
         and(
           eq(schema.bonsCommande.statut, "recu"),
           gte(schema.bonsCommande.dateReceptionEffective, debut),
-          lte(schema.bonsCommande.dateReceptionEffective, fin)
+          lte(schema.bonsCommande.dateReceptionEffective, fin),
+          tenantFilter(schema.bonsCommande.tenantId, tid)
         )
       )
       .groupBy(sql`to_char(${schema.bonsCommande.dateReceptionEffective}, 'YYYY-MM')`);
@@ -126,7 +130,8 @@ export async function GET(req: NextRequest) {
       .where(
         and(
           gte(schema.chargesOperationnelles.mois, `${annee}-01`),
-          lte(schema.chargesOperationnelles.mois, `${annee}-12`)
+          lte(schema.chargesOperationnelles.mois, `${annee}-12`),
+          tenantFilter(schema.chargesOperationnelles.tenantId, tid)
         )
       )
       .groupBy(schema.chargesOperationnelles.mois);

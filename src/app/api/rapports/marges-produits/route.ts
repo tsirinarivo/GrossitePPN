@@ -4,12 +4,14 @@ import * as schema from "@/lib/db/schema";
 import { and, eq, gte, lt, inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = await getSessionTenantId();
 
   const { searchParams } = new URL(req.url);
   const periode = searchParams.get("periode") ?? "mois";
@@ -36,7 +38,8 @@ export async function GET(req: NextRequest) {
       .where(
         and(
           eq(schema.commandes.statut, "validee"),
-          gte(schema.commandes.valideeAt, debut)
+          gte(schema.commandes.valideeAt, debut),
+          tenantFilter(schema.commandes.tenantId, tid)
         )
       )
       .groupBy(schema.lignesCommande.produitId, schema.lignesCommande.nomProduit)
@@ -54,7 +57,7 @@ export async function GET(req: NextRequest) {
             uniteBase: schema.produits.uniteBase,
           })
           .from(schema.produits)
-          .where(inArray(schema.produits.id, produitIds))
+          .where(and(inArray(schema.produits.id, produitIds), tenantFilter(schema.produits.tenantId, tid)))
       : [];
 
     const prixMap = new Map(prixAchats.map((p) => [p.id, p]));

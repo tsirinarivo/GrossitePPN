@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { eq, desc, and, gte, sql, inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +62,7 @@ const DEMO_TOP_PRODUITS = [
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = await getSessionTenantId();
 
   const { searchParams } = new URL(req.url);
   const annee = parseInt(searchParams.get("annee") ?? String(new Date().getFullYear()), 10);
@@ -74,7 +76,8 @@ export async function GET(req: NextRequest) {
     }).from(schema.commandes)
       .where(and(
         inArray(schema.commandes.statut, STATUTS_VALIDES as unknown as StatutValide[]),
-        gte(schema.commandes.createdAt, new Date(Date.now() - 24 * 30 * 24 * 60 * 60 * 1000))
+        gte(schema.commandes.createdAt, new Date(Date.now() - 24 * 30 * 24 * 60 * 60 * 1000)),
+        tenantFilter(schema.commandes.tenantId, tid)
       ))
       .groupBy(sql`to_char(date_trunc('month', ${schema.commandes.createdAt}), 'YYYY-MM')`)
       .orderBy(sql`to_char(date_trunc('month', ${schema.commandes.createdAt}), 'YYYY-MM')`);
@@ -88,7 +91,8 @@ export async function GET(req: NextRequest) {
       .innerJoin(schema.commandes, eq(schema.lignesCommande.commandeId, schema.commandes.id))
       .where(and(
         inArray(schema.commandes.statut, STATUTS_VALIDES as unknown as StatutValide[]),
-        gte(schema.commandes.createdAt, new Date(Date.now() - 90 * 24 * 60 * 60 * 1000))
+        gte(schema.commandes.createdAt, new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)),
+        tenantFilter(schema.commandes.tenantId, tid)
       ))
       .groupBy(schema.lignesCommande.nomProduit)
       .orderBy(desc(sql`SUM(${schema.lignesCommande.totalTTC})`))

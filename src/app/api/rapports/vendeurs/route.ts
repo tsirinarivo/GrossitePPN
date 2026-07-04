@@ -5,6 +5,7 @@ import { eq, desc, and, gte, inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { isDemoFallbackEnabled } from "@/lib/demo-mode";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,8 @@ export async function GET(req: NextRequest) {
   if (!["admin", "gerant", "comptable", "marketing"].includes(role)) {
     return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
   }
+
+  const tid = await getSessionTenantId();
 
   const { searchParams } = new URL(req.url);
   const periode = searchParams.get("periode") ?? "mois";
@@ -59,7 +62,8 @@ export async function GET(req: NextRequest) {
             "preparee",
             "en_livraison",
           ]),
-          gte(schema.commandes.createdAt, debutPeriode)
+          gte(schema.commandes.createdAt, debutPeriode),
+          tenantFilter(schema.commandes.tenantId, tid)
         )
       )
       .groupBy(schema.commandes.agentId, schema.users.name, schema.users.email)

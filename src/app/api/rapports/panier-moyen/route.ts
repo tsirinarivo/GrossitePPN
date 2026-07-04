@@ -5,6 +5,7 @@ import { eq, gte, inArray, sql, and } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { isDemoFallbackEnabled } from "@/lib/demo-mode";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,7 @@ const DEMO_DUOS: DuoProduit[] = [
 export async function GET(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = await getSessionTenantId();
 
   const periode = new URL(req.url).searchParams.get("periode") ?? "3mois";
 
@@ -72,7 +74,8 @@ export async function GET(req: NextRequest) {
       .where(
         and(
           inArray(schema.commandes.statut, [...STATUTS_VALIDES] as unknown as ("validee" | "preparee" | "en_livraison" | "livree")[]),
-          gte(schema.commandes.soumiseAt, debut)
+          gte(schema.commandes.soumiseAt, debut),
+          tenantFilter(schema.commandes.tenantId, tid)
         )
       );
 
@@ -129,7 +132,8 @@ export async function GET(req: NextRequest) {
             nomProduit: schema.lignesCommande.nomProduit,
           })
           .from(schema.lignesCommande)
-          .where(inArray(schema.lignesCommande.commandeId, cIds))
+          .innerJoin(schema.commandes, eq(schema.lignesCommande.commandeId, schema.commandes.id))
+          .where(and(inArray(schema.lignesCommande.commandeId, cIds), tenantFilter(schema.commandes.tenantId, tid)))
       : [];
 
     // Build commande → set produits

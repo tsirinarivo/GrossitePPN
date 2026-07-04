@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { and, gte, lte, inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
+import { getSessionTenantId, tenantFilter } from "@/lib/tenant";
 import { headers } from "next/headers";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +67,8 @@ export async function GET(req: NextRequest) {
   if (!session?.user)
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
+  const tid = await getSessionTenantId();
+
   const { searchParams } = new URL(req.url);
   const annee = parseInt(searchParams.get("annee") ?? String(new Date().getFullYear()), 10);
   const trimestreParam = searchParams.get("trimestre");
@@ -94,7 +97,8 @@ export async function GET(req: NextRequest) {
         and(
           inArray(schema.commandes.statut, STATUTS_VALIDES),
           gte(schema.commandes.createdAt, debut),
-          lte(schema.commandes.createdAt, fin)
+          lte(schema.commandes.createdAt, fin),
+          tenantFilter(schema.commandes.tenantId, tid)
         )
       )
       .groupBy(sql`to_char(${schema.commandes.createdAt}, 'YYYY-MM')`)
