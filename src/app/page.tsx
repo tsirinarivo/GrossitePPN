@@ -37,26 +37,20 @@ const BENEFITS = [
 
 const PLANS = [
   {
-    nom: "Essai", accent: false,
-    tagline: "Testez sans engagement",
-    features: ["1 dépôt", "Jusqu'à 3 utilisateurs", "POS + stock", "Support par email"],
-    cta: "Démarrer l'essai",
-  },
-  {
-    nom: "Standard", accent: false,
+    nom: "Standard", accent: false, prix: 49_000,
     tagline: "Pour démarrer sereinement",
     features: ["1 dépôt", "5 utilisateurs", "POS, stock, livraisons", "Rapports essentiels", "Boutique B2B"],
     cta: "Nous contacter",
   },
   {
-    nom: "Pro", accent: true,
+    nom: "Pro", accent: true, prix: 99_000,
     tagline: "Le plus populaire",
     features: ["Multi-dépôts", "Utilisateurs étendus", "Tous les modules", "Analytics avancés (RFM, prévisions)", "Audit & rôles fins"],
     cta: "Nous contacter",
   },
   {
-    nom: "Entreprise", accent: false,
-    tagline: "Sur mesure",
+    nom: "Entreprise", accent: false, prix: 149_000,
+    tagline: "Pour les grands volumes",
     features: ["Dépôts illimités", "Quotas personnalisés", "Accompagnement dédié", "Priorité support", "Intégrations sur devis"],
     cta: "Demander un devis",
   },
@@ -152,9 +146,9 @@ export default function LandingPage() {
       <section id="tarifs" className="max-w-6xl mx-auto px-4 py-16 md:py-20">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Des formules adaptées à votre taille</h2>
-          <p className="mt-3 text-[--foreground-muted]">Commencez petit, évoluez à votre rythme. Tarification sur devis selon vos besoins.</p>
+          <p className="mt-3 text-[--foreground-muted]">Des tarifs clairs, sans surprise. Évoluez à votre rythme, changez de formule quand vous voulez.</p>
         </div>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
           {PLANS.map((p) => (
             <div
               key={p.nom}
@@ -167,6 +161,10 @@ export default function LandingPage() {
               )}
               <h3 className="font-bold text-xl">{p.nom}</h3>
               <p className="text-sm text-[--foreground-muted] mt-1">{p.tagline}</p>
+              <div className="mt-4 flex items-baseline gap-1">
+                <span className="text-3xl font-extrabold tracking-tight">{p.prix.toLocaleString("fr-FR")}</span>
+                <span className="text-sm text-[--foreground-muted]">Ar / mois</span>
+              </div>
               <ul className="mt-5 space-y-2.5 flex-1">
                 {p.features.map((feat) => (
                   <li key={feat} className="flex items-start gap-2 text-sm">
