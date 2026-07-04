@@ -22,7 +22,7 @@ type Fields = z.infer<typeof schema>;
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get("redirect") ?? "/rapports";
+  const redirect = searchParams.get("redirect") ?? "/dashboard";
   const [showPwd, setShowPwd] = useState(false);
 
   const {

@@ -1,10 +1,31 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { headers } from "next/headers";
+import { eq } from "drizzle-orm";
 import { LoginForm } from "@/components/domain/auth/login-form";
+import { parseTenantSlug } from "@/lib/tenant-host";
+import { db } from "@/lib/db";
+import * as schema from "@/lib/db/schema";
 
 export const metadata: Metadata = { title: "Connexion" };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  // Sur un sous-domaine tenant, on affiche le nom de l'entreprise.
+  const slug = parseTenantSlug((await headers()).get("host"));
+  let tenantNom: string | null = null;
+  if (slug) {
+    try {
+      const [t] = await db
+        .select({ nom: schema.tenants.nom })
+        .from(schema.tenants)
+        .where(eq(schema.tenants.slug, slug))
+        .limit(1);
+      tenantNom = t?.nom ?? null;
+    } catch {
+      tenantNom = null;
+    }
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[--background] p-4">
       <div className="w-full max-w-sm">
@@ -25,10 +46,10 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-[--foreground]">
-            GrossistePPN
+            {tenantNom ?? "GrossistePPN"}
           </h1>
           <p className="text-sm text-[--foreground-muted] mt-1">
-            Madagascar — Gestion PPN
+            {tenantNom ? "Espace professionnel" : "Madagascar — Gestion PPN"}
           </p>
         </div>
         <Suspense>

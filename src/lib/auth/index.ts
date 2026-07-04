@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { ROOT_DOMAIN } from "@/lib/tenant-host";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -50,6 +51,12 @@ export const auth = betterAuth({
     process.env["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:3000",
     "http://localhost:3000",
     "http://localhost:3001",
+    // Multi-tenant : apex + tous les sous-domaines du domaine racine
+    // (Better-Auth 1.6 gère les patterns wildcard sur trustedOrigins).
+    `https://${ROOT_DOMAIN}`,
+    `http://${ROOT_DOMAIN}`,
+    `https://*.${ROOT_DOMAIN}`,
+    `http://*.${ROOT_DOMAIN}`,
   ],
   // Rate limiting global + règles spécifiques sur le sign-in
   rateLimit: {

@@ -30,8 +30,8 @@ export const ROLE_SECTIONS: Record<AppRole, string[] | "*"> = {
 
 /** Page d'accueil par défaut après login selon le rôle */
 export const ROLE_HOME: Record<AppRole, string> = {
-  admin:                  "/",
-  gerant:                 "/",
+  admin:                  "/dashboard",
+  gerant:                 "/dashboard",
   caissier:               "/pos/caisse",
   agent:                  "/pos/agent",
   magasinier:             "/stock",
@@ -52,7 +52,7 @@ export function canAccess(role: string | null | undefined, pathname: string): bo
 }
 
 export function homeForRole(role: string | null | undefined): string {
-  return ROLE_HOME[(role ?? "agent") as AppRole] ?? "/";
+  return ROLE_HOME[(role ?? "agent") as AppRole] ?? "/dashboard";
 }
 
 /** Labels affichables pour chaque rôle */
