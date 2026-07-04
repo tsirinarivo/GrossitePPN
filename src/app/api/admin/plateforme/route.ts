@@ -5,16 +5,9 @@ import { inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { isMasterHost } from "@/lib/tenant-host";
+import { PLAN_PRIX } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
-
-// Prix mensuel par plan (aligné sur la landing) → sert au MRR estimé.
-const PLAN_PRIX: Record<string, number> = {
-  essai: 0,
-  standard: 49_000,
-  pro: 99_000,
-  entreprise: 149_000,
-};
 
 // Statuts de commande considérés comme du CA réalisé.
 const CA_STATUTS: Array<typeof schema.commandes.statut.enumValues[number]> = [

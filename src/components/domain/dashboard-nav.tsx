@@ -8,7 +8,7 @@ import {
   BarChart3, DollarSign, Settings, Store,
   Wifi, WifiOff, Receipt, History, LogOut, User,
   X, ChevronLeft, ClipboardList, RotateCcw, Route,
-  Building, Mail, LayoutDashboard,
+  Building, Mail, LayoutDashboard, CreditCard, Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app.store";
@@ -45,9 +45,11 @@ const ALL_NAV_ITEMS: NavItem[] = [
 
 // Console master : uniquement la gestion plateforme (aucune donnée de vente/ERP).
 const PLATFORM_NAV_ITEMS: NavItem[] = [
-  { href: "/admin/plateforme", label: "Tableau de bord", icon: LayoutDashboard, color: "#10B981" },
-  { href: "/admin/tenants",    label: "Tenants",         icon: Building,         color: "#FF4D00" },
-  { href: "/admin/smtp",       label: "Email / SMTP",    icon: Mail,             color: "#3B82F6" },
+  { href: "/admin/plateforme",  label: "Tableau de bord", icon: LayoutDashboard, color: "#10B981" },
+  { href: "/admin/tenants",     label: "Tenants",         icon: Building,         color: "#FF4D00" },
+  { href: "/admin/abonnements", label: "Abonnements",     icon: CreditCard,      color: "#8B5CF6" },
+  { href: "/admin/paiements",   label: "Paiement",        icon: Smartphone,      color: "#22C55E" },
+  { href: "/admin/smtp",        label: "Email / SMTP",    icon: Mail,             color: "#3B82F6" },
 ];
 
 type Props = {

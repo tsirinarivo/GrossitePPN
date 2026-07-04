@@ -25,6 +25,22 @@ export const printerConfig = pgTable("printer_config", {
  * Configuration SMTP de la plateforme (singleton).
  * Config au niveau plateforme (super-admin), pas par tenant.
  */
+/**
+ * Numéros marchands Mobile Money de la plateforme (singleton).
+ * Affichés sur la page de souscription pour l'encaissement manuel.
+ */
+export const paiementConfig = pgTable("paiement_config", {
+  id: text("id").primaryKey().default("singleton"),
+  mvolaNumero: text("mvola_numero"),
+  mvolaNom: text("mvola_nom"),
+  orangeNumero: text("orange_numero"),
+  orangeNom: text("orange_nom"),
+  airtelNumero: text("airtel_numero"),
+  airtelNom: text("airtel_nom"),
+  instructions: text("instructions"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const smtpConfig = pgTable("smtp_config", {
   id: text("id").primaryKey().default("singleton"),
   host: text("host"),

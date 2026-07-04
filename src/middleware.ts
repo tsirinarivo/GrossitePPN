@@ -54,6 +54,8 @@ export async function middleware(request: NextRequest) {
     const masterAllowed =
       pathname.startsWith("/admin/plateforme") ||
       pathname.startsWith("/admin/tenants") ||
+      pathname.startsWith("/admin/abonnements") ||
+      pathname.startsWith("/admin/paiements") ||
       pathname.startsWith("/admin/smtp") ||
       pathname.startsWith("/login");
     if (!masterAllowed) {

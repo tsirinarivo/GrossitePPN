@@ -5,6 +5,7 @@ import {
   Check, ArrowRight, ShieldCheck, Warehouse, Smartphone, Zap,
 } from "lucide-react";
 import { TenantAccess } from "@/components/marketing/tenant-access";
+import { PLANS } from "@/lib/plans";
 
 export const metadata: Metadata = {
   title: "GrossistePPN — Le logiciel de gestion des grossistes à Madagascar",
@@ -33,27 +34,6 @@ const BENEFITS = [
   { icon: ShieldCheck, title: "Isolé & sécurisé", desc: "Chaque entreprise dispose de son espace totalement isolé, avec rôles et permissions." },
   { icon: Warehouse, title: "Pensé pour le gros", desc: "Paliers de prix détail / semi-gros / gros, unités de conditionnement, crédit client." },
   { icon: Zap, title: "Rapide à déployer", desc: "Votre espace prêt en quelques minutes, accessible depuis votre propre sous-domaine." },
-];
-
-const PLANS = [
-  {
-    nom: "Standard", accent: false, prix: 49_000,
-    tagline: "Pour démarrer sereinement",
-    features: ["1 dépôt", "5 utilisateurs", "POS, stock, livraisons", "Rapports essentiels", "Boutique B2B"],
-    cta: "Nous contacter",
-  },
-  {
-    nom: "Pro", accent: true, prix: 99_000,
-    tagline: "Le plus populaire",
-    features: ["Multi-dépôts", "Utilisateurs étendus", "Tous les modules", "Analytics avancés (RFM, prévisions)", "Audit & rôles fins"],
-    cta: "Nous contacter",
-  },
-  {
-    nom: "Entreprise", accent: false, prix: 149_000,
-    tagline: "Pour les grands volumes",
-    features: ["Dépôts illimités", "Quotas personnalisés", "Accompagnement dédié", "Priorité support", "Intégrations sur devis"],
-    cta: "Demander un devis",
-  },
 ];
 
 const CONTACT_EMAIL = process.env["NEXT_PUBLIC_CONTACT_EMAIL"] ?? "contact@dago-it.com";
@@ -151,7 +131,7 @@ export default function LandingPage() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
           {PLANS.map((p) => (
             <div
-              key={p.nom}
+              key={p.key}
               className={`relative rounded-2xl border p-6 flex flex-col ${p.accent ? "border-[#FF4D00] bg-[--card]" : "border-[--border] bg-[--card]"}`}
             >
               {p.accent && (
@@ -173,12 +153,12 @@ export default function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <a
-                href={mailto}
+              <Link
+                href={`/souscription?plan=${p.key}`}
                 className={`mt-6 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-semibold text-sm transition-colors ${p.accent ? "bg-[#FF4D00] hover:bg-[#E04400] text-white" : "border border-[--border-strong] hover:bg-[--accent]"}`}
               >
-                {p.cta}
-              </a>
+                Acheter <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
           ))}
         </div>

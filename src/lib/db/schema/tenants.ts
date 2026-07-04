@@ -12,6 +12,7 @@ export const tenantStatutEnum = pgEnum("tenant_statut", [
   "actif",
   "suspendu",
   "resilie",
+  "en_attente",
 ]);
 
 export const tenantPlanEnum = pgEnum("tenant_plan", [
@@ -19,6 +20,18 @@ export const tenantPlanEnum = pgEnum("tenant_plan", [
   "standard",
   "pro",
   "entreprise",
+]);
+
+export const abonnementOperateurEnum = pgEnum("abonnement_operateur", [
+  "mvola",
+  "orange_money",
+  "airtel_money",
+]);
+
+export const abonnementStatutEnum = pgEnum("abonnement_statut", [
+  "en_attente",
+  "valide",
+  "rejete",
 ]);
 
 /**
@@ -56,4 +69,32 @@ export const tenants = pgTable(
     index("tenants_statut_idx").on(t.statut),
     index("tenants_slug_idx").on(t.slug),
   ]
+);
+
+/**
+ * Demandes d'abonnement / paiements Mobile Money (souscription depuis la landing).
+ * Le paiement est manuel : le client paie sur le numéro marchand et saisit la
+ * référence ; le super-admin valide dans la console master (→ tenant activé).
+ */
+export const abonnements = pgTable(
+  "abonnements",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id"),
+    entrepriseNom: text("entreprise_nom").notNull(),
+    slug: text("slug"),
+    plan: tenantPlanEnum("plan").notNull(),
+    montant: integer("montant").notNull(),
+    operateur: abonnementOperateurEnum("operateur").notNull(),
+    telephone: text("telephone"),
+    reference: text("reference"),
+    contactNom: text("contact_nom"),
+    contactEmail: text("contact_email"),
+    statut: abonnementStatutEnum("statut").default("en_attente").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    valideAt: timestamp("valide_at"),
+    valideBy: text("valide_by"),
+  },
+  (t) => [index("abonnements_statut_idx").on(t.statut)]
 );
