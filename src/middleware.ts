@@ -43,17 +43,21 @@ export async function middleware(request: NextRequest) {
 
   // 3) Racine des sous-domaines.
   if (pathname === "/") {
-    return NextResponse.redirect(new URL(kind === "master" ? "/admin/tenants" : "/dashboard", request.url));
+    return NextResponse.redirect(new URL(kind === "master" ? "/admin/plateforme" : "/dashboard", request.url));
   }
   // Sur master, seules les surfaces plateforme existent : tout le reste
-  // (menus ERP : ventes, stock, etc.) est renvoyé vers la gestion des tenants.
+  // (menus ERP : ventes, stock, etc.) est renvoyé vers le tableau de bord.
   if (kind === "master") {
+    if (pathname === "/dashboard") {
+      return NextResponse.redirect(new URL("/admin/plateforme", request.url));
+    }
     const masterAllowed =
+      pathname.startsWith("/admin/plateforme") ||
       pathname.startsWith("/admin/tenants") ||
       pathname.startsWith("/admin/smtp") ||
       pathname.startsWith("/login");
     if (!masterAllowed) {
-      return NextResponse.redirect(new URL("/admin/tenants", request.url));
+      return NextResponse.redirect(new URL("/admin/plateforme", request.url));
     }
   }
 
