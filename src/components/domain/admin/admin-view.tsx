@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, Users, Wallet, Warehouse, Settings as SettingsIcon,
   ShieldCheck, Receipt, Smartphone, Check, Printer, Loader2,
-  Plus, X, Eye, EyeOff, Pencil, Tag, Building, Mail,
+  Plus, X, Eye, EyeOff, Pencil, Tag, Building, Mail, Trash2, AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -113,6 +113,9 @@ export function AdminView() {
   const [editPwd, setEditPwd] = useState("");
   const [showEditPwd, setShowEditPwd] = useState(false);
   const [editSaving, startEditSave] = useTransition();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteSaving, startDeleteSave] = useTransition();
+  const currentUserId = (session?.user as { id?: string } | undefined)?.id;
 
   function loadUsers() {
     setUsersLoading(true);
@@ -225,6 +228,30 @@ export function AdminView() {
         loadUsers();
       } else {
         toast.error("Erreur mise à jour");
+      }
+    });
+  }
+
+  function deleteUser() {
+    if (!editUser) return;
+    startDeleteSave(async () => {
+      const res = await fetch(`/api/admin/users/${editUser.id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        toast.success("Utilisateur supprimé");
+        setEditUser(null);
+        setEditPwd("");
+        setConfirmDelete(false);
+        loadUsers();
+      } else if (data?.deactivated) {
+        // Historique présent → désactivé au lieu de supprimé
+        toast.warning(data.error ?? "Utilisateur désactivé (historique présent)");
+        setEditUser(null);
+        setEditPwd("");
+        setConfirmDelete(false);
+        loadUsers();
+      } else {
+        toast.error(data?.error ?? "Erreur lors de la suppression");
       }
     });
   }
@@ -546,7 +573,7 @@ export function AdminView() {
                               {u.actif ? <Badge variant="success">Actif</Badge> : <Badge variant="outline">Désactivé</Badge>}
                             </td>
                             <td className="px-4 py-2.5">
-                              <Button variant="ghost" size="sm" onClick={() => setEditUser(u)}>
+                              <Button variant="ghost" size="sm" onClick={() => { setEditUser(u); setConfirmDelete(false); setEditPwd(""); }}>
                                 <Pencil className="w-3.5 h-3.5" />
                               </Button>
                             </td>
@@ -620,7 +647,7 @@ export function AdminView() {
                       className="bg-[--background] rounded-2xl border border-[--border] p-6 w-full max-w-md space-y-4">
                       <div className="flex items-center justify-between">
                         <h3 className="font-semibold text-[--foreground]">Modifier {editUser.name}</h3>
-                        <button onClick={() => { setEditUser(null); setEditPwd(""); }} className="text-[--foreground-muted] hover:text-[--foreground]">
+                        <button onClick={() => { setEditUser(null); setEditPwd(""); setConfirmDelete(false); }} className="text-[--foreground-muted] hover:text-[--foreground]">
                           <X className="w-5 h-5" />
                         </button>
                       </div>
@@ -667,11 +694,34 @@ export function AdminView() {
                           <span className="text-sm text-[--foreground]">Compte actif</span>
                         </div>
                       </div>
-                      <div className="flex justify-end gap-2 pt-2">
-                        <Button variant="outline" onClick={() => setEditUser(null)}>Annuler</Button>
-                        <Button onClick={saveEditUser} loading={editSaving}>
-                          <Check className="w-4 h-4" /> Enregistrer
-                        </Button>
+                      {confirmDelete && (
+                        <div className="flex items-start gap-2 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm">
+                          <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                          <p className="text-[--foreground]">
+                            Supprimer définitivement <span className="font-semibold">{editUser.name}</span> ?
+                            S&apos;il possède un historique (ventes, livraisons…), il sera désactivé plutôt que supprimé.
+                          </p>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between gap-2 pt-2">
+                        {editUser.id !== currentUserId ? (
+                          confirmDelete ? (
+                            <Button variant="destructive" onClick={deleteUser} loading={deleteSaving}>
+                              <Trash2 className="w-4 h-4" /> Confirmer
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                              onClick={() => setConfirmDelete(true)}>
+                              <Trash2 className="w-4 h-4" /> Supprimer
+                            </Button>
+                          )
+                        ) : <span />}
+                        <div className="flex gap-2">
+                          <Button variant="outline" onClick={() => { setEditUser(null); setEditPwd(""); setConfirmDelete(false); }}>Annuler</Button>
+                          <Button onClick={saveEditUser} loading={editSaving}>
+                            <Check className="w-4 h-4" /> Enregistrer
+                          </Button>
+                        </div>
                       </div>
                     </motion.div>
                   </motion.div>
