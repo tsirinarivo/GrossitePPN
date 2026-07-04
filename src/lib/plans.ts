@@ -11,6 +11,8 @@ export interface PlanDef {
   prix: number; // Ar / mois
   tagline: string;
   features: string[];
+  maxDepots: number;
+  maxUtilisateurs: number;
   accent?: boolean;
 }
 
@@ -20,6 +22,8 @@ export const PLANS: PlanDef[] = [
     nom: "Standard",
     prix: 49_000,
     tagline: "Pour démarrer sereinement",
+    maxDepots: 1,
+    maxUtilisateurs: 5,
     features: ["1 dépôt", "5 utilisateurs", "POS, stock, livraisons", "Rapports essentiels"],
   },
   {
@@ -27,7 +31,9 @@ export const PLANS: PlanDef[] = [
     nom: "Pro",
     prix: 99_000,
     tagline: "Le plus populaire",
-    features: ["Multi-dépôts", "Utilisateurs étendus", "Boutique B2B", "Tous les modules", "Analytics avancés (RFM, prévisions)", "Audit & rôles fins"],
+    maxDepots: 10,
+    maxUtilisateurs: 20,
+    features: ["10 dépôts", "20 utilisateurs", "Boutique B2B", "Tous les modules", "Analytics avancés (RFM, prévisions)", "Audit & rôles fins"],
     accent: true,
   },
   {
@@ -35,6 +41,8 @@ export const PLANS: PlanDef[] = [
     nom: "Entreprise",
     prix: 149_000,
     tagline: "Pour les grands volumes",
+    maxDepots: 999,
+    maxUtilisateurs: 999,
     features: ["Dépôts illimités", "Quotas personnalisés", "Accompagnement dédié", "Priorité support", "Intégrations sur devis"],
   },
 ];

@@ -46,7 +46,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Référence de la transaction requise" }, { status: 400 });
   }
 
-  const montant = PLAN_MAP[plan].prix;
+  const planDef = PLAN_MAP[plan];
+  const montant = planDef.prix;
 
   // Slug unique (dérivé du nom, suffixe si déjà pris).
   const wantedSlug = (body.slug ? slugify(String(body.slug)) : slugify(entrepriseNom)) || "tenant";
@@ -70,6 +71,8 @@ export async function POST(req: NextRequest) {
       contactNom: contactNom || null,
       contactEmail,
       contactTelephone: telephone || null,
+      maxDepots: planDef.maxDepots,
+      maxUtilisateurs: planDef.maxUtilisateurs,
     });
 
     // Identité entreprise (utilisée sur ses futurs documents).

@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { isMasterHost } from "@/lib/tenant-host";
 import { logAudit } from "@/lib/audit";
+import { isPlanKey, PLAN_MAP } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -57,8 +58,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const [tenant] = await db.select().from(schema.tenants).where(eq(schema.tenants.id, abo.tenantId)).limit(1);
   if (!tenant) return NextResponse.json({ error: "Tenant introuvable" }, { status: 404 });
 
+  const quotas = isPlanKey(abo.plan)
+    ? { maxDepots: PLAN_MAP[abo.plan].maxDepots, maxUtilisateurs: PLAN_MAP[abo.plan].maxUtilisateurs }
+    : {};
   await db.update(schema.tenants)
-    .set({ statut: "actif", plan: abo.plan, updatedAt: new Date() })
+    .set({ statut: "actif", plan: abo.plan, ...quotas, updatedAt: new Date() })
     .where(eq(schema.tenants.id, tenant.id));
 
   // Compte gérant + email des identifiants (best-effort)
