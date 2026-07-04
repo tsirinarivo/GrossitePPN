@@ -8,6 +8,7 @@ import {
   BarChart3, DollarSign, Settings, Store,
   Wifi, WifiOff, Receipt, History, LogOut, User,
   X, ChevronLeft, ClipboardList, RotateCcw, Route,
+  Building, Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/app.store";
@@ -42,14 +43,21 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { href: "/admin",      label: "Admin",             icon: Settings,     color: "#6B7280" },
 ];
 
+// Console master : uniquement la gestion plateforme (aucune donnée de vente/ERP).
+const PLATFORM_NAV_ITEMS: NavItem[] = [
+  { href: "/admin/tenants", label: "Tenants",      icon: Building, color: "#FF4D00" },
+  { href: "/admin/smtp",    label: "Email / SMTP", icon: Mail,     color: "#3B82F6" },
+];
+
 type Props = {
   role?: string;
+  isMaster?: boolean;
   collapsed: boolean;
   onToggle: () => void;
   onClose?: () => void;
 };
 
-export function DashboardNav({ role, collapsed, onToggle, onClose }: Props) {
+export function DashboardNav({ role, isMaster = false, collapsed, onToggle, onClose }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const connexion = useAppStore((s) => s.connexion);
@@ -58,6 +66,8 @@ export function DashboardNav({ role, collapsed, onToggle, onClose }: Props) {
   const [nbCaisse, setNbCaisse] = useState(0);
 
   useEffect(() => {
+    // Pas de badges ERP sur la console master.
+    if (isMaster) return;
     const fetchBadges = () => {
       fetch("/api/stock/alertes-count").then((r) => r.json()).then((d) => setNbAlertes(d.nbAlertes ?? 0)).catch(() => {});
       fetch("/api/caisse/commandes").then((r) => r.json()).then((d) => setNbCaisse(Array.isArray(d) ? d.length : 0)).catch(() => {});
@@ -65,14 +75,16 @@ export function DashboardNav({ role, collapsed, onToggle, onClose }: Props) {
     fetchBadges();
     const interval = setInterval(fetchBadges, 60_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isMaster]);
 
   const BADGES: Record<string, number> = {
     "/stock": nbAlertes,
     "/pos/caisse": nbCaisse,
   };
 
-  const navItems = ALL_NAV_ITEMS.filter((item) => canAccess(role, item.href));
+  const navItems = isMaster
+    ? PLATFORM_NAV_ITEMS
+    : ALL_NAV_ITEMS.filter((item) => canAccess(role, item.href));
 
   const handleSignOut = async () => {
     try {
@@ -127,7 +139,7 @@ export function DashboardNav({ role, collapsed, onToggle, onClose }: Props) {
                 <div className="text-sm font-bold text-white truncate leading-tight">
                   GrossistePPN
                 </div>
-                <div className="text-[10px] text-brand-muted truncate">Madagascar</div>
+                <div className="text-[10px] text-brand-muted truncate">{isMaster ? "Console plateforme" : "Madagascar"}</div>
               </motion.div>
             )}
           </AnimatePresence>

@@ -10,9 +10,11 @@ import { NotificationBell } from "@/components/notification-bell";
 export function DashboardShell({
   children,
   role,
+  isMaster = false,
 }: {
   children: React.ReactNode;
   role?: string;
+  isMaster?: boolean;
 }) {
   const [mobileNavOpen, setMobileNavOpen]   = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -37,6 +39,7 @@ export function DashboardShell({
       <div className="hidden lg:block shrink-0">
         <DashboardNav
           role={role}
+          isMaster={isMaster}
           collapsed={sidebarCollapsed}
           onToggle={() => setSidebarCollapsed((v) => !v)}
         />
@@ -51,6 +54,7 @@ export function DashboardShell({
       >
         <DashboardNav
           role={role}
+          isMaster={isMaster}
           collapsed={false}
           onToggle={() => {}}
           onClose={() => setMobileNavOpen(false)}
@@ -81,10 +85,10 @@ export function DashboardShell({
           >
             <Package className="w-4 h-4 text-white" />
           </div>
-          <span className="text-sm font-bold text-white">GrossistePPN</span>
+          <span className="text-sm font-bold text-white">{isMaster ? "Console" : "GrossistePPN"}</span>
         </div>
-        <NotificationBell />
-        <GlobalSearch />
+        {!isMaster && <NotificationBell />}
+        {!isMaster && <GlobalSearch />}
       </div>
     </div>
   );

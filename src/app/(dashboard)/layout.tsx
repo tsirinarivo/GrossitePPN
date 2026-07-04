@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { homeForRole } from "@/lib/permissions";
+import { parseHost } from "@/lib/tenant-host";
 import { DashboardShell } from "@/components/domain/dashboard-shell";
 
 export default async function DashboardLayout({
@@ -9,7 +10,8 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const h = await headers();
+  const session = await auth.api.getSession({ headers: h });
 
   if (!session?.user) {
     redirect("/login");
@@ -24,8 +26,15 @@ export default async function DashboardLayout({
     redirect("/login?error=compte_desactive");
   }
 
+  // Console master = coquille dédiée à la gestion plateforme (pas de menu ERP).
+  const isMaster = parseHost(h.get("host")).kind === "master";
+  // La console master est réservée au super-admin plateforme.
+  if (isMaster && role !== "admin") {
+    redirect("/login?error=reserve_admin");
+  }
+
   return (
-    <DashboardShell role={role}>
+    <DashboardShell role={role} isMaster={isMaster}>
       {children}
     </DashboardShell>
   );

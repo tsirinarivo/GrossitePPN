@@ -45,9 +45,16 @@ export async function middleware(request: NextRequest) {
   if (pathname === "/") {
     return NextResponse.redirect(new URL(kind === "master" ? "/admin/tenants" : "/dashboard", request.url));
   }
-  // Sur master, /dashboard mène à la gestion des tenants.
-  if (kind === "master" && pathname === "/dashboard") {
-    return NextResponse.redirect(new URL("/admin/tenants", request.url));
+  // Sur master, seules les surfaces plateforme existent : tout le reste
+  // (menus ERP : ventes, stock, etc.) est renvoyé vers la gestion des tenants.
+  if (kind === "master") {
+    const masterAllowed =
+      pathname.startsWith("/admin/tenants") ||
+      pathname.startsWith("/admin/smtp") ||
+      pathname.startsWith("/login");
+    if (!masterAllowed) {
+      return NextResponse.redirect(new URL("/admin/tenants", request.url));
+    }
   }
 
   // 4) Garde d'authentification sur les routes protégées.
