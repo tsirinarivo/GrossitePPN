@@ -20,14 +20,14 @@ export const PLANS: PlanDef[] = [
     nom: "Standard",
     prix: 49_000,
     tagline: "Pour démarrer sereinement",
-    features: ["1 dépôt", "5 utilisateurs", "POS, stock, livraisons", "Rapports essentiels", "Boutique B2B"],
+    features: ["1 dépôt", "5 utilisateurs", "POS, stock, livraisons", "Rapports essentiels"],
   },
   {
     key: "pro",
     nom: "Pro",
     prix: 99_000,
     tagline: "Le plus populaire",
-    features: ["Multi-dépôts", "Utilisateurs étendus", "Tous les modules", "Analytics avancés (RFM, prévisions)", "Audit & rôles fins"],
+    features: ["Multi-dépôts", "Utilisateurs étendus", "Boutique B2B", "Tous les modules", "Analytics avancés (RFM, prévisions)", "Audit & rôles fins"],
     accent: true,
   },
   {
