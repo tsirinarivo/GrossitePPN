@@ -3,6 +3,7 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { ROOT_DOMAIN } from "@/lib/tenant-host";
+import { impersonation } from "./impersonation";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -69,6 +70,7 @@ export const auth = betterAuth({
       "/forget-password": { window: 60, max: 3 },
     },
   },
+  plugins: [impersonation()],
 });
 
 export type Session = typeof auth.$Infer.Session;

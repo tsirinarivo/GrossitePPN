@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useTransition } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building, Plus, X, Check, Trash2, Loader2, Search, Info,
-  Pause, Play, Pencil, Users, Warehouse, Mail, Phone, CalendarClock, Send, KeyRound,
+  Pause, Play, Pencil, Users, Warehouse, Mail, Phone, CalendarClock, Send, KeyRound, LogIn,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -187,6 +187,22 @@ export function TenantsView() {
     } else toast.error("Suppression impossible");
   }
 
+  async function impersonate(t: Tenant) {
+    setBusy(t.id);
+    try {
+      const res = await fetch(`/api/admin/tenants/${t.id}/impersonate`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.url) {
+        toast.success(`Ouverture de l'espace « ${t.nom} »…`);
+        window.open(data.url, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error(data.error ?? "Impossible d'accéder à l'espace");
+      }
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function renvoyer(t: Tenant) {
     if (!t.contactEmail) {
       toast.error("Aucun email de contact pour ce tenant");
@@ -319,6 +335,10 @@ export function TenantsView() {
                           <Play className="w-3.5 h-3.5" /> Activer
                         </Button>
                       )}
+                      <Button variant="ghost" size="sm" className="h-8 text-xs text-[--foreground-muted] hover:text-[--primary]" disabled={busy === t.id}
+                        onClick={() => impersonate(t)} title="Se connecter dans l'espace de ce tenant (voir ce qui s'y passe)">
+                        <LogIn className="w-3.5 h-3.5" /> Se connecter
+                      </Button>
                       <Button variant="ghost" size="sm" className="h-8 text-xs" disabled={busy === t.id || !t.contactEmail}
                         onClick={() => renvoyer(t)} title={t.contactEmail ? `Renvoyer les infos à ${t.contactEmail}` : "Aucun email de contact"}>
                         <Send className="w-3.5 h-3.5" /> Renvoyer
