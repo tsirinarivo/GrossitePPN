@@ -107,19 +107,21 @@ git pull origin claude/resume-autonomous-dev-kUOrp
 pnpm install --frozen-lockfile
 pnpm db:push  # SI le schéma a changé (vérifier le diff avant)
 pnpm build
+rm -rf .next/standalone/.next/static .next/standalone/public  # OBLIGATOIRE avant le cp (sinon nesting → chunks 404)
 cp -r .next/static .next/standalone/.next/static
 cp -r public .next/standalone/public
 pm2 restart grossiteppn
 ```
 
 > ⚠️ `git pull` seul ne suffit pas — il faut toujours rebuilder.
+> ⚠️ **Toujours `rm -rf` le dossier static/public du standalone AVANT le `cp`** : sinon `cp -r` imbrique dans le dossier existant (`.next/standalone/.next/static/static/…`) → « Failed to load chunk » au 2ᵉ redéploiement.
 
 ### Règle après chaque `git push`
 
 Afficher OBLIGATOIREMENT ce bloc exact, prêt à copier-coller :
 
 ```
-cd /opt/grossiteppn && git pull origin claude/resume-autonomous-dev-kUOrp && pnpm build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public && pm2 restart grossiteppn
+cd /opt/grossiteppn && git pull origin claude/resume-autonomous-dev-kUOrp && pnpm build && rm -rf .next/standalone/.next/static .next/standalone/public && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public && pm2 restart grossiteppn
 ```
 
 Si le sprint a ajouté/modifié des tables DB, ajouter `pnpm db:push` après le `git pull`.
