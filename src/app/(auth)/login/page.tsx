@@ -9,7 +9,22 @@ import * as schema from "@/lib/db/schema";
 
 export const metadata: Metadata = { title: "Connexion" };
 
-export default async function LoginPage() {
+const ERROR_MESSAGES: Record<string, string> = {
+  compte_desactive: "Votre compte a été désactivé. Contactez votre administrateur.",
+  reserve_admin: "Cette console est réservée à l'administrateur de la plateforme.",
+  espace_inconnu: "Cet espace n'existe pas.",
+  mauvais_espace: "Votre compte n'appartient pas à cet espace. Connectez-vous à votre propre espace.",
+  espace_inactif: "Cet espace n'est pas actif (paiement en attente ou suspendu).",
+  impersonation_invalide: "Lien d'accès expiré ou invalide.",
+};
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error } = await searchParams;
+  const errorMessage = error ? ERROR_MESSAGES[error] ?? null : null;
   const { kind, slug } = parseHost((await headers()).get("host"));
 
   // Titre affiché : console master, nom du tenant, ou générique.
@@ -61,6 +76,11 @@ export default async function LoginPage() {
             {sousTitre}
           </p>
         </div>
+        {errorMessage && (
+          <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2.5 text-sm text-red-400">
+            {errorMessage}
+          </div>
+        )}
         <Suspense>
           <LoginForm />
         </Suspense>

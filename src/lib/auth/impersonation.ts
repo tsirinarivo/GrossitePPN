@@ -57,6 +57,8 @@ export const impersonation = () => ({
         if (!session) throw ctx.redirect("/login?error=impersonation_invalide");
 
         await setSessionCookie(ctx, { session, user });
+        // Marqueur lisible côté client pour afficher le bandeau d'impersonation.
+        ctx.setCookie("bff_imp", "1", { path: "/", maxAge: 60 * 60 * 24 * 7, sameSite: "lax", httpOnly: false });
         throw ctx.redirect(callbackURL);
       }
     ),

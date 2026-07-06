@@ -44,6 +44,8 @@ export function LoginForm() {
       return;
     }
 
+    // Un login normal n'est jamais une impersonation → on purge le marqueur.
+    document.cookie = "bff_imp=; Max-Age=0; path=/";
     router.push(redirect);
     router.refresh();
   };

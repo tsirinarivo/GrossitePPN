@@ -67,10 +67,21 @@ export function DashboardNav({ role, isMaster = false, collapsed, onToggle, onCl
   const { data: session } = useSession();
   const [nbAlertes, setNbAlertes] = useState(0);
   const [nbCaisse, setNbCaisse] = useState(0);
+  const [nbAbos, setNbAbos] = useState(0);
 
   useEffect(() => {
-    // Pas de badges ERP sur la console master.
-    if (isMaster) return;
+    // Console master : badge des demandes d'abonnement en attente.
+    if (isMaster) {
+      const fetchAbos = () => {
+        fetch("/api/admin/abonnements")
+          .then((r) => r.json())
+          .then((d) => setNbAbos((d.abonnements ?? []).filter((a: { statut: string }) => a.statut === "en_attente").length))
+          .catch(() => {});
+      };
+      fetchAbos();
+      const i = setInterval(fetchAbos, 60_000);
+      return () => clearInterval(i);
+    }
     const fetchBadges = () => {
       fetch("/api/stock/alertes-count").then((r) => r.json()).then((d) => setNbAlertes(d.nbAlertes ?? 0)).catch(() => {});
       fetch("/api/caisse/commandes").then((r) => r.json()).then((d) => setNbCaisse(Array.isArray(d) ? d.length : 0)).catch(() => {});
@@ -83,6 +94,7 @@ export function DashboardNav({ role, isMaster = false, collapsed, onToggle, onCl
   const BADGES: Record<string, number> = {
     "/stock": nbAlertes,
     "/pos/caisse": nbCaisse,
+    "/admin/abonnements": nbAbos,
   };
 
   const navItems = isMaster

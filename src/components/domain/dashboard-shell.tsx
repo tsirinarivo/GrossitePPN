@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { Menu, Package } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Menu, Package, ShieldAlert, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardNav } from "./dashboard-nav";
 import { GlobalSearch } from "@/components/global-search";
 import { NotificationBell } from "@/components/notification-bell";
+import { signOut } from "@/lib/auth/client";
+import { ROOT_DOMAIN } from "@/lib/tenant-host";
 
 export function DashboardShell({
   children,
@@ -18,6 +20,17 @@ export function DashboardShell({
 }) {
   const [mobileNavOpen, setMobileNavOpen]   = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [impersonating, setImpersonating] = useState(false);
+
+  useEffect(() => {
+    setImpersonating(!isMaster && /(?:^|;\s*)bff_imp=1/.test(document.cookie));
+  }, [isMaster]);
+
+  async function quitImpersonation() {
+    document.cookie = "bff_imp=; Max-Age=0; path=/";
+    try { await signOut(); } catch { /* ignore */ }
+    window.location.href = `https://master.${ROOT_DOMAIN}/admin/tenants`;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: "#1B1D24" }}>
@@ -63,6 +76,18 @@ export function DashboardShell({
 
       {/* ── Contenu principal ── */}
       <main className="flex-1 overflow-auto min-w-0 pt-14 lg:pt-0">
+        {impersonating && (
+          <div className="sticky top-0 z-30 flex items-center justify-between gap-3 px-4 py-2 bg-amber-500 text-black text-sm font-medium">
+            <span className="inline-flex items-center gap-2 min-w-0">
+              <ShieldAlert className="w-4 h-4 shrink-0" />
+              <span className="truncate">Mode administration — vous consultez cet espace en tant qu&apos;admin plateforme.</span>
+            </span>
+            <button onClick={quitImpersonation}
+              className="inline-flex items-center gap-1.5 shrink-0 rounded-md bg-black/85 hover:bg-black text-white px-3 py-1 text-xs font-semibold transition-colors">
+              <LogOut className="w-3.5 h-3.5" /> Quitter
+            </button>
+          </div>
+        )}
         {children}
       </main>
 
