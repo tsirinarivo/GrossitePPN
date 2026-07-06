@@ -13,6 +13,7 @@ export interface PlanDef {
   features: string[];
   maxDepots: number;
   maxUtilisateurs: number;
+  boutiqueB2B: boolean;
   accent?: boolean;
 }
 
@@ -24,6 +25,7 @@ export const PLANS: PlanDef[] = [
     tagline: "Pour démarrer sereinement",
     maxDepots: 1,
     maxUtilisateurs: 5,
+    boutiqueB2B: false,
     features: ["1 dépôt", "5 utilisateurs", "POS, stock, livraisons", "Rapports essentiels"],
   },
   {
@@ -33,6 +35,7 @@ export const PLANS: PlanDef[] = [
     tagline: "Le plus populaire",
     maxDepots: 10,
     maxUtilisateurs: 20,
+    boutiqueB2B: true,
     features: ["10 dépôts", "20 utilisateurs", "Boutique B2B", "Tous les modules", "Analytics avancés (RFM, prévisions)", "Audit & rôles fins"],
     accent: true,
   },
@@ -43,9 +46,15 @@ export const PLANS: PlanDef[] = [
     tagline: "Pour les grands volumes",
     maxDepots: 999,
     maxUtilisateurs: 999,
+    boutiqueB2B: true,
     features: ["Dépôts illimités", "Quotas personnalisés", "Accompagnement dédié", "Priorité support", "Intégrations sur devis"],
   },
 ];
+
+/** La boutique B2B est incluse partout SAUF sur la formule Standard. */
+export function planAllowsB2B(plan: string | null | undefined): boolean {
+  return plan !== "standard";
+}
 
 export const PLAN_MAP: Record<PlanKey, PlanDef> = Object.fromEntries(
   PLANS.map((p) => [p.key, p])

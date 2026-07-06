@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { logAudit } from "@/lib/audit";
-import { isPlanKey, PLAN_MAP } from "@/lib/plans";
+import { isPlanKey, PLAN_MAP, planAllowsB2B } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -104,10 +104,12 @@ export async function POST(req: NextRequest) {
     });
 
     // Identité entreprise (utilisée sur ses futurs documents).
+    // Boutique B2B activée seulement si la formule l'inclut (pas Standard).
     await db.insert(schema.entreprise).values({
       id: crypto.randomUUID(),
       tenantId,
       nom: entrepriseNom,
+      ecommerceActif: planAllowsB2B(plan),
     });
 
     // Demande d'abonnement / paiement en attente de validation.

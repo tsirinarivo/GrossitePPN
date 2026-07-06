@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { isMasterHost } from "@/lib/tenant-host";
 import { logAudit } from "@/lib/audit";
-import { isPlanKey, PLAN_MAP } from "@/lib/plans";
+import { isPlanKey, PLAN_MAP, planAllowsB2B } from "@/lib/plans";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +64,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   await db.update(schema.tenants)
     .set({ statut: "actif", plan: abo.plan, ...quotas, updatedAt: new Date() })
     .where(eq(schema.tenants.id, tenant.id));
+
+  // Aligne la boutique B2B sur le plan (Standard → désactivée).
+  await db.update(schema.entreprise)
+    .set({ ecommerceActif: planAllowsB2B(abo.plan), updatedAt: new Date() })
+    .where(eq(schema.entreprise.tenantId, tenant.id));
 
   // Compte gérant + email des identifiants (best-effort)
   let email: { sent: boolean; reason?: string } = { sent: false, reason: "Aucun email de contact" };

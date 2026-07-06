@@ -7,6 +7,13 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { getSessionTenantId } from "@/lib/tenant";
 import { getEntrepriseFor } from "@/lib/entreprise";
+import { planAllowsB2B } from "@/lib/plans";
+
+async function planForTenant(tenantId: string | null): Promise<string | null> {
+  if (!tenantId) return null;
+  const [t] = await db.select({ plan: schema.tenants.plan }).from(schema.tenants).where(eq(schema.tenants.id, tenantId)).limit(1);
+  return t?.plan ?? null;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +35,8 @@ export async function GET() {
     return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
   }
   const e = await getEntrepriseFor(mgr.tenantId);
-  return NextResponse.json(e ?? {});
+  const plan = await planForTenant(mgr.tenantId);
+  return NextResponse.json({ ...(e ?? {}), plan, boutiqueB2BAutorisee: planAllowsB2B(plan) });
 }
 
 const entrepriseSchema = z.object({
@@ -59,6 +67,11 @@ export async function PUT(req: NextRequest) {
   }
   const d = parsed.data;
   const tid = mgr.tenantId;
+
+  // Gating par formule : la boutique B2B ne peut pas être activée hors Pro/Entreprise.
+  if (!planAllowsB2B(await planForTenant(tid))) {
+    d.ecommerceActif = false;
+  }
 
   // Ligne entreprise existante pour ce tenant ?
   const existing = tid

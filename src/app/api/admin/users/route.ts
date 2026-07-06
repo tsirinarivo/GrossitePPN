@@ -63,6 +63,17 @@ export async function POST(req: NextRequest) {
   }
   const { name, email, password, role } = parsed.data;
 
+  // Quota du plan : nombre d'utilisateurs limité selon la formule.
+  if (admin.tenantId) {
+    const [t] = await db.select({ maxUtilisateurs: schema.tenants.maxUtilisateurs }).from(schema.tenants).where(eq(schema.tenants.id, admin.tenantId)).limit(1);
+    if (t) {
+      const existants = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.tenantId, admin.tenantId));
+      if (existants.length >= t.maxUtilisateurs) {
+        return NextResponse.json({ error: `Quota d'utilisateurs atteint (${t.maxUtilisateurs}). Passez à une formule supérieure pour en ajouter.` }, { status: 403 });
+      }
+    }
+  }
+
   try {
     const result = await auth.api.signUpEmail({
       body: { name, email, password },

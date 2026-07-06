@@ -82,9 +82,11 @@ export function AdminView() {
   });
   const [entLoading, setEntLoading] = useState(true);
   const [entSaving, startEntSave] = useTransition();
+  const [b2bAutorisee, setB2bAutorisee] = useState(true);
 
   useEffect(() => {
     fetch("/api/admin/entreprise").then(r => r.json()).then(d => {
+      setB2bAutorisee(d.boutiqueB2BAutorisee !== false);
       if (d.nom) setEnt({
         nom: d.nom ?? "", nif: d.nif ?? "", stat: d.stat ?? "", rcs: d.rcs ?? "",
         adresse: d.adresse ?? "", telephone: d.telephone ?? "", email: d.email ?? "",
@@ -394,8 +396,18 @@ export function AdminView() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="divide-y divide-[--border]">
-                      <Toggle active={ent.ecommerceActif} onClick={() => setEnt(c => ({ ...c, ecommerceActif: !c.ecommerceActif }))}
-                        label="Portail e-commerce B2B" description="Active le site /shop, catalogue, panier et compte client B2B." />
+                      {b2bAutorisee ? (
+                        <Toggle active={ent.ecommerceActif} onClick={() => setEnt(c => ({ ...c, ecommerceActif: !c.ecommerceActif }))}
+                          label="Portail e-commerce B2B" description="Active le site /shop, catalogue, panier et compte client B2B." />
+                      ) : (
+                        <div className="flex items-start justify-between gap-4 py-3 opacity-70">
+                          <div>
+                            <p className="font-medium text-[--foreground]">Portail e-commerce B2B</p>
+                            <p className="text-xs text-[--foreground-muted] mt-0.5">Non inclus dans votre formule — disponible à partir de la formule Pro.</p>
+                          </div>
+                          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide rounded-full border border-[--border] px-2 py-1 text-[--foreground-muted]">Pro</span>
+                        </div>
+                      )}
                       <Toggle active={ent.fideliteActif} onClick={() => setEnt(c => ({ ...c, fideliteActif: !c.fideliteActif }))}
                         label="Programme fidélité" description="Points cumulés, paliers Bronze/Argent/Or/Platine." />
                     </CardContent>
