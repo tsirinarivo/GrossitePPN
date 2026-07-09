@@ -109,6 +109,11 @@ export async function POST(req: NextRequest) {
   if (!session?.user)
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
+  const role = (session.user as { role?: string }).role ?? "agent";
+  if (!["admin", "gerant", "magasinier"].includes(role)) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
+
   const body = await req.json().catch(() => null);
   const parsed = inventaireSchema.safeParse(body);
   if (!parsed.success) {
@@ -121,58 +126,46 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const ref = `INV-${now.toISOString().slice(0, 10).replace(/-/g, "")}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
-    let ecarts = 0;
+    // Tout l'inventaire dans UNE transaction : all-or-nothing (pas d'état partiel).
+    const ecarts = await db.transaction(async (tx) => {
+      let nbEcarts = 0;
+      for (const ligne of lignes) {
+        const [stockRow] = await tx
+          .select({ quantiteBase: schema.stocks.quantiteBase })
+          .from(schema.stocks)
+          .where(and(eq(schema.stocks.produitId, ligne.produitId), eq(schema.stocks.depotId, depotId)))
+          .limit(1);
 
-    for (const ligne of lignes) {
-      const [stockRow] = await db
-        .select()
-        .from(schema.stocks)
-        .where(
-          and(
-            eq(schema.stocks.produitId, ligne.produitId),
-            eq(schema.stocks.depotId, depotId)
-          )
-        )
-        .limit(1);
+        const avant = stockRow?.quantiteBase ?? 0;
+        const apres = ligne.quantiteComptee;
 
-      const avant = stockRow?.quantiteBase ?? 0;
-      const apres = ligne.quantiteComptee;
+        await tx
+          .insert(schema.stocks)
+          .values({ id: crypto.randomUUID(), produitId: ligne.produitId, depotId, quantiteBase: apres, updatedAt: now })
+          .onConflictDoUpdate({
+            target: [schema.stocks.produitId, schema.stocks.depotId],
+            set: { quantiteBase: apres, updatedAt: now },
+          });
 
-      // Upsert stock
-      await db
-        .insert(schema.stocks)
-        .values({
+        const diff = apres - avant;
+        if (Math.abs(diff) >= 0.001) nbEcarts++;
+
+        await tx.insert(schema.mouvementsStock).values({
           id: crypto.randomUUID(),
           produitId: ligne.produitId,
           depotId,
-          quantiteBase: apres,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: [schema.stocks.produitId, schema.stocks.depotId],
-          set: { quantiteBase: apres, updatedAt: now },
+          type: "inventaire",
+          quantiteBase: diff,
+          quantiteAvant: avant,
+          quantiteApres: apres,
+          reference: ref,
+          notes: notes ?? `Inventaire physique ${ref}`,
+          userId: session.user.id,
+          createdAt: now,
         });
-
-      const diff = apres - avant;
-      if (Math.abs(diff) >= 0.001) {
-        ecarts++;
       }
-
-      // Insert mouvement
-      await db.insert(schema.mouvementsStock).values({
-        id: crypto.randomUUID(),
-        produitId: ligne.produitId,
-        depotId,
-        type: "inventaire",
-        quantiteBase: diff,
-        quantiteAvant: avant,
-        quantiteApres: apres,
-        reference: ref,
-        notes: notes ?? `Inventaire physique ${ref}`,
-        userId: session.user.id,
-        createdAt: now,
-      });
-    }
+      return nbEcarts;
+    });
 
     return NextResponse.json({ success: true, nbLignes: lignes.length, reference: ref, ecarts });
   } catch (e) {

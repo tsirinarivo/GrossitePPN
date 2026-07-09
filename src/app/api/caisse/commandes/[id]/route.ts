@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { and, eq, notInArray, sql } from "drizzle-orm";
+import { and, eq, notInArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { broadcastMiseAJour, broadcastAnnulation } from "@/lib/sse/broadcast";
@@ -151,9 +151,17 @@ function getTierFidelite(points: number): "bronze" | "argent" | "or" | "platine"
   return "bronze";
 }
 
+/** La commande n'a pas pu être passée en « validee » (déjà traitée / introuvable). */
+class NonTransitionnee extends Error {}
+
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
+  const role = (session.user as { role?: string }).role ?? "agent";
+  if (!["admin", "gerant", "caissier"].includes(role)) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
 
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
@@ -169,29 +177,161 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     ? (modePaiementRaw as ModePaiement)
     : "especes";
 
+  const now = new Date();
+  const datePart = now.toISOString().slice(0, 10).replace(/-/g, "");
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  const factureNumero = `FAC-${datePart}-${rand}`;
+
   try {
-    // Atomic state transition — prevents double-validation and race conditions
-    const [updated] = await db
-      .update(schema.commandes)
-      .set({ statut: "validee", valideeAt: new Date() })
-      .where(
-        and(
-          eq(schema.commandes.id, id),
-          notInArray(schema.commandes.statut, ["validee", "annulee"])
-        )
-      )
-      .returning({
-        id: schema.commandes.id,
-        numero: schema.commandes.numero,
-        depotId: schema.commandes.depotId,
-        clientId: schema.commandes.clientId,
-        totalHT: schema.commandes.totalHT,
-        totalTVA: schema.commandes.totalTVA,
-        totalTTC: schema.commandes.totalTTC,
-        assujettieTV: schema.commandes.assujettieTV,
+    // TOUT dans une transaction : validation, stock, facture, paiement, stats.
+    // En cas d'échec, rollback complet (pas de commande validée sans facture).
+    const result = await db.transaction(async (tx) => {
+      // ── Transition d'état atomique (anti double-validation) ────────────────
+      const [updated] = await tx
+        .update(schema.commandes)
+        .set({ statut: "validee", valideeAt: now })
+        .where(and(eq(schema.commandes.id, id), notInArray(schema.commandes.statut, ["validee", "annulee"])))
+        .returning({
+          id: schema.commandes.id,
+          numero: schema.commandes.numero,
+          depotId: schema.commandes.depotId,
+          clientId: schema.commandes.clientId,
+          totalHT: schema.commandes.totalHT,
+          totalTVA: schema.commandes.totalTVA,
+          totalTTC: schema.commandes.totalTTC,
+        });
+
+      if (!updated) throw new NonTransitionnee();
+
+      // ── 1. Déduction de stock (verrou de ligne, décompte exact) ───────────
+      if (updated.depotId) {
+        const depotId = updated.depotId;
+        const lignes = await tx
+          .select({ produitId: schema.lignesCommande.produitId, quantiteBase: schema.lignesCommande.quantiteBase })
+          .from(schema.lignesCommande)
+          .where(eq(schema.lignesCommande.commandeId, id));
+
+        for (const ligne of lignes) {
+          const [row] = await tx
+            .select({ q: schema.stocks.quantiteBase })
+            .from(schema.stocks)
+            .where(and(eq(schema.stocks.produitId, ligne.produitId), eq(schema.stocks.depotId, depotId)))
+            .limit(1)
+            .for("update");
+
+          const avant = row?.q ?? 0;
+          const apres = Math.max(0, avant - ligne.quantiteBase);
+          if (row) {
+            await tx.update(schema.stocks)
+              .set({ quantiteBase: apres, updatedAt: now })
+              .where(and(eq(schema.stocks.produitId, ligne.produitId), eq(schema.stocks.depotId, depotId)));
+          }
+
+          await tx.insert(schema.mouvementsStock).values({
+            id: crypto.randomUUID(),
+            produitId: ligne.produitId,
+            depotId,
+            type: "vente",
+            quantiteBase: ligne.quantiteBase,
+            quantiteAvant: avant,
+            quantiteApres: apres,
+            reference: updated.numero,
+            userId: session.user.id,
+          });
+        }
+      }
+
+      // ── 2. Facture + paiement ─────────────────────────────────────────────
+      const factureId = crypto.randomUUID();
+      await tx.insert(schema.factures).values({
+        id: factureId,
+        tenantId: (session.user as { tenantId?: string | null }).tenantId ?? null,
+        numero: factureNumero,
+        commandeId: id,
+        clientId: updated.clientId ?? null,
+        caissierID: session.user.id,
+        totalHT: updated.totalHT,
+        totalTVA: updated.totalTVA,
+        totalTTC: updated.totalTTC,
+        totalRegle: modePaiement === "credit_client" ? 0 : updated.totalTTC,
+        soldeRestant: modePaiement === "credit_client" ? updated.totalTTC : 0,
+        modePaiement,
+        statut: modePaiement === "credit_client" ? "emise" : "payee",
       });
 
-    if (!updated) {
+      if (modePaiement !== "credit_client") {
+        await tx.insert(schema.paiements).values({
+          id: crypto.randomUUID(),
+          factureId,
+          mode: modePaiement,
+          montant: updated.totalTTC,
+          confirme: true,
+        });
+      }
+
+      // ── 3. Stats + encours + fidélité client ──────────────────────────────
+      if (updated.clientId) {
+        const [client] = await tx
+          .select({
+            totalAchats: schema.clients.totalAchats,
+            nbCommandes: schema.clients.nbCommandes,
+            pointsFidelite: schema.clients.pointsFidelite,
+            encoursCourant: schema.clients.encoursCourant,
+          })
+          .from(schema.clients)
+          .where(eq(schema.clients.id, updated.clientId))
+          .limit(1);
+
+        if (client) {
+          const nouveauTotal = (client.totalAchats ?? 0) + updated.totalTTC;
+          const nouveauNb = (client.nbCommandes ?? 0) + 1;
+          const nouveauPanier = nouveauNb > 0 ? Math.round(nouveauTotal / nouveauNb) : 0;
+          const deltaEncours = modePaiement === "credit_client" ? updated.totalTTC : 0;
+          const nouvelEncours = Math.max(0, (client.encoursCourant ?? 0) + deltaEncours);
+          const pointsGagnes = Math.floor(updated.totalTTC / 1000);
+          const nouveauxPoints = (client.pointsFidelite ?? 0) + pointsGagnes;
+          const nouveauTier = getTierFidelite(nouveauxPoints);
+
+          await tx.update(schema.clients).set({
+            totalAchats: nouveauTotal,
+            nbCommandes: nouveauNb,
+            panierMoyen: nouveauPanier,
+            dernierAchat: now,
+            encoursCourant: nouvelEncours,
+            pointsFidelite: nouveauxPoints,
+            statutFidelite: nouveauTier,
+            updatedAt: now,
+          }).where(eq(schema.clients.id, updated.clientId));
+
+          if (pointsGagnes > 0) {
+            await tx.insert(schema.transactionsFidelite).values({
+              id: crypto.randomUUID(),
+              clientId: updated.clientId,
+              type: "gain",
+              points: pointsGagnes,
+              soldeApres: nouveauxPoints,
+              reference: updated.numero,
+              notes: `Vente ${updated.numero}`,
+            });
+          }
+        }
+      }
+
+      return { numero: updated.numero, totalTTC: updated.totalTTC };
+    });
+
+    // ── Effets de bord après commit (n'affectent pas l'intégrité) ───────────
+    broadcastAnnulation({ commandeId: id, numero: result.numero });
+    await logAudit({
+      action: "commande.valider",
+      entite: "commande",
+      entiteId: id,
+      details: { numero: result.numero, factureNumero, totalTTC: result.totalTTC, modePaiement },
+    });
+
+    return NextResponse.json({ ok: true, factureNumero });
+  } catch (e) {
+    if (e instanceof NonTransitionnee) {
       const [existing] = await db
         .select({ statut: schema.commandes.statut })
         .from(schema.commandes)
@@ -200,151 +340,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (!existing) return NextResponse.json({ error: "Commande introuvable" }, { status: 404 });
       return NextResponse.json({ error: "Commande déjà traitée" }, { status: 409 });
     }
-
-    // ── 1. Déduction de stock ──────────────────────────────────────────────
-    if (updated.depotId) {
-      const depotId = updated.depotId;
-      const lignes = await db
-        .select({
-          produitId: schema.lignesCommande.produitId,
-          quantiteBase: schema.lignesCommande.quantiteBase,
-        })
-        .from(schema.lignesCommande)
-        .where(eq(schema.lignesCommande.commandeId, id));
-
-      for (const ligne of lignes) {
-        // UPDATE atomique : SET quantiteBase = GREATEST(0, quantiteBase - X) + RETURNING
-        // Évite la race condition entre SELECT et UPDATE
-        const [updatedStock] = await db
-          .update(schema.stocks)
-          .set({
-            quantiteBase: sql`GREATEST(0, ${schema.stocks.quantiteBase} - ${ligne.quantiteBase})`,
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(schema.stocks.produitId, ligne.produitId),
-              eq(schema.stocks.depotId, depotId)
-            )
-          )
-          .returning({ apres: schema.stocks.quantiteBase });
-
-        const apres = updatedStock?.apres ?? 0;
-        const avant = apres + ligne.quantiteBase; // reconstruit pour le mouvement
-
-        await db.insert(schema.mouvementsStock).values({
-          id: crypto.randomUUID(),
-          produitId: ligne.produitId,
-          depotId,
-          type: "vente",
-          quantiteBase: ligne.quantiteBase,
-          quantiteAvant: avant,
-          quantiteApres: apres,
-          reference: updated.numero,
-          userId: session.user.id,
-        });
-      }
-    }
-
-    // ── 2. Création facture + paiement ─────────────────────────────────────
-    const now = new Date();
-    const datePart = now.toISOString().slice(0, 10).replace(/-/g, "");
-    const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-    const factureNumero = `FAC-${datePart}-${rand}`;
-    const factureId = crypto.randomUUID();
-
-    await db.insert(schema.factures).values({
-      id: factureId,
-      tenantId: (session.user as { tenantId?: string | null }).tenantId ?? null,
-      numero: factureNumero,
-      commandeId: id,
-      clientId: updated.clientId ?? null,
-      caissierID: session.user.id,
-      totalHT: updated.totalHT,
-      totalTVA: updated.totalTVA,
-      totalTTC: updated.totalTTC,
-      totalRegle: modePaiement === "credit_client" ? 0 : updated.totalTTC,
-      soldeRestant: modePaiement === "credit_client" ? updated.totalTTC : 0,
-      modePaiement,
-      statut: modePaiement === "credit_client" ? "emise" : "payee",
-    });
-
-    if (modePaiement !== "credit_client") {
-      await db.insert(schema.paiements).values({
-        id: crypto.randomUUID(),
-        factureId,
-        mode: modePaiement,
-        montant: updated.totalTTC,
-        confirme: true,
-      });
-    }
-
-    // ── 3. Mise à jour stats + encours client ──────────────────────────────
-    if (updated.clientId) {
-      const [client] = await db
-        .select({
-          totalAchats: schema.clients.totalAchats,
-          nbCommandes: schema.clients.nbCommandes,
-          pointsFidelite: schema.clients.pointsFidelite,
-          encoursCourant: schema.clients.encoursCourant,
-          creditAutorise: schema.clients.creditAutorise,
-        })
-        .from(schema.clients)
-        .where(eq(schema.clients.id, updated.clientId))
-        .limit(1);
-
-      if (client) {
-        const nouveauTotal = (client.totalAchats ?? 0) + updated.totalTTC;
-        const nouveauNb = (client.nbCommandes ?? 0) + 1;
-        const nouveauPanier = nouveauNb > 0 ? Math.round(nouveauTotal / nouveauNb) : 0;
-
-        // Encours: incrémenter si paiement à crédit
-        const deltaEncours = modePaiement === "credit_client" ? updated.totalTTC : 0;
-        const nouvelEncours = Math.max(0, (client.encoursCourant ?? 0) + deltaEncours);
-
-        // Points fidélité: 1 point par 1 000 MGA
-        const pointsGagnes = Math.floor(updated.totalTTC / 1000);
-        const nouveauxPoints = (client.pointsFidelite ?? 0) + pointsGagnes;
-        const nouveauTier = getTierFidelite(nouveauxPoints);
-
-        await db.update(schema.clients).set({
-          totalAchats: nouveauTotal,
-          nbCommandes: nouveauNb,
-          panierMoyen: nouveauPanier,
-          dernierAchat: now,
-          encoursCourant: nouvelEncours,
-          pointsFidelite: nouveauxPoints,
-          statutFidelite: nouveauTier,
-          updatedAt: now,
-        }).where(eq(schema.clients.id, updated.clientId));
-
-        if (pointsGagnes > 0) {
-          await db.insert(schema.transactionsFidelite).values({
-            id: crypto.randomUUID(),
-            clientId: updated.clientId,
-            type: "gain",
-            points: pointsGagnes,
-            soldeApres: nouveauxPoints,
-            reference: updated.numero,
-            notes: `Vente ${updated.numero}`,
-          });
-        }
-      }
-    }
-
-    broadcastAnnulation({ commandeId: id, numero: updated.numero });
-
-    await logAudit({
-      action: "commande.valider",
-      entite: "commande",
-      entiteId: id,
-      details: { numero: updated.numero, factureNumero, totalTTC: updated.totalTTC, modePaiement },
-    });
-
-    return NextResponse.json({ ok: true, factureNumero });
-  } catch (e) {
     console.error("[api/caisse/commandes/[id] PATCH]", e);
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    return NextResponse.json({ error: "Erreur lors de la validation" }, { status: 500 });
   }
 }
 

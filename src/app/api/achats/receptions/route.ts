@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { computeNextNumero, retryOnUniqueViolation } from "@/lib/sequence";
 
 export const dynamic = "force-dynamic";
 
@@ -64,41 +65,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate numero REC-{YYYY}-{NNNN}
+    // Numéro REC-{YYYY}-{NNNN} (généré à l'insertion, retry anti-collision)
     const year = new Date().getFullYear();
     const prefix = `REC-${year}-`;
-
-    const [maxRow] = await db
-      .select({
-        maxNumero: sql<string>`max(${schema.receptions.numero})`,
-      })
-      .from(schema.receptions)
-      .where(sql`${schema.receptions.numero} like ${prefix + "%"}`);
-
-    let nextSeq = 1;
-    if (maxRow?.maxNumero) {
-      const parts = maxRow.maxNumero.split("-");
-      const lastPart = parts[parts.length - 1] ?? "";
-      const lastSeq = parseInt(lastPart, 10);
-      if (!isNaN(lastSeq)) nextSeq = lastSeq + 1;
-    }
-    const numero = `${prefix}${String(nextSeq).padStart(4, "0")}`;
 
     const receptionId = crypto.randomUUID();
 
     // Insert reception header
-    const [reception] = await db
-      .insert(schema.receptions)
-      .values({
-        id: receptionId,
-        numero,
-        bonCommandeId,
-        depotId: safeDepotId,
-        receptionneurId: session.user.id,
-        statut: "complete",
-        notes: notes ?? null,
-      })
-      .returning();
+    const reception = await retryOnUniqueViolation(
+      () => computeNextNumero(sql`${schema.receptions}`, sql`${schema.receptions.numero}`, prefix),
+      async (numero) => {
+        const [r] = await db
+          .insert(schema.receptions)
+          .values({
+            id: receptionId,
+            numero,
+            bonCommandeId,
+            depotId: safeDepotId,
+            receptionneurId: session.user.id,
+            statut: "complete",
+            notes: notes ?? null,
+          })
+          .returning();
+        if (!r) throw new Error("Échec insertion réception");
+        return r;
+      }
+    );
 
     // Insert reception lines
     await db.insert(schema.lignesReception).values(
@@ -153,8 +145,8 @@ export async function POST(req: NextRequest) {
         quantiteBase: l.quantiteBase,
         quantiteAvant,
         quantiteApres,
-        reference: numero,
-        notes: `Réception ${numero} — BC ${bc.numero}`,
+        reference: reception.numero,
+        notes: `Réception ${reception.numero} — BC ${bc.numero}`,
         userId: session.user.id,
       });
     }

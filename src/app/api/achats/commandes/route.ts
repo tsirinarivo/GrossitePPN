@@ -4,6 +4,7 @@ import * as schema from "@/lib/db/schema";
 import { eq, desc, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { computeNextNumero, retryOnUniqueViolation } from "@/lib/sequence";
 
 export const dynamic = "force-dynamic";
 
@@ -84,25 +85,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "fournisseurId est requis" }, { status: 400 });
     }
 
-    // Generate numero BC-{YYYY}-{NNNN}
+    // Numéro BC-{YYYY}-{NNNN} (généré à l'insertion, avec retry anti-collision)
     const year = new Date().getFullYear();
     const prefix = `BC-${year}-`;
-
-    const [maxRow] = await db
-      .select({
-        maxNumero: sql<string>`max(${schema.bonsCommande.numero})`,
-      })
-      .from(schema.bonsCommande)
-      .where(sql`${schema.bonsCommande.numero} like ${prefix + "%"}`);
-
-    let nextSeq = 1;
-    if (maxRow?.maxNumero) {
-      const parts = maxRow.maxNumero.split("-");
-      const lastPart = parts[parts.length - 1] ?? "";
-      const lastSeq = parseInt(lastPart, 10);
-      if (!isNaN(lastSeq)) nextSeq = lastSeq + 1;
-    }
-    const numero = `${prefix}${String(nextSeq).padStart(4, "0")}`;
 
     // Calculate line totals
     type LigneInput = {
@@ -129,7 +114,10 @@ export async function POST(req: NextRequest) {
 
     const bcId = crypto.randomUUID();
 
-    const [commande] = await db
+    const commande = await retryOnUniqueViolation(
+      () => computeNextNumero(sql`${schema.bonsCommande}`, sql`${schema.bonsCommande.numero}`, prefix),
+      async (numero) => {
+        const [c] = await db
       .insert(schema.bonsCommande)
       .values({
         id: bcId,
@@ -148,6 +136,10 @@ export async function POST(req: NextRequest) {
         referenceFournisseur: referenceFournisseur ?? null,
       })
       .returning();
+        if (!c) throw new Error("Échec insertion bon de commande");
+        return c;
+      }
+    );
 
     let insertedLignes: (typeof schema.lignesBonCommande.$inferSelect)[] = [];
     if (lignesCalculees.length > 0) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { z } from "zod";
@@ -16,9 +16,17 @@ const transfertSchema = z.object({
   notes: z.string().optional().nullable(),
 });
 
+/** Erreur métier « stock insuffisant » (déclenche un rollback + 422). */
+class StockInsuffisant extends Error {}
+
 export async function POST(req: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
+  const role = (session.user as { role?: string }).role ?? "agent";
+  if (!["admin", "gerant", "magasinier"].includes(role)) {
+    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => null);
   const parsed = transfertSchema.safeParse(body);
@@ -32,87 +40,77 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Source et destination identiques" }, { status: 400 });
   }
 
+  const now = new Date();
+  const ref = `TRF-${now.toISOString().slice(0, 10).replace(/-/g, "")}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
   try {
-    // Vérifier stock source
-    const [stockSource] = await db
-      .select({ quantiteBase: schema.stocks.quantiteBase })
-      .from(schema.stocks)
-      .where(and(eq(schema.stocks.produitId, produitId), eq(schema.stocks.depotId, sourceDepotId)))
-      .limit(1);
-
-    const avantSource = stockSource?.quantiteBase ?? 0;
-    if (avantSource < quantiteBase) {
-      return NextResponse.json(
-        { error: `Stock insuffisant (disponible: ${avantSource})` },
-        { status: 422 }
-      );
-    }
-
-    const now = new Date();
-    const ref = `TRF-${now.toISOString().slice(0, 10).replace(/-/g, "")}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-
-    // ── Source: décrémenter ────────────────────────────────────────────────
-    const apresSource = avantSource - quantiteBase;
-    if (stockSource) {
-      await db
+    await db.transaction(async (tx) => {
+      // ── Source : décrément ATOMIQUE avec garde (jamais négatif, anti-concurrence)
+      const dec = await tx
         .update(schema.stocks)
-        .set({ quantiteBase: apresSource, updatedAt: now })
-        .where(and(eq(schema.stocks.produitId, produitId), eq(schema.stocks.depotId, sourceDepotId)));
-    }
+        .set({ quantiteBase: sql`${schema.stocks.quantiteBase} - ${quantiteBase}`, updatedAt: now })
+        .where(
+          and(
+            eq(schema.stocks.produitId, produitId),
+            eq(schema.stocks.depotId, sourceDepotId),
+            sql`${schema.stocks.quantiteBase} >= ${quantiteBase}`
+          )
+        )
+        .returning({ apres: schema.stocks.quantiteBase });
 
-    await db.insert(schema.mouvementsStock).values({
-      id: crypto.randomUUID(),
-      produitId,
-      depotId: sourceDepotId,
-      type: "transfert",
-      quantiteBase,
-      quantiteAvant: avantSource,
-      quantiteApres: apresSource,
-      reference: ref,
-      notes: notes ?? `Transfert vers dépôt ${destinationDepotId}`,
-      userId: session.user.id,
-    });
+      if (dec.length === 0) {
+        // Soit la ligne n'existe pas, soit stock insuffisant.
+        throw new StockInsuffisant();
+      }
+      const apresSource = Number(dec[0]!.apres);
+      const avantSource = apresSource + quantiteBase;
 
-    // ── Destination: incrémenter (ou créer la ligne si absente) ───────────
-    const [stockDest] = await db
-      .select({ quantiteBase: schema.stocks.quantiteBase })
-      .from(schema.stocks)
-      .where(and(eq(schema.stocks.produitId, produitId), eq(schema.stocks.depotId, destinationDepotId)))
-      .limit(1);
+      await tx.insert(schema.mouvementsStock).values({
+        id: crypto.randomUUID(),
+        produitId,
+        depotId: sourceDepotId,
+        type: "transfert",
+        quantiteBase,
+        quantiteAvant: avantSource,
+        quantiteApres: apresSource,
+        reference: ref,
+        notes: notes ?? `Transfert vers dépôt ${destinationDepotId}`,
+        userId: session.user.id,
+      });
 
-    const avantDest = stockDest?.quantiteBase ?? 0;
-    const apresDest = avantDest + quantiteBase;
+      // ── Destination : incrément ATOMIQUE (upsert additif)
+      const inc = await tx
+        .insert(schema.stocks)
+        .values({ id: crypto.randomUUID(), produitId, depotId: destinationDepotId, quantiteBase, updatedAt: now })
+        .onConflictDoUpdate({
+          target: [schema.stocks.produitId, schema.stocks.depotId],
+          set: { quantiteBase: sql`${schema.stocks.quantiteBase} + ${quantiteBase}`, updatedAt: now },
+        })
+        .returning({ apres: schema.stocks.quantiteBase });
 
-    if (stockDest) {
-      await db
-        .update(schema.stocks)
-        .set({ quantiteBase: apresDest, updatedAt: now })
-        .where(and(eq(schema.stocks.produitId, produitId), eq(schema.stocks.depotId, destinationDepotId)));
-    } else {
-      await db.insert(schema.stocks).values({
+      const apresDest = Number(inc[0]!.apres);
+      const avantDest = apresDest - quantiteBase;
+
+      await tx.insert(schema.mouvementsStock).values({
         id: crypto.randomUUID(),
         produitId,
         depotId: destinationDepotId,
-        quantiteBase: apresDest,
+        type: "transfert",
+        quantiteBase,
+        quantiteAvant: avantDest,
+        quantiteApres: apresDest,
+        reference: ref,
+        notes: notes ?? `Transfert depuis dépôt ${sourceDepotId}`,
+        userId: session.user.id,
       });
-    }
-
-    await db.insert(schema.mouvementsStock).values({
-      id: crypto.randomUUID(),
-      produitId,
-      depotId: destinationDepotId,
-      type: "transfert",
-      quantiteBase,
-      quantiteAvant: avantDest,
-      quantiteApres: apresDest,
-      reference: ref,
-      notes: notes ?? `Transfert depuis dépôt ${sourceDepotId}`,
-      userId: session.user.id,
     });
 
     return NextResponse.json({ ok: true, reference: ref });
   } catch (e) {
+    if (e instanceof StockInsuffisant) {
+      return NextResponse.json({ error: "Stock insuffisant à la source" }, { status: 422 });
+    }
     console.error("[api/stock/transferts POST]", e);
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    return NextResponse.json({ error: "Erreur lors du transfert" }, { status: 500 });
   }
 }
