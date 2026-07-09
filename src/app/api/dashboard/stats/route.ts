@@ -18,73 +18,40 @@ export async function GET() {
     const now = new Date();
     const debutJour = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const debutMois = new Date(now.getFullYear(), now.getMonth(), 1);
+    const debutHier = new Date(debutJour.getTime() - 86400000);
 
-    // ── CA + commandes du jour ─────────────────────────────────────────────
-    const [statsJour] = await db
-      .select({
+    // Requêtes indépendantes lancées en parallèle (1 vague au lieu de 6 A/R Neon).
+    const [
+      [statsJour],
+      [statsHier],
+      clientsActifsRows,
+      alertesRows,
+      commandesRecentes,
+      enAttenteRows,
+    ] = await Promise.all([
+      db.select({
         caJour: sql<number>`COALESCE(SUM(${schema.commandes.totalTTC}), 0)`,
         nbCommandes: sql<number>`COUNT(*)`,
-      })
-      .from(schema.commandes)
-      .where(
-        and(
-          tCmd(),
-          eq(schema.commandes.statut, "validee"),
-          gte(schema.commandes.valideeAt, debutJour)
-        )
-      );
+      }).from(schema.commandes).where(and(tCmd(), eq(schema.commandes.statut, "validee"), gte(schema.commandes.valideeAt, debutJour))),
 
-    // ── CA hier (pour comparaison) ─────────────────────────────────────────
-    const debutHier = new Date(debutJour.getTime() - 86400000);
-    const [statsHier] = await db
-      .select({
+      db.select({
         caHier: sql<number>`COALESCE(SUM(${schema.commandes.totalTTC}), 0)`,
-      })
-      .from(schema.commandes)
-      .where(
-        and(
-          tCmd(),
-          eq(schema.commandes.statut, "validee"),
-          gte(schema.commandes.valideeAt, debutHier),
-          sql`${schema.commandes.valideeAt} < ${debutJour.toISOString()}`
-        )
-      );
+      }).from(schema.commandes).where(and(tCmd(), eq(schema.commandes.statut, "validee"), gte(schema.commandes.valideeAt, debutHier), sql`${schema.commandes.valideeAt} < ${debutJour.toISOString()}`)),
 
-    // ── Clients actifs ce mois ─────────────────────────────────────────────
-    const clientsActifsRows = await db
-      .select({ nbClientsActifs: sql<number>`COUNT(DISTINCT ${schema.commandes.clientId})` })
-      .from(schema.commandes)
-      .where(
-        and(
-          tCmd(),
-          inArray(schema.commandes.statut, ["validee", "soumise"]),
-          gte(schema.commandes.createdAt, debutMois),
-          sql`${schema.commandes.clientId} IS NOT NULL`
-        )
-      );
-    const nbClientsActifs = clientsActifsRows[0]?.nbClientsActifs ?? 0;
+      db.select({ nbClientsActifs: sql<number>`COUNT(DISTINCT ${schema.commandes.clientId})` })
+        .from(schema.commandes)
+        .where(and(tCmd(), inArray(schema.commandes.statut, ["validee", "soumise"]), gte(schema.commandes.createdAt, debutMois), sql`${schema.commandes.clientId} IS NOT NULL`)),
 
-    // ── Alertes stock ──────────────────────────────────────────────────────
-    const alertesRows = await db
-      .select({
+      db.select({
         id: schema.produits.id,
         seuilAlerte: schema.produits.seuilAlerte,
         stockBase: sql<number>`COALESCE(SUM(${schema.stocks.quantiteBase}), 0)`,
-      })
-      .from(schema.produits)
-      .leftJoin(schema.stocks, eq(schema.stocks.produitId, schema.produits.id))
-      .where(and(tenantFilter(schema.produits.tenantId, tid), eq(schema.produits.actif, true)))
-      .groupBy(schema.produits.id);
+      }).from(schema.produits)
+        .leftJoin(schema.stocks, eq(schema.stocks.produitId, schema.produits.id))
+        .where(and(tenantFilter(schema.produits.tenantId, tid), eq(schema.produits.actif, true)))
+        .groupBy(schema.produits.id),
 
-    const nbAlertes = alertesRows.filter((p) => {
-      const s = p.seuilAlerte ?? 0;
-      const q = Number(p.stockBase);
-      return q <= 0 || (s > 0 && q <= s);
-    }).length;
-
-    // ── Activité récente ───────────────────────────────────────────────────
-    const commandesRecentes = await db
-      .select({
+      db.select({
         id: schema.commandes.id,
         numero: schema.commandes.numero,
         statut: schema.commandes.statut,
@@ -93,11 +60,23 @@ export async function GET() {
         clientId: schema.commandes.clientId,
         createdAt: schema.commandes.createdAt,
         valideeAt: schema.commandes.valideeAt,
-      })
-      .from(schema.commandes)
-      .where(and(tCmd(), gte(schema.commandes.createdAt, debutJour)))
-      .orderBy(desc(schema.commandes.createdAt))
-      .limit(10);
+      }).from(schema.commandes)
+        .where(and(tCmd(), gte(schema.commandes.createdAt, debutJour)))
+        .orderBy(desc(schema.commandes.createdAt))
+        .limit(10),
+
+      db.select({ nbEnAttente: sql<number>`COUNT(*)` })
+        .from(schema.commandes)
+        .where(and(tCmd(), eq(schema.commandes.statut, "soumise"))),
+    ]);
+
+    const nbClientsActifs = clientsActifsRows[0]?.nbClientsActifs ?? 0;
+
+    const nbAlertes = alertesRows.filter((p) => {
+      const s = p.seuilAlerte ?? 0;
+      const q = Number(p.stockBase);
+      return q <= 0 || (s > 0 && q <= s);
+    }).length;
 
     const clientIds = commandesRecentes.map((c) => c.clientId).filter(Boolean) as string[];
     const clientsMap = new Map<string, string>();
@@ -120,11 +99,6 @@ export async function GET() {
         : "--:--",
     }));
 
-    // ── Commandes en attente à la caisse ──────────────────────────────────
-    const enAttenteRows = await db
-      .select({ nbEnAttente: sql<number>`COUNT(*)` })
-      .from(schema.commandes)
-      .where(and(tCmd(), eq(schema.commandes.statut, "soumise")));
     const nbEnAttente = enAttenteRows[0]?.nbEnAttente ?? 0;
 
     const caJour = Number(statsJour?.caJour ?? 0);

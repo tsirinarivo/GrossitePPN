@@ -3,10 +3,14 @@ import { loadXprintConfig, sendPrintAndLog } from "@/lib/xprint/service";
 import { formatFactureTicket } from "@/lib/xprint/format";
 import { getSessionTenantId } from "@/lib/tenant";
 import { getEntrepriseFor } from "@/lib/entreprise";
+import { requireAuth } from "@/lib/api-guard";
 
 export const dynamic = "force-dynamic";
 
 export async function POST() {
+  if (!(await requireAuth())) {
+    return NextResponse.json({ ok: false, errorMessage: "Non autorisé" }, { status: 401 });
+  }
   try {
     const tid = await getSessionTenantId();
     const cfg = await loadXprintConfig(tid);

@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { getSessionTenantId } from "@/lib/tenant";
 import { getEntrepriseFor } from "@/lib/entreprise";
+import { requireAuth } from "@/lib/api-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +43,9 @@ function buildQrPayload(opts: {
 }
 
 export async function POST(req: NextRequest) {
+  if (!(await requireAuth())) {
+    return NextResponse.json({ ok: false, errorMessage: "Non autorisé" }, { status: 401 });
+  }
   try {
     const tid = await getSessionTenantId();
     const cfg = await loadXprintConfig(tid);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { requireRoles } from "@/lib/api-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -273,6 +274,9 @@ const PRODUITS: ProduitSeed[] = [
 
 // ── Seed handler ──────────────────────────────────────────────────────────────
 export async function POST() {
+  if (!(await requireRoles("admin", "gerant"))) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
   const now = new Date();
   const errors: string[] = [];
   let nbCategories = 0;
