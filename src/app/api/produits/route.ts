@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
       nom: d.nom,
       nomMG: d.nomMG ?? null,
       description: d.description ?? null,
-      categorieId: d.categorieId ?? null,
+      categorieId: d.categorieId || null,
       marque: d.marque ?? null,
       uniteBase: d.uniteBase,
       seuilAlerte: d.seuilAlerte,

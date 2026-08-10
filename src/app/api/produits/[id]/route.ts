@@ -104,6 +104,10 @@ export async function PATCH(req: NextRequest, { params }: RouteContext) {
       }
     }
 
+    // categorieId est une clé étrangère : "" (aucune catégorie) doit devenir NULL,
+    // sinon violation de contrainte FK (Key (categorie_id)=() not present).
+    if (updates.categorieId === "") updates.categorieId = null;
+
     updates.updatedAt = new Date();
 
     const rows = await db
