@@ -19,6 +19,7 @@ import {
   ChevronRight,
   ArrowLeftRight,
   ClipboardList,
+  Tag,
   History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -335,6 +336,12 @@ export function StockView() {
             <Link href="/stock/inventaire">
               <ClipboardList className="w-4 h-4" />
               Inventaire
+            </Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/stock/categories">
+              <Tag className="w-4 h-4" />
+              Catégories
             </Link>
           </Button>
           <Button size="sm" asChild>
