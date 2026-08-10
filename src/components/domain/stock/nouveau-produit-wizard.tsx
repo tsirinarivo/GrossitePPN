@@ -222,7 +222,10 @@ export function NouveauProduitWizard() {
                       {errors.code && <p className="text-xs text-[--destructive]">{errors.code.message}</p>}
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-[--foreground]">Catégorie *</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-medium text-[--foreground]">Catégorie <span className="text-[--foreground-subtle] font-normal">(optionnel)</span></label>
+                        <a href="/stock/categories" target="_blank" rel="noopener noreferrer" className="text-xs text-[--primary] hover:underline">+ Gérer les catégories</a>
+                      </div>
                       <select
                         {...register("categorieId")}
                         className={cn(
@@ -231,11 +234,14 @@ export function NouveauProduitWizard() {
                           errors.categorieId && "border-[--destructive]"
                         )}
                       >
-                        <option value="">Sélectionner...</option>
+                        <option value="">— Aucune —</option>
                         {categories.map((c) => (
                           <option key={c.id} value={c.id}>{c.label}</option>
                         ))}
                       </select>
+                      {categories.length === 0 && (
+                        <p className="text-xs text-[--foreground-subtle]">Aucune catégorie. Vous pouvez en créer via « Gérer les catégories », ou laisser « Aucune ».</p>
+                      )}
                       {errors.categorieId && <p className="text-xs text-[--destructive]">{errors.categorieId.message}</p>}
                     </div>
                     <div className="space-y-1.5">
