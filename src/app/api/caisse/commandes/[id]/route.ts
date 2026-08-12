@@ -4,14 +4,36 @@ import * as schema from "@/lib/db/schema";
 import { and, eq, notInArray } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { requireRole } from "@/lib/api-guard";
+import { scopeTenant } from "@/lib/tenant";
 import { broadcastMiseAJour, broadcastAnnulation } from "@/lib/sse/broadcast";
 import { logAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const actor = await requireRole();
+  if (!actor) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = actor.tenantId;
+
   const { id } = await params;
   try {
+    const commande = await db
+      .select({
+        id: schema.commandes.id,
+        numero: schema.commandes.numero,
+        totalHT: schema.commandes.totalHT,
+        totalTVA: schema.commandes.totalTVA,
+        totalTTC: schema.commandes.totalTTC,
+        assujettieTV: schema.commandes.assujettieTV,
+      })
+      .from(schema.commandes)
+      .where(scopeTenant(schema.commandes.tenantId, tid, eq(schema.commandes.id, id)))
+      .limit(1);
+
+    // La commande hors tenant est invisible → pas de fuite de lignes.
+    if (!commande[0]) return NextResponse.json({ commande: null, lignes: [] });
+
     const lignes = await db
       .select({
         id: schema.lignesCommande.id,
@@ -32,20 +54,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       .from(schema.lignesCommande)
       .where(eq(schema.lignesCommande.commandeId, id));
 
-    const commande = await db
-      .select({
-        id: schema.commandes.id,
-        numero: schema.commandes.numero,
-        totalHT: schema.commandes.totalHT,
-        totalTVA: schema.commandes.totalTVA,
-        totalTTC: schema.commandes.totalTTC,
-        assujettieTV: schema.commandes.assujettieTV,
-      })
-      .from(schema.commandes)
-      .where(eq(schema.commandes.id, id))
-      .limit(1);
-
-    return NextResponse.json({ commande: commande[0] ?? null, lignes });
+    return NextResponse.json({ commande: commande[0], lignes });
   } catch (e) {
     console.error("[api/caisse/commandes/[id] GET]", e);
     return NextResponse.json({ commande: null, lignes: [] });

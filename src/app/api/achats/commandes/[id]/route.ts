@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { requireRole } from "@/lib/api-guard";
+import { scopeTenant } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +11,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const actor = await requireRole();
+  if (!actor) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = actor.tenantId;
   try {
     const { id } = await params;
 
@@ -43,7 +46,7 @@ export async function GET(
         schema.fournisseurs,
         eq(schema.fournisseurs.id, schema.bonsCommande.fournisseurId)
       )
-      .where(eq(schema.bonsCommande.id, id));
+      .where(scopeTenant(schema.bonsCommande.tenantId, tid, eq(schema.bonsCommande.id, id)));
 
     if (!commande) {
       return NextResponse.json({ error: "Bon de commande introuvable" }, { status: 404 });
@@ -65,10 +68,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-  }
+  const actor = await requireRole("admin", "gerant", "magasinier");
+  if (!actor) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  const tid = actor.tenantId;
 
   try {
     const { id } = await params;
@@ -77,7 +79,7 @@ export async function PATCH(
     const [commande] = await db
       .select()
       .from(schema.bonsCommande)
-      .where(eq(schema.bonsCommande.id, id));
+      .where(scopeTenant(schema.bonsCommande.tenantId, tid, eq(schema.bonsCommande.id, id)));
 
     if (!commande) {
       return NextResponse.json({ error: "Bon de commande introuvable" }, { status: 404 });
@@ -89,7 +91,7 @@ export async function PATCH(
       const [updated] = await db
         .update(schema.bonsCommande)
         .set({ statut: "envoye", updatedAt: new Date() })
-        .where(eq(schema.bonsCommande.id, id))
+        .where(scopeTenant(schema.bonsCommande.tenantId, tid, eq(schema.bonsCommande.id, id)))
         .returning();
       return NextResponse.json({ commande: updated });
     }
@@ -98,7 +100,7 @@ export async function PATCH(
       const [updated] = await db
         .update(schema.bonsCommande)
         .set({ statut: "confirme", updatedAt: new Date() })
-        .where(eq(schema.bonsCommande.id, id))
+        .where(scopeTenant(schema.bonsCommande.tenantId, tid, eq(schema.bonsCommande.id, id)))
         .returning();
       return NextResponse.json({ commande: updated });
     }
@@ -114,7 +116,7 @@ export async function PATCH(
       const [updated] = await db
         .update(schema.bonsCommande)
         .set({ statut: "annule", updatedAt: new Date() })
-        .where(eq(schema.bonsCommande.id, id))
+        .where(scopeTenant(schema.bonsCommande.tenantId, tid, eq(schema.bonsCommande.id, id)))
         .returning();
       return NextResponse.json({ commande: updated });
     }
@@ -189,7 +191,7 @@ export async function PATCH(
           totalTTC: bcTotalTTC,
           updatedAt: new Date(),
         })
-        .where(eq(schema.bonsCommande.id, id))
+        .where(scopeTenant(schema.bonsCommande.tenantId, tid, eq(schema.bonsCommande.id, id)))
         .returning();
 
       return NextResponse.json({ commande: updated, lignes: newLignes });

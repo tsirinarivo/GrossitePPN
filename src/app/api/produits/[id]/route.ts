@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
-import { getSessionTenantId, scopeTenant } from "@/lib/tenant";
+import { requireRole } from "@/lib/api-guard";
+import { scopeTenant } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +12,11 @@ interface RouteContext {
 }
 
 export async function GET(_req: NextRequest, { params }: RouteContext) {
+  const actor = await requireRole();
+  if (!actor) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = actor.tenantId;
   try {
     const { id } = await params;
-    const tid = await getSessionTenantId();
 
     const rows = await db
       .select({
@@ -84,14 +85,12 @@ const ALLOWED_FIELDS = new Set([
 ]);
 
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
-  }
+  const actor = await requireRole("admin", "gerant", "magasinier");
+  if (!actor) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
 
   try {
     const { id } = await params;
-    const tid = (session.user as { tenantId?: string | null }).tenantId ?? null;
+    const tid = actor.tenantId;
     const body = await req.json().catch(() => null);
     if (!body || typeof body !== "object") {
       return NextResponse.json({ error: "Corps invalide" }, { status: 400 });

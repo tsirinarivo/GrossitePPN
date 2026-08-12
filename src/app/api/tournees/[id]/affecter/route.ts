@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { requireRole } from "@/lib/api-guard";
+import { scopeTenant } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +13,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const actor = await requireRole("admin", "gerant", "chauffeur");
+  if (!actor) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  const tid = actor.tenantId;
 
   const { id } = await params;
   const body = await req.json();
@@ -29,7 +30,7 @@ export async function POST(
     const [tournee] = await db
       .select()
       .from(schema.tournees)
-      .where(eq(schema.tournees.id, id))
+      .where(scopeTenant(schema.tournees.tenantId, tid, eq(schema.tournees.id, id)))
       .limit(1);
 
     if (!tournee) return NextResponse.json({ error: "Tournée introuvable" }, { status: 404 });
@@ -39,7 +40,7 @@ export async function POST(
       const existantes = await db
         .select({ id: schema.livraisons.id })
         .from(schema.livraisons)
-        .where(eq(schema.livraisons.tourneeId, id));
+        .where(scopeTenant(schema.livraisons.tenantId, tid, eq(schema.livraisons.tourneeId, id)));
 
       const aDetacher = existantes
         .map((l) => l.id)
@@ -49,14 +50,14 @@ export async function POST(
         await db
           .update(schema.livraisons)
           .set({ tourneeId: null, ordre: 0 })
-          .where(inArray(schema.livraisons.id, aDetacher));
+          .where(scopeTenant(schema.livraisons.tenantId, tid, inArray(schema.livraisons.id, aDetacher)));
       }
     } else {
       // Vider la tournée
       await db
         .update(schema.livraisons)
         .set({ tourneeId: null, ordre: 0 })
-        .where(eq(schema.livraisons.tourneeId, id));
+        .where(scopeTenant(schema.livraisons.tenantId, tid, eq(schema.livraisons.tourneeId, id)));
     }
 
     // Affecter et ordonner
@@ -66,7 +67,7 @@ export async function POST(
       await db
         .update(schema.livraisons)
         .set({ tourneeId: id, ordre: i + 1 })
-        .where(eq(schema.livraisons.id, lid));
+        .where(scopeTenant(schema.livraisons.tenantId, tid, eq(schema.livraisons.id, lid)));
     }
 
     return NextResponse.json({ ok: true, count: livraisonIds.length });

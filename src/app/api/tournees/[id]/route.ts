@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { eq, asc } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { requireRole } from "@/lib/api-guard";
+import { scopeTenant } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -12,8 +12,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const actor = await requireRole();
+  if (!actor) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = actor.tenantId;
 
   const { id } = await params;
 
@@ -21,7 +22,7 @@ export async function GET(
     const [tournee] = await db
       .select()
       .from(schema.tournees)
-      .where(eq(schema.tournees.id, id))
+      .where(scopeTenant(schema.tournees.tenantId, tid, eq(schema.tournees.id, id)))
       .limit(1);
 
     if (!tournee) return NextResponse.json({ error: "Tournée introuvable" }, { status: 404 });
@@ -81,8 +82,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const actor = await requireRole("admin", "gerant", "chauffeur");
+  if (!actor) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  const tid = actor.tenantId;
 
   const { id } = await params;
   const body = await req.json();
@@ -105,8 +107,10 @@ export async function PATCH(
     const [tournee] = await db
       .update(schema.tournees)
       .set(updates)
-      .where(eq(schema.tournees.id, id))
+      .where(scopeTenant(schema.tournees.tenantId, tid, eq(schema.tournees.id, id)))
       .returning();
+
+    if (!tournee) return NextResponse.json({ error: "Tournée introuvable" }, { status: 404 });
 
     return NextResponse.json({ tournee });
   } catch {
@@ -119,19 +123,25 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const actor = await requireRole("admin", "gerant", "chauffeur");
+  if (!actor) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  const tid = actor.tenantId;
 
   const { id } = await params;
 
   try {
+    const [deleted] = await db
+      .delete(schema.tournees)
+      .where(scopeTenant(schema.tournees.tenantId, tid, eq(schema.tournees.id, id)))
+      .returning({ id: schema.tournees.id });
+
+    if (!deleted) return NextResponse.json({ error: "Tournée introuvable" }, { status: 404 });
+
     // Détacher les livraisons
     await db
       .update(schema.livraisons)
       .set({ tourneeId: null, ordre: 0 })
-      .where(eq(schema.livraisons.tourneeId, id));
-
-    await db.delete(schema.tournees).where(eq(schema.tournees.id, id));
+      .where(scopeTenant(schema.livraisons.tenantId, tid, eq(schema.livraisons.tourneeId, id)));
 
     return NextResponse.json({ ok: true });
   } catch {

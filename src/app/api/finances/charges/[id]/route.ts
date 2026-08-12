@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { requireRole } from "@/lib/api-guard";
+import { scopeTenant } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const actor = await requireRole("admin", "gerant", "comptable");
+  if (!actor) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  const tid = actor.tenantId;
 
   const { id } = await params;
   const body = await req.json();
@@ -26,8 +27,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         notes: notes ?? null,
         updatedAt: new Date(),
       })
-      .where(eq(schema.chargesOperationnelles.id, id))
+      .where(scopeTenant(schema.chargesOperationnelles.tenantId, tid, eq(schema.chargesOperationnelles.id, id)))
       .returning();
+    if (!charge) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
     return NextResponse.json({ charge });
   } catch {
     return NextResponse.json(
@@ -38,12 +40,17 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const actor = await requireRole("admin", "gerant", "comptable");
+  if (!actor) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  const tid = actor.tenantId;
 
   const { id } = await params;
   try {
-    await db.delete(schema.chargesOperationnelles).where(eq(schema.chargesOperationnelles.id, id));
+    const deleted = await db
+      .delete(schema.chargesOperationnelles)
+      .where(scopeTenant(schema.chargesOperationnelles.tenantId, tid, eq(schema.chargesOperationnelles.id, id)))
+      .returning();
+    if (deleted.length === 0) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Table absente" }, { status: 503 });

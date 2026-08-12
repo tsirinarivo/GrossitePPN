@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { requireRole } from "@/lib/api-guard";
+import { scopeTenant } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -24,9 +24,9 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user)
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const actor = await requireRole("admin", "gerant", "caissier");
+  if (!actor) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+  const tid = actor.tenantId;
 
   const { id } = await params;
   const body = await req.json();
@@ -42,7 +42,7 @@ export async function PATCH(
   const [commande] = await db
     .select()
     .from(schema.commandes)
-    .where(eq(schema.commandes.id, id))
+    .where(scopeTenant(schema.commandes.tenantId, tid, eq(schema.commandes.id, id)))
     .limit(1);
 
   if (!commande)
@@ -56,8 +56,11 @@ export async function PATCH(
       ...(statut === "validee" ? { valideeAt: new Date() } : {}),
       ...(statut === "soumise" ? { soumiseAt: new Date() } : {}),
     })
-    .where(eq(schema.commandes.id, id))
+    .where(scopeTenant(schema.commandes.tenantId, tid, eq(schema.commandes.id, id)))
     .returning();
+
+  if (!updated)
+    return NextResponse.json({ error: "Introuvable" }, { status: 404 });
 
   return NextResponse.json({ commande: updated });
 }

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { requireRole } from "@/lib/api-guard";
+import { scopeTenant } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +11,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const actor = await requireRole();
+  if (!actor) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  const tid = actor.tenantId;
 
   const { id } = await params;
 
@@ -20,7 +21,7 @@ export async function GET(
     const [facture] = await db
       .select()
       .from(schema.factures)
-      .where(eq(schema.factures.id, id))
+      .where(scopeTenant(schema.factures.tenantId, tid, eq(schema.factures.id, id)))
       .limit(1);
 
     if (!facture) return NextResponse.json({ error: "Facture introuvable" }, { status: 404 });
